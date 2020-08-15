@@ -1,5 +1,5 @@
 [package]
-name = "veriwasm-rust"
+name = "veriwasm"
 version = "0.1.0"
 authors = ["enjhnsn2 <e5johnso@eng.ucsd.edu>"]
 edition = "2018"

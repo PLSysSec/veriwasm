@@ -1,6 +1,6 @@
-use std::cmp::Ordering;
-use crate::lattices::{Lattice};
+use crate::lattices::{ConstLattice, Lattice};
 
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum HeapValue {
     HeapBase,
     Bounded4GB,
@@ -9,46 +9,35 @@ enum HeapValue {
     GlobalsBase
 }
 
-#[derive(Eq)]
-pub struct HeapValueLattice{
-    v: Option<u32>
+
+type HeapValueLattice = ConstLattice<HeapValue>;
+
+
+#[test]
+fn heap_lattice_test() {
+    let x1  = HeapValueLattice {v : None};
+    let x2  = HeapValueLattice {v : Some(HeapValue::HeapBase)};
+    let x3  = HeapValueLattice {v : Some(HeapValue::HeapBase)};
+    let x4  = HeapValueLattice {v : Some(HeapValue::Bounded4GB)};
+
+    assert_eq!(x1 == x2, false);
+    assert_eq!(x2 == x3, true);
+    assert_eq!(x3 == x4, false);
+
+    assert_eq!(x1 != x2, true);
+    assert_eq!(x2 != x3, false);
+    assert_eq!(x3 != x4, true);
+
+    assert_eq!(x1 > x2, false);
+    assert_eq!(x2 > x3, false);
+    assert_eq!(x3 > x4, false);
+
+    assert_eq!(x1 < x2, true);
+    assert_eq!(x2 < x3, false);
+    assert_eq!(x3 < x4, false);
+
+    assert_eq!(x1.meet(x2) == HeapValueLattice {v : None}, true);
+    assert_eq!(x2.meet(x3) == HeapValueLattice {v : Some(HeapValue::HeapBase)}, true);
+    assert_eq!(x3.meet(x4) == HeapValueLattice {v : None}, true);
 }
 
-// impl Valued for HeapValueLattice{
-//     type Vtype = Option<HeapValue>;
-//     fn value(&self) -> Self::Vtype {
-//         self.v
-//     }
-// }
-
-impl PartialOrd forHeapValue2Lattice {
-    fn partial_cmp(&self, other: &HeapValueLattice) -> Option<Ordering> {
-        match (self.v, other.v){
-            (None,None) => Some(Ordering::Equal),
-            (None,_) => Some(Ordering::Less),
-            (_,None) => Some(Ordering::Greater),
-            (Some(x), Some(y)) => 
-                if x == y {Some(Ordering::Equal) }
-                else {None}
-        }
-    }
-}
-
-impl PartialEq for HeapValueLattice {
-    fn eq(&self, other: &HeapValueLattice) -> bool {
-        self.v == other.v
-    }
-}
-
-impl Lattice for HeapValueLattice {
-    fn meet(&self, other : Self) -> Self {
-        if self.v == other.v {HeapValueLattice {v : self.v}}
-        else {HeapValueLattice { v : None}}
-    }
-} 
-
-impl Default for HeapValueLattice {
-    fn default() -> Self {
-        HeapValueLattice {v : None}
-    }
-}

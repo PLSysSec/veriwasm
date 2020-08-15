@@ -1,37 +1,17 @@
 use std::cmp::Ordering;
 pub mod regslattice;
+pub mod heaplattice;
+pub mod switchlattice;
+pub mod davlattice;
 
-
-// pub trait Valued {
-//     type Vtype;        
-//     // fn value(&self) -> Self::Vtype;
-
-//     fn value(&self) -> Self::Vtype {
-//         unimplemented!();
-//     }
-// }
-
-
-// pub trait Meetable {
-//     fn meet(&self, other : Self) -> Self;
-// }
-
-pub trait Lattice: PartialOrd + PartialEq + Default {
+pub trait Lattice: PartialOrd + Eq + Default {
     fn meet(&self, other : Self) -> Self;
 }
-// impl<T> Lattice for T where T: PartialOrd + PartialEq+ Valued + Default {}
 
 #[derive(Eq)]
 pub struct BooleanLattice{
     v: bool
 }
-
-// impl Valued for BooleanLattice{
-//     type Vtype = bool;
-//     fn value(&self) -> Self::Vtype {
-//         self.v
-//     }
-// }
 
 impl PartialOrd for BooleanLattice {
     fn partial_cmp(&self, other: &BooleanLattice) -> Option<Ordering> {
@@ -57,21 +37,15 @@ impl Default for BooleanLattice {
     }
 }
 
+type Constu32Lattice = ConstLattice::<u32>;
 
-#[derive(Eq)]
-pub struct Constu32Lattice{
-    v: Option<u32>
+#[derive(Eq, Clone, Copy)]
+pub struct ConstLattice<T:Eq + Copy>{
+    v: Option<T>
 }
 
-// impl Valued for Constu32Lattice{
-//     type Vtype = Option<u32>;
-//     fn value(&self) -> Self::Vtype {
-//         self.v
-//     }
-// }
-
-impl PartialOrd for Constu32Lattice {
-    fn partial_cmp(&self, other: &Constu32Lattice) -> Option<Ordering> {
+impl<T:Eq + Copy> PartialOrd for ConstLattice<T> {
+    fn partial_cmp(&self, other: &ConstLattice<T>) -> Option<Ordering> {
         match (self.v, other.v){
             (None,None) => Some(Ordering::Equal),
             (None,_) => Some(Ordering::Less),
@@ -83,55 +57,26 @@ impl PartialOrd for Constu32Lattice {
     }
 }
 
-impl PartialEq for Constu32Lattice {
-    fn eq(&self, other: &Constu32Lattice) -> bool {
+impl<T:Eq + Copy> PartialEq for ConstLattice<T> {
+    fn eq(&self, other: &ConstLattice<T>) -> bool {
         self.v == other.v
     }
 }
 
-impl Lattice for Constu32Lattice {
+impl<T:Eq + Copy> Lattice for ConstLattice<T> {
     fn meet(&self, other : Self) -> Self {
-        if self.v == other.v {Constu32Lattice {v : self.v}}
-        else {Constu32Lattice { v : None}}
+        if self.v == other.v {ConstLattice {v : self.v}}
+        else {ConstLattice { v : None}}
     }
 } 
 
-impl Default for Constu32Lattice {
+impl<T:Eq + Copy> Default for ConstLattice<T> {
     fn default() -> Self {
-        Constu32Lattice {v : None}
+        ConstLattice {v : None}
     }
 }
 
-// #[derive(Eq)]
-// pub struct CompositeLattice<T:Lattice>{
-//     v: Vec<T>
-// }
 
-// impl<T:Lattice> Valued for CompositeLattice<T>{
-//     type Vtype = Vec<T>;
-//     fn value(&self) -> Self::Vtype {
-//         self.v.clone()
-//     }
-// }
-
-// impl<T:Lattice> PartialOrd for CompositeLattice<T> {
-//     fn partial_cmp(&self, other: &CompositeLattice<T>) -> Option<Ordering> {
-//         assert_eq!(self.v.len() == other.v.len(), true);
-//         self.v.partial_cmp(&other.v)
-//     }
-// }
-
-// impl<T:Lattice> PartialEq for CompositeLattice<T>{
-//     fn eq(&self, other: &CompositeLattice<T>) -> bool {
-//         self.v == other.v
-//     }
-// }
-
-
-
-pub fn hello_world(){
-    println!("Hello, world!");
-}
 
 #[test]
 fn boolean_lattice_test() {
@@ -144,11 +89,16 @@ fn boolean_lattice_test() {
 
 #[test]
 fn u32_lattice_test() {
-    let x1  = Constu32Lattice {v : Some(1)};
-    let x2  = Constu32Lattice {v : Some(1)};
+    let x1  = ConstLattice::<u32> {v : Some(1)};
+    let x2  = ConstLattice::<u32> {v : Some(1)};
+    let y1  = ConstLattice::<u32> {v : Some(2)};
+    let y2  = ConstLattice::<u32> {v : Some(2)};
 
-    let y1  = Constu32Lattice {v : Some(2)};
-    let y2  = Constu32Lattice {v : Some(2)};
+    let z1  = Constu32Lattice {v : Some(3)};
+    let z2  = Constu32Lattice {v : Some(3)};
+
+    // let y1  = Constu32Lattice {v : Some(2)};
+    // let y2  = Constu32Lattice {v : Some(2)};
     assert_eq!(x1 < y1, false);
     assert_eq!(y1 < x1, false);
     assert_eq!(x1 == x2, true);
@@ -157,30 +107,7 @@ fn u32_lattice_test() {
     assert_eq!(x1 >= y1, false);
     assert_eq!(x1 > x2, false);
     assert_eq!(x1 >= x2, true);
+    assert_eq!(z1 == z2, true);
+    assert_eq!(z1 == x1, false);
     assert_eq!(x1.lt(&y1), false);
 }
-
-
-// #[test]
-// fn composite_lattice_test() {
-//     let f1  = BooleanLattice {v : false};
-//     let f2  = BooleanLattice {v : false};
-//     let t1  = BooleanLattice {v : true};
-//     let t2  = BooleanLattice {v : true};
-//     let f3  = BooleanLattice {v : false};
-//     let f4  = BooleanLattice {v : false};
-//     let t3  = BooleanLattice {v : true};
-//     let t4  = BooleanLattice {v : true};
-
-//     let mut vecft = vec![f1, t1];
-//     let mut vectf = vec![t2, f2];
-//     let mut vecff = vec![f3, f4];
-//     let mut vectt = vec![t3, t4];
-
-
-//     assert_eq!(vecft < vectf, false);
-//     assert_eq!(vecff < vectt, true);
-//     assert_eq!(vecff < vecft, true);
-//     assert_eq!(vecff == vectf, false);
-
-// }

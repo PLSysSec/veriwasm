@@ -1,53 +1,47 @@
-use std::cmp::Ordering;
-use crate::lattices::{Lattice, Valued, Constu32Lattice};
+use crate::lattices::{ConstLattice, Lattice};
 
-enum HeapValue {
-    SwitchBase(Constu32Lattice),
-    UpperBound(Constu32Lattice),
-    JmpOffset(Constu32Lattice),
-    JmpTarget(ConstU32Lattice),
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SwitchValue {
+    SwitchBase(u32),
+    UpperBound(u32),
+    JmpOffset(u32),
+    JmpTarget(u32),
 }
 
-#[derive(Eq)]
-pub struct HeapValueLattice{
-    v: Option<u32>
-}
+type SwitchValueLattice = ConstLattice<SwitchValue>;
 
-// impl Valued for HeapValueLattice{
-//     type Vtype = Option<HeapValue>;
-//     fn value(&self) -> Self::Vtype {
-//         self.v
-//     }
-}
+#[test]
+fn switch_lattice_test() {
+    let x1  = SwitchValueLattice {v : None};
+    let x2  = SwitchValueLattice {v : Some(SwitchValue::SwitchBase(1))};
+    let x3  = SwitchValueLattice {v : Some(SwitchValue::SwitchBase(1))};
+    let x4  = SwitchValueLattice {v : Some(SwitchValue::SwitchBase(2))};
+    let x5  = SwitchValueLattice {v : Some(SwitchValue::UpperBound(1))};
 
-impl PartialOrd for HeapValueLattice {
-    fn partial_cmp(&self, other: &HeapValueLattice) -> Option<Ordering> {
-        match (self.v, other.v){
-            (None,None) => Some(Ordering::Equal),
-            (None,_) => Some(Ordering::Less),
-            (_,None) => Some(Ordering::Greater),
-            (Some(x), Some(y)) => 
-                if x == y {Some(Ordering::Equal) }
-                else {None}
-        }
-    }
-}
+    assert_eq!(x1 == x2, false);
+    assert_eq!(x2 == x3, true);
+    assert_eq!(x3 == x4, false);
+    assert_eq!(x4 == x5, false);
 
-impl PartialEq for HeapValueLattice {
-    fn eq(&self, other: &HeapValueLattice) -> bool {
-        self.v == other.v
-    }
-}
+    assert_eq!(x1 != x2, true);
+    assert_eq!(x2 != x3, false);
+    assert_eq!(x3 != x4, true);
+    assert_eq!(x4 != x5, true);
 
-impl Lattice for HeapValueLattice {
-    fn meet(&self, other : Self) -> Self {
-        if self.v == other.v {HeapValueLattice {v : self.v}}
-        else {HeapValueLattice { v : None}}
-    }
-} 
+    assert_eq!(x1 > x2, false);
+    assert_eq!(x2 > x3, false);
+    assert_eq!(x3 > x4, false);
+    assert_eq!(x4 > x5, false);
 
-impl Default for HeapValueLattice {
-    fn default() -> Self {
-        HeapValueLattice {v : None}
-    }
+    assert_eq!(x1 < x2, true);
+    assert_eq!(x2 < x3, false);
+    assert_eq!(x3 < x4, false);
+    assert_eq!(x4 < x5, false);
+
+    assert_eq!(x1.meet(x2) == SwitchValueLattice {v : None}, true);
+    assert_eq!(x2.meet(x3) == SwitchValueLattice {v :  Some(SwitchValue::SwitchBase(1))}, true);
+    assert_eq!(x3.meet(x4) == SwitchValueLattice {v : None}, true);
+    assert_eq!(x4.meet(x5) == SwitchValueLattice {v : None}, true);
+
+
 }
