@@ -1,46 +1,34 @@
 use std::cmp::Ordering;
-use crate::lattices::{Lattice, Valued Constu32Lattice};
+use crate::lattices::{Lattice, ConstLattice};
 
-#[derive(Eq)]
-pub struct StackGrowthLattice{
-    v: Option<u32>
-}
+type StackGrowthLattice = ConstLattice<u64>;
 
-// impl Valued for StackGrowthLattice{
-//     type Vtype = Option<u32>;
-//     fn value(&self) -> Self::Vtype {
-//         self.v
-//     }
-// }
 
-impl PartialOrd for StackGrowthLattice {
-    fn partial_cmp(&self, other: &StackGrowthLattice) -> Option<Ordering> {
-        match (self.v, other.v){
-            (None,None) => Some(Ordering::Equal),
-            (None,_) => Some(Ordering::Less),
-            (_,None) => Some(Ordering::Greater),
-            (Some(x), Some(y)) => 
-                if x == y {Some(Ordering::Equal) }
-                else {None}
-        }
-    }
-}
+#[test]
+fn stack_growth_lattice_test() {
+    let x1  = StackGrowthLattice {v : None};
+    let x2  = StackGrowthLattice {v : Some(1)};
+    let x3  = StackGrowthLattice {v : Some(1)};
+    let x4  = StackGrowthLattice {v : Some(2)};
 
-impl PartialEq for StackGrowthLattice {
-    fn eq(&self, other: &StackGrowthLattice) -> bool {
-        self.v == other.v
-    }
-}
 
-impl Lattice for StackGrowthLattice {
-    fn meet(&self, other : Self) -> Self {
-        if self.v == other.v StackGrowthLattice {v : self.v}}
-        else {StackGrowthLattice { v : None}}
-    }
-} 
+    assert_eq!(x1 == x2, false);
+    assert_eq!(x2 == x3, true);
+    assert_eq!(x3 == x4, false);
 
-impl Default for StackGrowthLattice {
-    fn default() -> Self {
-        StackGrowthLattice {v : 0}
-    }
+    assert_eq!(x1 != x2, true);
+    assert_eq!(x2 != x3, false);
+    assert_eq!(x3 != x4, true);
+
+    assert_eq!(x1 > x2, false);
+    assert_eq!(x2 > x3, false);
+    assert_eq!(x3 > x4, false);
+
+    assert_eq!(x1 < x2, true);
+    assert_eq!(x2 < x3, false);
+    assert_eq!(x3 < x4, false);
+
+    assert_eq!(x1.meet(x2) == StackGrowthLattice {v : None}, true);
+    assert_eq!(x2.meet(x3) == StackGrowthLattice {v : Some(1)}, true);
+    assert_eq!(x3.meet(x4) == StackGrowthLattice {v : None}, true);
 }

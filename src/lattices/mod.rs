@@ -3,6 +3,9 @@ pub mod regslattice;
 pub mod heaplattice;
 pub mod switchlattice;
 pub mod davlattice;
+pub mod calllattice;
+pub mod stackgrowthlattice;
+pub mod stacklattice;
 
 pub trait Lattice: PartialOrd + Eq + Default {
     fn meet(&self, other : Self) -> Self;

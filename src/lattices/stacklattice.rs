@@ -1,83 +1,79 @@
 use std::cmp::Ordering;
-use crate::lattices::{Lattice, Valued};
+use crate::lattices::{Lattice};
+use std::collections::HashMap;
+use std::default::Default;
 
-pub struct StackSlot {
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub struct StackSlot<T:Lattice + Copy> {
     size: u32,
-    value: i64,
+    value: T,
 }
 
-//TODO: Currently implemented with vector, could also try with associative map
-
+//Currently implemented with hashmap, could also use a vector for a dense map
 #[derive(Eq)]
-pub struct StackLattice{
+pub struct StackLattice<T:Lattice + Copy>{
     offset: i64,
-    map : Vec<Option<StackSlot>>
+    map : HashMap<i64, StackSlot<T>>
+}
 
-    fn update(&self, i32 : offset, i64 : value, u32 : size) -> {
-        // Index in the vec
-        let idx =  self.get_stack_idx(offset);
-        // remap with more size if we need it
-        self.map.resize_with(idx + 1, Default::default);
-        if (idx > 0) && self.map[idx - 1].size == 8 
-        {
-            self.map[idx - 1] = None;
+impl<T:Lattice + Copy> StackLattice<T>{
+    fn update(&mut self, offset:i64, value:T, size:u32) -> (){
+        self.map.insert(self.offset + offset, StackSlot{size : size, value : value});
+    }
+
+    fn get(&self, offset:i64, size:u32) -> T {
+        match self.map.get( &(self.offset + offset) ){
+            Some(stack_slot) => 
+                if stack_slot.size == size { stack_slot.value }
+                else { Default::default() },
+            None => Default::default()
         }
-
-        if size == 8 {
-            self.map[idx + 1] = None;
-        }
-
-        self.map[idx] = value;
     }
 
-    fn get(&self, i32 : offset, u32 : size) -> i64 {
-        let idx =  self.get_stack_idx(offset);
-        self.map.resize_with(idx + 1, Default::default);
-        self.map[idx]
-    }
-
-    fn get_stack_idx(&self, i64 : offset)
-    {
-        (self.offset + offset) / 4
-    }
-
-    fn update_stack_offset(&self, i64: adjustment) -> {
+    fn update_stack_offset(&mut self, adjustment:i64) -> () {
         self.offset += adjustment;
     }
 }
 
 //TODO: implement partial order
-impl PartialOrd for StackLattice {
-    fn partial_cmp(&self, other: &StackLattice) -> Option<Ordering> {
-        match (self.v, other.v){
-            (None,None) => Some(Ordering::Equal),
-            (None,_) => Some(Ordering::Less),
-            (_,None) => Some(Ordering::Greater),
-            (Some(x), Some(y)) => 
-                if x == y {Some(Ordering::Equal) }
-                else {None}
-        }
+impl<T:Lattice + Copy> PartialOrd for StackLattice<T> {
+    fn partial_cmp(&self, other: &StackLattice<T>) -> Option<Ordering> {
+        unimplemented!();
     }
 }
 
-impl PartialEq for StackLattice {
-    fn eq(&self, other: &StackLattice) -> bool {
+impl<T:Lattice + Copy> PartialEq for StackLattice<T> {
+    fn eq(&self, other: &StackLattice<T>) -> bool {
         (self.map == other.map) && (self.offset == other.offset)
     }
 }
 
-//TODO: implement meet
-impl Lattice for StackLattice {
+//assumes that stack offset is equal in both stack lattices
+impl<T:Lattice + Copy> Lattice for StackLattice<T> {
     fn meet(&self, other : Self) -> Self {
-        if self.v == other.v {StackLattice {v : self.v}}
-        else {StackLattice { v : None}}
+        let mut newmap : HashMap <i64, StackSlot<T>> = HashMap::new();
+        for (k,v1) in self.map.iter(){
+             match other.map.get(k){
+                Some(v2) => 
+                if v1.size == v2.size {
+                    let newslot =  StackSlot {size : v1.size, value : v1.value.meet(v2.value)};
+                    newmap.insert(*k, newslot); 
+                },
+                None => ()
+             }
+         }
+
+        StackLattice {offset : self.offset, map : newmap}
     }
 } 
 
-impl Default for StackLattice {
+impl<T:Lattice + Copy> Default for StackLattice<T> {
     fn default() -> Self {
-        StackLattice {offset : 0, map :  Vec::new()}
+        StackLattice {offset : 0, map :  HashMap::new()}
     }
 }
 
-
+#[test]
+fn stack_lattice_test() {
+   
+}

@@ -81,31 +81,6 @@ impl<T:Lattice> Lattice for X86RegsLattice<T> {
             zf : self.zf.meet(other.zf)
         }
     }
-
-    
-
-    // impl Default for HeapValueLattice {
-    //     fn default() -> Self {
-    //         X86RegsLattice {
-    //             rax : , 
-    //             rbx: , 
-    //             rcx : ,
-    //             rdx : ,
-    //             rdi : ,
-    //             rsi : ,
-    //             rsp : ,
-    //             rbp : ,
-    //             r8 : ,
-    //             r9 : ,
-    //             r10 : ,
-    //             r11 : ,
-    //             r12 : ,
-    //             r13 : ,
-    //             r14 : ,
-    //             r15 : ,
-    //             zf : 
-    //         }
-    //     }
 } 
 
 

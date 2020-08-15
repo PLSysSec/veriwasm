@@ -3,7 +3,7 @@ use crate::lattices::{Lattice};
 
 // Dependent Abstract Value
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum DAV {
+pub enum DAV {
     Unknown,
     Unchecked(u64),
     Checked,
@@ -60,6 +60,7 @@ impl Default for DAVLattice {
     }
 }
 
+#[test]
 fn dav_lattice_test() {
     let x1 = DAVLattice {v : DAV::Unknown};
     let x2 = DAVLattice {v : DAV::Unchecked(1)};
