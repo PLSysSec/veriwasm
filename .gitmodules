@@ -1,0 +1,3 @@
+[submodule "yaxpeax-core"]
+	path = yaxpeax-core
+	url = git@github.com:iximeow/yaxpeax-core.git
