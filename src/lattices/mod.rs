@@ -6,12 +6,15 @@ pub mod davlattice;
 pub mod calllattice;
 pub mod stackgrowthlattice;
 pub mod stacklattice;
+pub mod reachingdefslattice;
+use crate::lattices::regslattice::X86RegsLattice;
+use crate::lattices::stacklattice::StackLattice;
 
 pub trait Lattice: PartialOrd + Eq + Default {
     fn meet(&self, other : Self) -> Self;
 }
 
-#[derive(Eq)]
+#[derive(Eq, Clone, Copy)]
 pub struct BooleanLattice{
     v: bool
 }
@@ -78,6 +81,24 @@ impl<T:Eq + Copy> Default for ConstLattice<T> {
         ConstLattice {v : None}
     }
 }
+
+
+
+
+#[derive(PartialEq, Eq, PartialOrd, Default, Clone)]
+pub struct VariableState<T:Lattice + Clone>{
+    regs: X86RegsLattice<T>,
+    stack: StackLattice<T>,
+}
+
+impl<T:Lattice + Clone> Lattice for VariableState<T> {
+    fn meet(&self, other : Self) -> Self {
+        VariableState { 
+            regs : self.regs.meet(other.regs), 
+            stack : self.stack.meet(other.stack)
+        }
+    }
+} 
 
 
 

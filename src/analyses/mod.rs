@@ -5,9 +5,6 @@ pub mod jump_analyzer;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::{Lattice};
 
-// pub trait AbstrState: Default {
-//     fn (&self, other : Self) -> Self;
-// }
 
 //abstract state is just a lattice
 
@@ -16,9 +13,9 @@ use crate::lattices::{Lattice};
 
 //TODO: finish analyzer
 pub trait AbstractAnalyzer {
-    fn init_state<T:Lattice>(&self) -> T; 
-    fn aeval<T:Lattice>(&self) -> ();
-    fn process_branch<T:Lattice>(&self, instate : T) -> (Vec<T>);
+    fn init_state<T:Lattice + Clone>(&self) -> T; 
+    fn aeval<T:Lattice + Clone>(&self) -> ();
+    fn process_branch<T:Lattice + Clone>(&self, instate : T) -> (Vec<T>); // default implementation is one_result_for_all_successors
 }
 
 pub fn run_worklist<T:AbstractAnalyzer> (cfg : ControlFlowGraph<u64>, analyzer : T){
