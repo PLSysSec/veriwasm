@@ -12,4 +12,5 @@ yaxpeax-arch = { version = "0.0.4", features = ["use-serde"] }
 yaxpeax-arm = { version = "0.0.4", features = ["use-serde"] }
 yaxpeax-x86 = { version = "0.0.13", features = ["use-serde"] }
 "petgraph" = "0.4.13"
+clap = "2.33.3"
 
