@@ -73,6 +73,7 @@ impl<T:Lattice + Copy> Default for StackLattice<T> {
     }
 }
 
+//TODO: properly test stack lattice
 #[test]
 fn stack_lattice_test() {
    
