@@ -1,7 +1,10 @@
 pub mod lattices;
 pub mod utils;
+pub mod analyses;
 use utils::{get_cfgs};
 use std::env;
+use analyses::stack_analyzer::{analyze_stack};
+
 
 
 fn run(binpath : &str){
@@ -11,6 +14,7 @@ fn run(binpath : &str){
         println!("Checking Instruction Legality");
         //TODO: check stack safety
         println!("Checking Stack Safety");
+        let stack_result = analyze_stack(cfg);
         //TODO: check heap safety
         println!("Checking Heap Safety");
         //TODO: check call safety
