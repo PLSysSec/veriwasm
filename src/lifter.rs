@@ -118,11 +118,27 @@ pub enum Stmt {
     Push(Value)
 }
 fn convert_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> Value{
-    unimplemented!()
+    let size = match reg.bank{
+        RegisterBank::Q => ValSize::Size64,
+        RegisterBank::D => ValSize::Size32,
+        RegisterBank::W => ValSize::Size16,
+        RegisterBank::B => ValSize::Size8,
+        _ => panic!("Unknown register bank")
+    };
+    let num = reg.num;
+    Value::Reg(num, size)
 }
 
 fn convert_memarg_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> MemArg{
-    unimplemented!()
+    let size = match reg.bank{
+        RegisterBank::Q => ValSize::Size64,
+        RegisterBank::D => ValSize::Size32,
+        RegisterBank::W => ValSize::Size16,
+        RegisterBank::B => ValSize::Size8,
+        _ => panic!("Unknown register bank")
+    };
+    let num = reg.num;
+    MemArg::Reg(num, size)
 }
 
 fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{

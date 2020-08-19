@@ -159,7 +159,7 @@ fn regs_lattice_test() {
     assert_eq!(r2 < r3, false);
     assert_eq!(r2 <= r3, false);
 
-    assert_eq!(r2.meet(r3) == r1, true);
-    assert_eq!(r1.meet(r2) == r1, true);
+    assert_eq!(r2.meet(&r3) == r1, true);
+    assert_eq!(r1.meet(&r2) == r1, true);
 
 }
