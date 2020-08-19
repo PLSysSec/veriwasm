@@ -10,6 +10,9 @@ pub fn analyze_stack(cfg : &ControlFlowGraph<u64>, irmap : IRMap){
     
 }
 
+// fn update_stackgrowth(state : &mut StackGrowthLattice, adjustment : i64){
+//     state.v.map(|x| x + adjustment)
+// }
 
 
 pub struct StackAnalyzer{
@@ -21,20 +24,20 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
         StackGrowthLattice {v : Some(0)}
     }
 
-    fn aexec(&self, in_state : StackGrowthLattice, ir_instr : Stmt) -> StackGrowthLattice {
+    //TODO: how to get size of pop / push
+    fn aexec(&self, in_state : &mut StackGrowthLattice, ir_instr : &Stmt) -> () {
         // match ir_instr{
-        //     Clear(yaxpeax_x86::long_mode::Opcode, Value),
-        //     Unop(yaxpeax_x86::long_mode::Opcode, Value, Value),
-        //     Binop(yaxpeax_x86::long_mode::Opcode, Value, Value, Value),
-        //     Call(Value),
-        //     Pop(Value),
-        //     Push(Value),
-        //     _ => ()
+        //     Clear(opcode, dst) => (),
+        //     Unop(opcode, dst, arg) => (),
+        //     Binop(opcode, dst, arg1, arg2) => (),
+        //     Call(target) => (),
+        //     Pop(dst) => StackGrowthLattice {v : in_state.v.map(|x| x + 8)}, 
+        //     Push(dst) => StackGrowthLattice {v : in_state.v.map(|x| x - 8)},
         // }
         unimplemented!()
     }
 
-    fn process_branch(&self, in_state : StackGrowthLattice) -> (Vec<StackGrowthLattice>){
+    fn process_branch(&self, in_state : StackGrowthLattice) -> Vec<StackGrowthLattice>{
         // let output : Vec<StackGrowthLattice> = {in_state.clone(), in_state.clone()}
         let mut output = Vec::new();
         output.push(in_state.clone());

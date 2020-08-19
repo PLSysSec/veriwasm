@@ -2,7 +2,7 @@ use yaxpeax_x86::long_mode::Opcode::*;
 use std::collections::HashMap;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use yaxpeax_core::memory::repr::process::ModuleData;
-use yaxpeax_x86::long_mode::{Arch as AMD64};
+use yaxpeax_x86::long_mode::{Arch as AMD64, Operand, RegSpec, RegisterBank};
 use yaxpeax_arch::Arch;
 use yaxpeax_core::arch::InstructionSpan;
 
@@ -77,24 +77,39 @@ pub struct RegSpec {
 
 */
 
-pub enum Value {
-    Deref,
-    Reg,
-    Imm
+pub enum ImmType {
+    Signed,
+    Unsigned
 }
 
-// enum Expr {
-//     Unop,
-//     Binop,
-//     Deref,
-//     Empty
-// }
+pub enum ValSize {
+    Size8,
+    Size16,
+    Size32,
+    Size64
+}
+
+pub enum MemArgs {
+    Mem1Arg(MemArg),
+    Mem2Args(MemArg, MemArg),
+    Mem3Args(MemArg, MemArg, MemArg)
+}
+
+pub enum MemArg {
+    Reg(u8, ValSize),
+    Imm(ImmType, ValSize, u64) //signed, size, const
+}
+
+pub enum Value {
+    Mem(MemArgs),
+    Reg(u8, ValSize),
+    Imm(ImmType, ValSize, u64) //signed, size, const
+}
 
 pub enum Stmt {
     Clear(yaxpeax_x86::long_mode::Opcode, Value),
     Unop(yaxpeax_x86::long_mode::Opcode, Value, Value),
     Binop(yaxpeax_x86::long_mode::Opcode, Value, Value, Value),
-    // Trinop(yaxpeax_x86::long_mode::Opcode, Value, Value, Value, Value),
     Undefined,
     Ret,
     Branch(yaxpeax_x86::long_mode::Opcode, Value),
@@ -102,10 +117,41 @@ pub enum Stmt {
     Pop(Value),
     Push(Value)
 }
-
-fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{
+fn convert_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> Value{
     unimplemented!()
 }
+
+fn convert_memarg_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> MemArg{
+    unimplemented!()
+}
+
+fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{
+    match op{
+        Operand::ImmediateI8(imm) => Value::Imm(ImmType::Signed, ValSize::Size8, imm as u64),
+        Operand::ImmediateU8(imm) => Value::Imm(ImmType::Unsigned, ValSize::Size8, imm as u64),
+        Operand::ImmediateI16(imm) => Value::Imm(ImmType::Signed, ValSize::Size16, imm as u64),
+        Operand::ImmediateU16(imm) => Value::Imm(ImmType::Unsigned, ValSize::Size16, imm as u64),
+        Operand::ImmediateU32(imm) => Value::Imm(ImmType::Unsigned, ValSize::Size32, imm as u64),
+        Operand::ImmediateI32(imm) => Value::Imm(ImmType::Signed, ValSize::Size32, imm as u64),
+        Operand::ImmediateU64(imm) => Value::Imm(ImmType::Unsigned, ValSize::Size64, imm as u64),
+        Operand::ImmediateI64(imm) => Value::Imm(ImmType::Signed, ValSize::Size64, imm as u64),
+        Operand::Register(reg) => convert_reg(reg),
+        Operand::DisplacementU32(imm) => Value::Mem(MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size32, imm as u64))), //mem[c]
+        Operand::DisplacementU64(imm) => Value::Mem(MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size64, imm))), //mem[c]
+        Operand::RegDeref(reg) => Value::Mem(MemArgs::Mem1Arg(convert_memarg_reg(reg) )), // mem[reg]
+        Operand::RegDisp(reg, imm) => Value::Mem(MemArgs::Mem2Args(convert_memarg_reg(reg), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as u64)) ), //mem[reg + c]
+        Operand::RegIndexBase(reg1, reg2) => Value::Mem(MemArgs::Mem2Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2)) ), // mem[reg1 + reg2]
+        Operand::RegIndexBaseDisp(reg1, reg2, imm) => Value::Mem(MemArgs::Mem3Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as u64)) ), //mem[reg1 + reg2 + c]
+        Operand::RegScale(_,_) => panic!("Memory operations with scaling prohibited"), // mem[reg * c]
+        Operand::RegScaleDisp(_,_,_) => panic!("Memory operations with scaling prohibited"), //mem[reg*c1 + c2]
+        Operand::RegIndexBaseScale(_,_,_) => panic!("Memory operations with scaling prohibited"),//mem[reg1 + reg2*c]
+        Operand::RegIndexBaseScaleDisp(_,_,_,_) => panic!("Memory operations with scaling prohibited"),//mem[reg1 + reg2*c1 + c2]
+        Operand::Nothing => panic!("Nothing Operand?"),
+    }
+}
+
+
+
 
 fn clear_reg(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
     Stmt::Clear(instr.opcode, convert_operand(instr.operand(0)))
