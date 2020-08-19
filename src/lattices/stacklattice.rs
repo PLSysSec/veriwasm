@@ -78,13 +78,13 @@ impl<T:Lattice + Clone> PartialEq for StackLattice<T> {
 
 //assumes that stack offset is equal in both stack lattices
 impl<T:Lattice + Clone> Lattice for StackLattice<T> {
-    fn meet(&self, other : Self) -> Self {
+    fn meet(&self, other : &Self) -> Self {
         let mut newmap : HashMap <i64, StackSlot<T>> = HashMap::new();
         for (k,v1) in self.map.iter(){
              match other.map.get(k){
                 Some(v2) => 
                 if v1.size == v2.size {
-                    let newslot =  StackSlot {size : v1.size, value : v1.value.meet(v2.value.clone())};
+                    let newslot =  StackSlot {size : v1.size, value : v1.value.meet(&v2.value.clone())};
                     newmap.insert(*k, newslot); 
                 },
                 None => ()

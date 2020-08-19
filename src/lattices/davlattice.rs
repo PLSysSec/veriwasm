@@ -38,7 +38,7 @@ impl PartialEq for DAVLattice {
 }
 
 impl Lattice for DAVLattice {
-    fn meet(&self, other : Self) -> Self {
+    fn meet(&self, other : &Self) -> Self {
         match (self.v, other.v){
             (DAV::Unknown,_) => DAVLattice {v : DAV::Unknown},
             (_,DAV::Unknown) => DAVLattice {v : DAV::Unknown},
@@ -88,9 +88,9 @@ fn dav_lattice_test() {
     assert_eq!(x3 < x4, false);
     assert_eq!(x4 < x5, true);
 
-    assert_eq!(x1.meet(x2) == DAVLattice {v : DAV::Unknown}, true);
-    assert_eq!(x2.meet(x3) == DAVLattice {v : DAV::Unchecked(1)}, true);
-    assert_eq!(x3.meet(x4) == DAVLattice {v : DAV::Unknown}, true);
-    assert_eq!(x4.meet(x5) == DAVLattice {v : DAV::Unchecked(2)}, true);
+    assert_eq!(x1.meet(&x2) == DAVLattice {v : DAV::Unknown}, true);
+    assert_eq!(x2.meet(&x3) == DAVLattice {v : DAV::Unchecked(1)}, true);
+    assert_eq!(x3.meet(&x4) == DAVLattice {v : DAV::Unknown}, true);
+    assert_eq!(x4.meet(&x5) == DAVLattice {v : DAV::Unchecked(2)}, true);
 }
 

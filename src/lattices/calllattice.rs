@@ -45,10 +45,10 @@ fn call_lattice_test() {
     assert_eq!(x3 < x4, false);
     assert_eq!(x4 < x5, true);
 
-    assert_eq!(x1.meet(x2) == CallCheckValueLattice {v : None}, true);
-    assert_eq!(x2.meet(x3) == CallCheckValueLattice {v : None}, true);
-    assert_eq!(x3.meet(x4) == CallCheckValueLattice {v : Some(CallCheckValue::PtrOffset(DAV::Unknown))}, true);
-    assert_eq!(x4.meet(x5) ==CallCheckValueLattice {v : Some(CallCheckValue::PtrOffset(DAV::Unknown))}, true);
+    assert_eq!(x1.meet(&x2) == CallCheckValueLattice {v : None}, true);
+    assert_eq!(x2.meet(&x3) == CallCheckValueLattice {v : None}, true);
+    assert_eq!(x3.meet(&x4) == CallCheckValueLattice {v : Some(CallCheckValue::PtrOffset(DAV::Unknown))}, true);
+    assert_eq!(x4.meet(&x5) ==CallCheckValueLattice {v : Some(CallCheckValue::PtrOffset(DAV::Unknown))}, true);
 
 
 }

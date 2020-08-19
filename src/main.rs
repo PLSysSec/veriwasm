@@ -1,9 +1,12 @@
 pub mod lattices;
 pub mod utils;
 pub mod analyses;
-use utils::get_cfgs;
+pub mod metadata;
+pub mod lifter;
+use utils::{load_program, get_cfgs};
 use analyses::stack_analyzer::analyze_stack;
 use clap::{Arg, App};
+use lifter::lift_cfg;
 
 pub struct Config{
     module_path: String,
@@ -13,14 +16,30 @@ pub struct Config{
     quiet : bool
 }
 
+
+
 fn run(config : Config){
+    let program = load_program(&config.module_path);
     // let cfgs = get_cfgs(binpath);
     for cfg in get_cfgs(&config.module_path).iter(){
+        let irmap = lift_cfg(&program, cfg);
+        // let g = &cfg.graph;
+        // let blocks = &cfg.blocks;
+        // for node in g.nodes(){
+        //     let block = cfg.get_block(node);
+        //     let mut iter = program.instructions_spanning(<AMD64 as Arch>::Decoder::default(), block.start, block.end);
+        //     while let Some((address, instr)) = iter.next() {
+        //         lift(instr);
+        //         println!("{:?}\n", instr);
+        //     }
+            
+        // }
+
         //TODO: check instruction legality
         println!("Checking Instruction Legality");
         //TODO: check stack safety
         println!("Checking Stack Safety");
-        let stack_result = analyze_stack(cfg);
+        let stack_result = analyze_stack(cfg, irmap);
         //TODO: check heap safety
         println!("Checking Heap Safety");
         //TODO: check call safety
@@ -60,8 +79,9 @@ fn main() {
     let num_jobs  = num_jobs_opt.map(|s| s.parse::<u32>().unwrap_or(1)).unwrap_or(1);
     let quiet = matches.is_present("quiet");
 
-    let has_output = 
-    if output_path == "" {true} else {false};
+    let has_output = if output_path == "" {true} else {false};
+
+    let metadata_path = module_path.clone();
 
     let config = Config{
         module_path: module_path.to_string(), 
@@ -71,6 +91,7 @@ fn main() {
         quiet:quiet};
 
     run(config);
-
+    // println!("wow metadata_path = {:?}", metadata_path);
+    // load_metadata(metadata_path.to_string());
 }
 

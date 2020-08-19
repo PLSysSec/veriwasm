@@ -59,25 +59,25 @@ pub struct X86RegsLattice<T:Lattice + Clone>{
 // }
 
 impl<T:Lattice + Clone> Lattice for X86RegsLattice<T> {
-    fn meet(&self, other : Self) -> Self {
+    fn meet(&self, other : &Self) -> Self {
         X86RegsLattice {
-            rax : self.rax.meet(other.rax), 
-            rbx: self.rbx.meet(other.rbx), 
-            rcx : self.rcx.meet(other.rcx),
-            rdx : self.rdx.meet(other.rdx),
-            rdi : self.rdi.meet(other.rdi),
-            rsi : self.rsi.meet(other.rsi),
-            rsp : self.rsp.meet(other.rsp),
-            rbp : self.rbp.meet(other.rbp),
-            r8 : self.r8.meet(other.r8),
-            r9 : self.r9.meet(other.r9),
-            r10 : self.r10.meet(other.r10),
-            r11 : self.r11.meet(other.r11),
-            r12 : self.r12.meet(other.r12),
-            r13 : self.r13.meet(other.r13),
-            r14 : self.r14.meet(other.r14),
-            r15 : self.r15.meet(other.r15),
-            zf : self.zf.meet(other.zf)
+            rax : self.rax.meet(&other.rax), 
+            rbx: self.rbx.meet(&other.rbx), 
+            rcx : self.rcx.meet(&other.rcx),
+            rdx : self.rdx.meet(&other.rdx),
+            rdi : self.rdi.meet(&other.rdi),
+            rsi : self.rsi.meet(&other.rsi),
+            rsp : self.rsp.meet(&other.rsp),
+            rbp : self.rbp.meet(&other.rbp),
+            r8 : self.r8.meet(&other.r8),
+            r9 : self.r9.meet(&other.r9),
+            r10 : self.r10.meet(&other.r10),
+            r11 : self.r11.meet(&other.r11),
+            r12 : self.r12.meet(&other.r12),
+            r13 : self.r13.meet(&other.r13),
+            r14 : self.r14.meet(&other.r14),
+            r15 : self.r15.meet(&other.r15),
+            zf : self.zf.meet(&other.zf)
         }
     }
 } 

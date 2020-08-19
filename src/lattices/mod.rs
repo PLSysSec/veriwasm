@@ -11,7 +11,7 @@ use crate::lattices::regslattice::X86RegsLattice;
 use crate::lattices::stacklattice::StackLattice;
 
 pub trait Lattice: PartialOrd + Eq + Default {
-    fn meet(&self, other : Self) -> Self;
+    fn meet(&self, other : &Self) -> Self;
 }
 
 #[derive(Eq, Clone, Copy)]
@@ -32,7 +32,7 @@ impl PartialEq for BooleanLattice {
 }
 
 impl Lattice for BooleanLattice {
-    fn meet(&self, other : Self) -> Self {
+    fn meet(&self, other : &Self) -> Self {
         BooleanLattice {v : self.v && other.v}
     }
 } 
@@ -43,11 +43,11 @@ impl Default for BooleanLattice {
     }
 }
 
-type Constu32Lattice = ConstLattice::<u32>;
+pub type Constu32Lattice = ConstLattice::<u32>;
 
 #[derive(Eq, Clone, Copy)]
 pub struct ConstLattice<T:Eq + Copy>{
-    v: Option<T>
+    pub v: Option<T>
 }
 
 impl<T:Eq + Copy> PartialOrd for ConstLattice<T> {
@@ -70,7 +70,7 @@ impl<T:Eq + Copy> PartialEq for ConstLattice<T> {
 }
 
 impl<T:Eq + Copy> Lattice for ConstLattice<T> {
-    fn meet(&self, other : Self) -> Self {
+    fn meet(&self, other : &Self) -> Self {
         if self.v == other.v {ConstLattice {v : self.v}}
         else {ConstLattice { v : None}}
     }
@@ -92,10 +92,10 @@ pub struct VariableState<T:Lattice + Clone>{
 }
 
 impl<T:Lattice + Clone> Lattice for VariableState<T> {
-    fn meet(&self, other : Self) -> Self {
+    fn meet(&self, other : &Self) -> Self {
         VariableState { 
-            regs : self.regs.meet(other.regs), 
-            stack : self.stack.meet(other.stack)
+            regs : self.regs.meet(&other.regs), 
+            stack : self.stack.meet(&other.stack)
         }
     }
 } 

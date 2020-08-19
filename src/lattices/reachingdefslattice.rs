@@ -39,7 +39,7 @@ impl PartialEq for ReachingDefnLattice {
 }
 
 impl Lattice for ReachingDefnLattice {
-    fn meet(&self, other : Self) -> Self {
+    fn meet(&self, other : &Self) -> Self {
         let newdefs :  BTreeSet<ReachingDefn> =  self.defs.intersection(&other.defs).cloned().collect();
         ReachingDefnLattice {defs : newdefs}
     }

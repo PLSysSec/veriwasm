@@ -12,7 +12,7 @@ use yaxpeax_core::analyses::control_flow;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph; 
 
 
-fn load_program(binpath : &str) -> ModuleData{
+pub fn load_program(binpath : &str) -> ModuleData{
     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
     let program = if let FileRepr::Executable(program) = program {
         program
