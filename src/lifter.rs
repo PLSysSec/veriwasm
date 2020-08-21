@@ -123,10 +123,9 @@ fn convert_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> Value{
         RegisterBank::D => ValSize::Size32,
         RegisterBank::W => ValSize::Size16,
         RegisterBank::B => ValSize::Size8,
-        _ => panic!("Unknown register bank")
+        _ => panic!("Unknown register bank: {:?}", reg.bank)
     };
-    let num = reg.num;
-    Value::Reg(num, size)
+    Value::Reg(reg.num, size)
 }
 
 fn convert_memarg_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> MemArg{
@@ -135,10 +134,9 @@ fn convert_memarg_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> MemArg{
         RegisterBank::D => ValSize::Size32,
         RegisterBank::W => ValSize::Size16,
         RegisterBank::B => ValSize::Size8,
-        _ => panic!("Unknown register bank")
+        _ => panic!("Unknown register bank: {:?}", reg.bank)
     };
-    let num = reg.num;
-    MemArg::Reg(num, size)
+    MemArg::Reg(reg.num, size)
 }
 
 fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{
@@ -165,8 +163,6 @@ fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{
         Operand::Nothing => panic!("Nothing Operand?"),
     }
 }
-
-
 
 
 fn clear_reg(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{

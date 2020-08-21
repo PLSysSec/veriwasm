@@ -21,8 +21,7 @@ pub struct Config{
 fn run(config : Config){
     let program = load_program(&config.module_path);
     // let cfgs = get_cfgs(binpath);
-    for cfg in get_cfgs(&config.module_path).iter(){
-        let irmap = lift_cfg(&program, cfg);
+    for (func_name,cfg) in get_cfgs(&config.module_path).iter(){
         // let g = &cfg.graph;
         // let blocks = &cfg.blocks;
         // for node in g.nodes(){
@@ -36,10 +35,12 @@ fn run(config : Config){
         // }
 
         //TODO: check instruction legality
+        println!("Analyzing: {:?}", func_name);
         println!("Checking Instruction Legality");
+        let irmap = lift_cfg(&program, cfg);
         //TODO: check stack safety
         println!("Checking Stack Safety");
-        let stack_result = analyze_stack(cfg, irmap);
+        // let stack_result = analyze_stack(cfg, irmap);
         //TODO: check heap safety
         println!("Checking Heap Safety");
         //TODO: check call safety

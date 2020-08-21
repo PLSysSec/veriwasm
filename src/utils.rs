@@ -10,7 +10,10 @@ use yaxpeax_core::ContextWrite;
 use yaxpeax_core::arch::x86_64::x86_64Data;
 use yaxpeax_core::analyses::control_flow;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph; 
-
+use yaxpeax_core::arch::FunctionQuery;
+use yaxpeax_core::ContextRead;
+use yaxpeax_core::arch::AddressNamer;
+use yaxpeax_core::arch::SymbolQuery;
 
 pub fn load_program(binpath : &str) -> ModuleData{
     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
@@ -83,7 +86,7 @@ fn function_cfg_for_addr(program: &ModuleData,
 }
 
 
-pub fn get_cfgs(binpath : &str) -> Vec<ControlFlowGraph<u64>>{
+pub fn get_cfgs(binpath : &str) -> Vec<(String, ControlFlowGraph<u64>)>{
     let program = load_program(binpath);
 
     // grab some details from the binary and panic if it's not what we expected
@@ -101,11 +104,19 @@ pub fn get_cfgs(binpath : &str) -> Vec<ControlFlowGraph<u64>>{
 
     let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
 
-    let mut cfgs : Vec<ControlFlowGraph<u64>> = Vec::new(); 
+    let mut cfgs : Vec<(String, ControlFlowGraph<u64>)> = Vec::new(); 
     while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
-        // let function_cfg = function_cfg_for_addr(&program, &mut x86_64_data, addr);
-        cfgs.push(function_cfg_for_addr(&program, &mut x86_64_data, addr));
+        // let function_cfg = function_cfg_for_addr(&program, &mut x86_64_data,
+        // addr);
+        // let func_name =
+        // x86_64_data.contexts.function_at(addr).unwrap().name();
+        if let Some(symbol) = x86_64_data.symbol_for(addr)
+        {
+        // println!("Generating CFG for: {:?}", symbol.1);
+        cfgs.push((symbol.1.clone(), function_cfg_for_addr(&program, &mut x86_64_data, addr)));
+        }
     }
     cfgs
 
 }
+
