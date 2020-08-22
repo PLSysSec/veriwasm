@@ -123,6 +123,7 @@ fn convert_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> Value{
         RegisterBank::D => ValSize::Size32,
         RegisterBank::W => ValSize::Size16,
         RegisterBank::B => ValSize::Size8,
+        RegisterBank::rB => ValSize::Size8,
         _ => panic!("Unknown register bank: {:?}", reg.bank)
     };
     Value::Reg(reg.num, size)
@@ -191,7 +192,7 @@ fn call(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
 
 pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt>{
     let mut instrs = Vec::new();
-
+    // println!("{:?}", instr);
     match instr.opcode{
         PUSH => instrs.push(Stmt::Push(convert_operand(instr.operand(0)))), 
         POP => instrs.push(Stmt::Pop(convert_operand(instr.operand(0)))),
@@ -414,6 +415,7 @@ pub fn lift_cfg(program : &ModuleData, cfg : &ControlFlowGraph<u64>) -> IRMap{
         let block = cfg.get_block(block_addr);
         let mut iter = program.instructions_spanning(<AMD64 as Arch>::Decoder::default(), block.start, block.end);
         while let Some((addr, instr)) = iter.next() {
+            // println!("{:x?}", addr);
             let ir = (addr,lift(instr));
             block_ir.push(ir);
         }

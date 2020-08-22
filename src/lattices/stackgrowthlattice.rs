@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use crate::lattices::{Lattice, ConstLattice};
 
-pub type StackGrowthLattice = ConstLattice<u64>;
+pub type StackGrowthLattice = ConstLattice<i64>;
 
 
 #[test]

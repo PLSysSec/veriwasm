@@ -40,7 +40,7 @@ fn run(config : Config){
         let irmap = lift_cfg(&program, cfg);
         //TODO: check stack safety
         println!("Checking Stack Safety");
-        // let stack_result = analyze_stack(cfg, irmap);
+        let stack_result = analyze_stack(cfg, irmap);
         //TODO: check heap safety
         println!("Checking Heap Safety");
         //TODO: check call safety
