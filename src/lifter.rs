@@ -55,7 +55,7 @@ pub enum MemArg {
 }
 
 pub enum Value {
-    Mem(MemArgs),
+    Mem(ValSize, MemArgs),
     Reg(u8, ValSize),
     Imm(ImmType, ValSize, i64) //signed, size, const
 }
@@ -130,12 +130,13 @@ fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{
         Operand::ImmediateU64(imm) => Value::Imm(ImmType::Unsigned, ValSize::Size64, imm as i64),
         Operand::ImmediateI64(imm) => Value::Imm(ImmType::Signed, ValSize::Size64, imm as i64),
         Operand::Register(reg) => convert_reg(reg),
-        Operand::DisplacementU32(imm) => Value::Mem(MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size32, imm as i64))), //mem[c]
-        Operand::DisplacementU64(imm) => Value::Mem(MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size64, imm as i64))), //mem[c]
-        Operand::RegDeref(reg) => Value::Mem(MemArgs::Mem1Arg(convert_memarg_reg(reg) )), // mem[reg]
-        Operand::RegDisp(reg, imm) => Value::Mem(MemArgs::Mem2Args(convert_memarg_reg(reg), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) ), //mem[reg + c]
-        Operand::RegIndexBase(reg1, reg2) => Value::Mem(MemArgs::Mem2Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2)) ), // mem[reg1 + reg2]
-        Operand::RegIndexBaseDisp(reg1, reg2, imm) => Value::Mem(MemArgs::Mem3Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) ), //mem[reg1 + reg2 + c]
+        //u32 and u64 are address sizes
+        Operand::DisplacementU32(imm) => Value::Mem(ValSize::Size64, MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size32, imm as i64))), //mem[c]
+        Operand::DisplacementU64(imm) => Value::Mem(ValSize::Size64, MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size64, imm as i64))), //mem[c]
+        Operand::RegDeref(reg) => Value::Mem(valsize(reg.width() as u32), MemArgs::Mem1Arg(convert_memarg_reg(reg) )), // mem[reg]
+        Operand::RegDisp(reg, imm) => Value::Mem(valsize(reg.width() as u32), MemArgs::Mem2Args(convert_memarg_reg(reg), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) ), //mem[reg + c]
+        Operand::RegIndexBase(reg1, reg2) => Value::Mem(valsize(reg1.width() as u32), MemArgs::Mem2Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2)) ), // mem[reg1 + reg2]
+        Operand::RegIndexBaseDisp(reg1, reg2, imm) => Value::Mem(valsize(reg1.width() as u32), MemArgs::Mem3Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) ), //mem[reg1 + reg2 + c]
         Operand::RegScale(_,_) => panic!("Memory operations with scaling prohibited"), // mem[reg * c]
         Operand::RegScaleDisp(_,_,_) => panic!("Memory operations with scaling prohibited"), //mem[reg*c1 + c2]
         Operand::RegIndexBaseScale(_,_,_) => panic!("Memory operations with scaling prohibited"),//mem[reg1 + reg2*c]
@@ -168,7 +169,7 @@ fn call(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
 fn lea(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
     let dst = instr.operand(0);
     match convert_operand(instr.operand(1)){
-        Value::Mem(memargs) => 
+        Value::Mem(_, memargs) => 
             match memargs {
                 MemArgs::Mem1Arg(arg) => match arg{
                     MemArg::Imm(_,_,val) => unop(Unopcode::Mov, instr),
@@ -211,10 +212,10 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt>{
 
         Opcode::PUSH => { let width = 64; //TODO: do not fix width
             instrs.push(Stmt::Binop(Binopcode::Sub, Value::Reg(4, ValSize::Size64), Value::Reg(4, ValSize::Size64), mk_value_i64(width / 8)));
-            instrs.push(Stmt::Unop(Unopcode::Mov, Value::Mem(MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64))), convert_operand(instr.operand(0))))
+            instrs.push(Stmt::Unop(Unopcode::Mov, Value::Mem(valsize(width as u32), MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64))), convert_operand(instr.operand(0))))
         },
         Opcode::POP => { let width = 64; //TODO: do not fix width
-            instrs.push(Stmt::Unop(Unopcode::Mov, convert_operand(instr.operand(0)), Value::Mem(MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)))  ));
+            instrs.push(Stmt::Unop(Unopcode::Mov, convert_operand(instr.operand(0)), Value::Mem(valsize(width as u32), MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)))  ));
             instrs.push(Stmt::Binop(Binopcode::Add, Value::Reg(4, ValSize::Size64), Value::Reg(4, ValSize::Size64), mk_value_i64(width / 8)))
         },
 

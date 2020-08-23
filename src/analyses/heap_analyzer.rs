@@ -21,12 +21,11 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         result
     }
 
-    //TODO: complete aexec
-    // - handle stack offset tracking
+    // TODO - handle stack offset tracking
     fn aexec(&self, in_state : &mut HeapLattice, ir_instr : &Stmt) -> () {
         match ir_instr{
             Stmt::Clear(dst) => in_state.set_to_bot(dst),
-            Stmt::Unop(_, dst, _) => in_state.set_to_bot(dst),
+            Stmt::Unop(_, dst, src) => in_state.set(dst, self.aeval_unop(in_state, src)), //in_state.set_to_bot(dst),
             Stmt::Binop(_, dst, _, _) =>  in_state.set_to_bot(dst),
             Stmt::Call(_) => in_state.regs.clear_regs(),
             _ => ()
@@ -34,31 +33,22 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     }
 
     fn process_branch(&self, in_state : HeapLattice) -> Vec<HeapLattice>{
-        // let output : Vec<StackGrowthLattice> = {in_state.clone(), in_state.clone()}
-        let mut output = Vec::new();
-        output.push(in_state.clone());
-        output.push(in_state.clone());
-        output
+        vec![in_state.clone(), in_state.clone()]
     }
 }
 
-// Need to handle mem[rsp + x]
 // Need to handle load from globals table
-// TODO: fix get_rsp_offset -- 
 impl HeapAnalyzer{
-    pub fn aeval(&self, in_state : &HeapLattice, value : &Value) -> HeapValueLattice{
+    pub fn aeval_unop(&self, in_state : &HeapLattice, value : &Value) -> HeapValueLattice{
         match value{
-                Value::Mem(memargs) => 
+                Value::Mem(memsize, memargs) => 
                 match get_rsp_offset(memargs){ 
-                    Some(offset) => unimplemented!("Need memarg size"), //in_state.stack.get(offset),
+                    Some(offset) => in_state.stack.get(offset, memsize.to_u32()),
                     None => Default::default()
                 }
-                // match memargs{
-                //     MemArg::Mem1Arg(arg) => (),
-                //     MemArg::Mem2Args(arg1, arg2) => (),
-                //     _ => Default::default(),
-                // },
-                Value::Reg(regnum, size) => in_state.regs.get(regnum),
+                Value::Reg(regnum, size) => {if size.to_u32() <= 32 {
+                    HeapValueLattice{ v : Some(HeapValue::Bounded4GB)}} 
+                    else {in_state.regs.get(regnum)} },
                 Value::Imm(_,_,immval) => 
                     if (*immval as u64) == self.metadata.guest_table_0 {
                         HeapValueLattice{ v : Some(HeapValue::GuestTable0)}

@@ -14,12 +14,10 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
         StackGrowthLattice {v : Some(0)}
     }
 
-    //TODO: how to get size of pop / push
-    //TODO: binop => allow for PLUS and MINUS stack adjustments
     fn aexec(&self, in_state : &mut StackGrowthLattice, ir_instr : &Stmt) -> () {
         match ir_instr{
             Stmt::Clear(dst) => 
-            if let Value::Reg(regnum,_) = dst {
+            if let Value::Reg(regnum,size) = dst {
                 if *regnum == 4 {
                     *in_state = StackGrowthLattice {v : None};
                 }     
@@ -30,25 +28,28 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
                     *in_state = StackGrowthLattice {v : None};
                 }     
             },
-            Stmt::Binop(_, dst, _, _) =>  
-            if let Value::Reg(regnum,_) = dst {
+            Stmt::Binop(_, dst, src1, src2) =>  
+            if let Value::Reg(regnum,size) = dst {
                 if *regnum == 4 {
-                    *in_state = StackGrowthLattice {v : None};
+                    assert_eq!(size.to_u32(), 64);
+                    match(src1, src2){
+                        (Value::Reg(regnum2,size2),Value::Imm(_,_,v)) =>{ 
+                            if *regnum2 == 4{
+                                assert_eq!(size2.to_u32(), 64);
+                                *in_state = StackGrowthLattice {v : in_state.v.map(|x| x + v)}
+                            }
+                        }
+                        _ => panic!("Illegal RSP write")
+                    }
                 }     
             },
             Stmt::Call(_) => (),
-            // Stmt::Pop(_) => *in_state = StackGrowthLattice {v : in_state.v.map(|x| x + 8)}, 
-            // Stmt::Push(_) => *in_state = StackGrowthLattice {v : in_state.v.map(|x| x - 8)},
             _ => ()
         }
     }
 
     fn process_branch(&self, in_state : StackGrowthLattice) -> Vec<StackGrowthLattice>{
-        // let output : Vec<StackGrowthLattice> = {in_state.clone(), in_state.clone()}
-        let mut output = Vec::new();
-        output.push(in_state.clone());
-        output.push(in_state.clone());
-        output
+        vec![in_state.clone(), in_state.clone()]
     }
 }
 

@@ -113,7 +113,7 @@ impl<T:Lattice + Clone> VariableState<T>{
 
     pub fn set(&mut self, index : &Value, value : T) -> (){
         match index{
-            Value::Mem(memargs) => match memargs{
+            Value::Mem(_, memargs) => match memargs{
                 MemArgs::Mem1Arg(arg) => 
                     if let MemArg::Reg(regnum, size) = arg{
                         if *regnum == 4{
