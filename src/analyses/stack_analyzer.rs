@@ -17,7 +17,7 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
     fn aexec(&self, in_state : &mut StackGrowthLattice, ir_instr : &Stmt) -> () {
         match ir_instr{
             Stmt::Clear(dst) => 
-            if let Value::Reg(regnum,size) = dst {
+            if let Value::Reg(regnum,_) = dst {
                 if *regnum == 4 {
                     *in_state = StackGrowthLattice {v : None};
                 }     
@@ -46,10 +46,6 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
             Stmt::Call(_) => (),
             _ => ()
         }
-    }
-
-    fn process_branch(&self, in_state : StackGrowthLattice) -> Vec<StackGrowthLattice>{
-        vec![in_state.clone(), in_state.clone()]
     }
 }
 

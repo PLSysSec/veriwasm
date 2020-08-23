@@ -13,8 +13,16 @@ use crate::lifter::{IRMap, IRBlock, Stmt};
 pub trait AbstractAnalyzer<State:Lattice + Clone> {
     fn init_state(&self) -> State; 
     fn aexec(&self, in_state : &mut State, instr : &Stmt) -> ();
-    fn process_branch(&self, in_state : State) -> Vec<State>;
+    fn process_branch(&self, in_state : State) -> Vec<State>{
+        vec![in_state.clone(), in_state.clone()]
+    }
 }
+
+// impl AbstractAnalyzer<State:Lattice + Clone>{
+//     fn process_branch(&self, in_state : State) -> Vec<State>{
+//         vec![in_state.clone(), in_state.clone()]
+//     }
+// }
 
 //TODO: implement analyze_block
 fn analyze_block<T:AbstractAnalyzer<State>, State:Lattice + Clone> (analyzer : &T, state : &State, irblock : &IRBlock) -> State {

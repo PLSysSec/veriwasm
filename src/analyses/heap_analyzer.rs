@@ -31,10 +31,6 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
             _ => ()
         }
     }
-
-    fn process_branch(&self, in_state : HeapLattice) -> Vec<HeapLattice>{
-        vec![in_state.clone(), in_state.clone()]
-    }
 }
 
 // Need to handle load from globals table
