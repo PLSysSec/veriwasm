@@ -9,6 +9,7 @@ pub mod stacklattice;
 pub mod reachingdefslattice;
 use crate::lattices::regslattice::X86RegsLattice;
 use crate::lattices::stacklattice::StackLattice;
+use crate::lifter::{Value, MemArgs, MemArg, ImmType};
 
 pub trait Lattice: PartialOrd + Eq + Default {
     fn meet(&self, other : &Self) -> Self;
@@ -87,8 +88,8 @@ impl<T:Eq + Copy> Default for ConstLattice<T> {
 
 #[derive(PartialEq, Eq, PartialOrd, Default, Clone)]
 pub struct VariableState<T:Lattice + Clone>{
-    regs: X86RegsLattice<T>,
-    stack: StackLattice<T>,
+    pub regs: X86RegsLattice<T>,
+    pub stack: StackLattice<T>,
 }
 
 impl<T:Lattice + Clone> Lattice for VariableState<T> {
@@ -99,6 +100,49 @@ impl<T:Lattice + Clone> Lattice for VariableState<T> {
         }
     }
 } 
+
+
+impl<T:Lattice + Clone> VariableState<T>{
+//     pub fn get(&self, index : &Value) -> T{
+//         match index{
+//             Mem(_) => (),
+//             Reg(_,_) => (),
+//             Imm(_,_,_) => panic!(""),
+//         }
+//     }
+
+    pub fn set(&mut self, index : &Value, value : T) -> (){
+        match index{
+            Value::Mem(memargs) => match memargs{
+                MemArgs::Mem1Arg(arg) => 
+                    if let MemArg::Reg(regnum, size) = arg{
+                        if *regnum == 4{
+                            self.stack.update(0, value, size.to_u32())
+                        }
+                    },
+                MemArgs::Mem2Args(arg1, arg2) => 
+                    if let MemArg::Reg(regnum, size) = arg1{
+                        if *regnum == 4{
+                            if let MemArg::Imm(imm_sign,_,offset) = arg2{
+                                if let ImmType::Signed = imm_sign{
+                                    assert_eq!(false,true);
+                                }
+                                self.stack.update(*offset, value, size.to_u32())
+                            }
+                        }
+                    },
+                MemArgs::Mem3Args(_, _, _) => ()
+            },
+            Value::Reg(regnum,_) => self.regs.set(regnum, value),
+            Value::Imm(_,_,_) => panic!("Trying to write to an immediate value"),
+        }
+    }
+
+    pub fn set_to_bot(&mut self, index : &Value){
+        self.set(index, Default::default())
+    }
+}
+
 
 
 

@@ -14,7 +14,7 @@ enum CallCheckValue {
     CheckFlag(u32)
 }
 
-type CallCheckValueLattice = ConstLattice<CallCheckValue>;
+pub type CallCheckValueLattice = ConstLattice<CallCheckValue>;
 
 
 #[test]

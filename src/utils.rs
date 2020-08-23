@@ -10,10 +10,8 @@ use yaxpeax_core::ContextWrite;
 use yaxpeax_core::arch::x86_64::x86_64Data;
 use yaxpeax_core::analyses::control_flow;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph; 
-use yaxpeax_core::arch::FunctionQuery;
-use yaxpeax_core::ContextRead;
-use yaxpeax_core::arch::AddressNamer;
 use yaxpeax_core::arch::SymbolQuery;
+use crate::lifter::{MemArg, MemArgs};
 
 pub fn load_program(binpath : &str) -> ModuleData{
     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
@@ -120,3 +118,75 @@ pub fn get_cfgs(binpath : &str) -> Vec<(String, ControlFlowGraph<u64>)>{
 
 }
 
+fn get_symbol_addr(symbols : &Vec<ELFSymbol>, name : &str)-> std::option::Option<u64> {
+    let mut x = None;
+    for symbol in symbols.iter(){
+        if symbol.name == name{
+            x = Some(symbol.addr);
+        }
+    }
+    x
+}
+
+pub struct LucetMetadata {
+    pub guest_table_0: u64,
+    pub lucet_tables: u64
+}
+
+
+pub fn load_metadata(binpath : &str) -> LucetMetadata{
+    let program = load_program(binpath);
+
+    // grab some details from the binary and panic if it's not what we expected
+    let (_, sections, entrypoint, imports, exports, symbols) = match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
+        Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
+            (isa, sections, entry, imports, exports, symbols)
+        }
+        Some(other) => {
+            panic!("{:?} isn't an elf, but is a {:?}?", binpath,other);
+        }
+        None => {
+            panic!("{:?} doesn't appear to be a binary yaxpeax understands.", binpath);
+        }
+    };
+
+    // let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
+    let guest_table_0 = get_symbol_addr(symbols, "guest_table_0").unwrap();
+    let lucet_tables = get_symbol_addr(symbols, "lucet_tables").unwrap();
+    println!("guest_table_0 = {:x} lucet_tables = {:x}", guest_table_0, lucet_tables);
+    LucetMetadata {guest_table_0 : guest_table_0, lucet_tables : lucet_tables}
+    // for symbol in symbols.iter(){
+    //     if symbol.name == "guest_table_0"{
+    //         println!("{:?} @ {:x} in section {:?}", symbol.name, symbol.addr, symbol.section_index);
+    //     }
+    //     if symbol.name == "lucet_tables"{
+    //         println!("{:?} @ {:x} in section {:?}", symbol.name, symbol.addr, symbol.section_index);
+    //     }
+
+    //     // println!("{:?}",  sections[symbol.section_index].start);
+        
+    // }
+    // println!("{:?}", symbols)
+}
+
+
+pub fn get_rsp_offset(memargs : &MemArgs) -> Option<i64>{
+    match memargs{
+        MemArgs::Mem1Arg(arg) => 
+            if let MemArg::Reg(regnum,_) = arg{ 
+                if *regnum == 4 {Some(0)} 
+                else{None}
+            }
+            else {None},
+        MemArgs::Mem2Args(arg1, arg2) => 
+        if let MemArg::Reg(regnum, size) = arg1{
+            if *regnum == 4{
+                if let MemArg::Imm(imm_sign,_,offset) = arg2{Some(*offset)}
+                else {None}
+            }
+            else {None}
+        }
+        else {None},
+        _ => None
+    }
+}

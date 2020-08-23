@@ -17,7 +17,7 @@ pub struct StackLattice<T:Lattice + Clone>{
 }
 
 impl<T:Lattice + Clone> StackLattice<T>{
-    fn update(&mut self, offset:i64, value:T, size:u32) -> (){
+    pub fn update(&mut self, offset:i64, value:T, size:u32) -> (){
         //Check if 4 aligned
         if (offset & 3) != 0 {
             panic!("Unsafe: Attempt to store value on the stack on not 4-byte aligned address.");
@@ -38,7 +38,7 @@ impl<T:Lattice + Clone> StackLattice<T>{
 
     }
 
-    fn get(&self, offset:i64, size:u32) -> T {
+    pub fn get(&self, offset:i64, size:u32) -> T {
         match self.map.get( &(self.offset + offset) ){
             Some(stack_slot) => 
                 if stack_slot.size == size { stack_slot.value.clone() }
@@ -47,7 +47,7 @@ impl<T:Lattice + Clone> StackLattice<T>{
         }
     }
 
-    fn update_stack_offset(&mut self, adjustment:i64) -> () {
+    pub fn update_stack_offset(&mut self, adjustment:i64) -> () {
         if (adjustment & 3) != 0 {
             panic!("Unsafe: Attempt to make stack not 4-byte aligned.");
         }

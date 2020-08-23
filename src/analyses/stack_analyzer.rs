@@ -7,8 +7,7 @@ pub fn analyze_stack(cfg : &ControlFlowGraph<u64>, irmap : IRMap){
     run_worklist(cfg, irmap, StackAnalyzer{});    
 }
 
-pub struct StackAnalyzer{
-}
+pub struct StackAnalyzer{}
 
 impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
     fn init_state(&self) -> StackGrowthLattice {
@@ -19,7 +18,7 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
     //TODO: binop => allow for PLUS and MINUS stack adjustments
     fn aexec(&self, in_state : &mut StackGrowthLattice, ir_instr : &Stmt) -> () {
         match ir_instr{
-            Stmt::Clear(_, dst) => 
+            Stmt::Clear(dst) => 
             if let Value::Reg(regnum,_) = dst {
                 if *regnum == 4 {
                     *in_state = StackGrowthLattice {v : None};
@@ -38,8 +37,8 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
                 }     
             },
             Stmt::Call(_) => (),
-            Stmt::Pop(_) => *in_state = StackGrowthLattice {v : in_state.v.map(|x| x + 8)}, 
-            Stmt::Push(_) => *in_state = StackGrowthLattice {v : in_state.v.map(|x| x - 8)},
+            // Stmt::Pop(_) => *in_state = StackGrowthLattice {v : in_state.v.map(|x| x + 8)}, 
+            // Stmt::Push(_) => *in_state = StackGrowthLattice {v : in_state.v.map(|x| x - 8)},
             _ => ()
         }
     }

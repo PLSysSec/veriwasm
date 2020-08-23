@@ -3,7 +3,7 @@ pub mod utils;
 pub mod analyses;
 pub mod metadata;
 pub mod lifter;
-use utils::{load_program, get_cfgs};
+use utils::{load_program, get_cfgs, load_metadata};
 use analyses::stack_analyzer::analyze_stack;
 use clap::{Arg, App};
 use lifter::lift_cfg;
@@ -21,6 +21,8 @@ pub struct Config{
 fn run(config : Config){
     let program = load_program(&config.module_path);
     // let cfgs = get_cfgs(binpath);
+    println!("Loading Metadata");
+    let metadata = load_metadata(&config.module_path);
     for (func_name,cfg) in get_cfgs(&config.module_path).iter(){
         // let g = &cfg.graph;
         // let blocks = &cfg.blocks;

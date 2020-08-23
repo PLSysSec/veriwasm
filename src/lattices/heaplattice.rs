@@ -1,17 +1,18 @@
-use crate::lattices::{ConstLattice, Lattice};
+use crate::lattices::{ConstLattice, VariableState};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum HeapValue {
+pub enum HeapValue {
     HeapBase,
     Bounded4GB,
-    FnTableMd,
-    FnPtrTable,
+    LucetTables,
+    GuestTable0,
     GlobalsBase
 }
 
 
-type HeapValueLattice = ConstLattice<HeapValue>;
+pub type HeapValueLattice = ConstLattice<HeapValue>;
 
+pub type HeapLattice =  VariableState<HeapValueLattice>;
 
 #[test]
 fn heap_lattice_test() {

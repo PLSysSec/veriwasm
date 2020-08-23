@@ -1,28 +1,118 @@
-// pub mod lattices 
-use std::cmp::Ordering;
 use crate::lattices::{Lattice, BooleanLattice};
 
 //TODO: fix constructor so we only need to pass some arguments?
 #[derive(Default, PartialEq, Eq, Clone, PartialOrd)]
 pub struct X86RegsLattice<T:Lattice + Clone>{
-    rax : T,
-    rbx : T,
-    rcx : T,
-    rdx : T,
-    rdi  : T,
-    rsi  : T,
-    rsp  : T,
-    rbp  : T,
-    r8  : T,
-    r9  : T,
-    r10  : T,
-    r11  : T,
-    r12  : T,
-    r13  : T,
-    r14  : T,
-    r15  : T,
-    zf : T
+    pub rax : T,
+    pub rbx : T,
+    pub rcx : T,
+    pub rdx : T,
+    pub rdi  : T,
+    pub rsi  : T,
+    pub rsp  : T,
+    pub rbp  : T,
+    pub r8  : T,
+    pub r9  : T,
+    pub r10  : T,
+    pub r11  : T,
+    pub r12  : T,
+    pub r13  : T,
+    pub r14  : T,
+    pub r15  : T,
+    pub zf : T,
 }
+
+impl<T:Lattice + Clone> X86RegsLattice<T>{
+    pub fn get(&self, index : &u8) -> T{
+        match index {
+            0 => self.rax.clone(),
+            1 => self.rcx.clone(),
+            2 => self.rdx.clone(),
+            3 => self.rbx.clone(),
+            4 => self.rsp.clone(),
+            5 => self.rbp.clone(),
+            6 => self.rsi.clone(),
+            7 => self.rdi.clone(),
+            8 => self.r8.clone(),
+            9 => self.r9.clone(),
+            10 => self.r10.clone(),
+            11 => self.r11.clone(),
+            12 => self.r12.clone(),
+            13 => self.r13.clone(),
+            14 => self.r14.clone(),
+            15 => self.r15.clone(),
+            _ => panic!("Unknown register: index = {:?}", index)
+        }
+    }
+
+    pub fn set(&mut self, index : &u8, value : T) -> (){
+        match index {
+            0 => self.rax = value,
+            1 => self.rcx = value,
+            2 => self.rdx = value,
+            3 => self.rbx = value,
+            4 => self.rsp = value,
+            5 => self.rbp = value,
+            6 => self.rsi = value,
+            7 => self.rdi = value,
+            8 => self.r8 = value,
+            9 => self.r9 = value,
+            10 => self.r10 = value,
+            11 => self.r11 = value,
+            12 => self.r12 = value,
+            13 => self.r13 = value,
+            14 => self.r14 = value,
+            15 => self.r15 = value,
+            _ => panic!("Unknown register: index = {:?}", index)
+        }
+    }
+
+    pub fn clear_regs(&mut self) -> (){
+        self.rax = Default::default();
+        self.rcx = Default::default();
+        self.rdx = Default::default();
+        self.rbx = Default::default();
+        self.rbp = Default::default();
+        self.rsi = Default::default();
+        self.rdi = Default::default();
+
+        self.r8 = Default::default();
+        self.r9 = Default::default();
+        self.r10 = Default::default();
+        self.r11 = Default::default();
+        self.r12 = Default::default();
+        self.r13 = Default::default();
+        self.r14 = Default::default();
+        self.r15 = Default::default();
+    }
+}
+
+
+// impl Index<u32> for X86RegsLattice<T:Lattice + Clone> {
+//     type Output = T;
+
+//     fn index(&self, index: u32) -> &Self::Output {
+//         match index {
+//             0 => &self.rax,
+//             1 => &self.rcx,
+//             2 => &self.rdx,
+//             3 => &self.rbx,
+//             4 => &self.rsp,
+//             5 => &self.rbp,
+//             6 => &self.rsi,
+//             7 => &self.rdi,
+//             8 => &self.r8,
+//             9 => &self.r9,
+//             10 => &self.r10,
+//             11 => &self.r11,
+//             12 => &self.r12,
+//             13 => &self.r13,
+//             14 => &self.r14,
+//             15 => &self.r15,
+//             _ => panic!("Unknown register: index = {:?}", index)
+//         }
+//     }
+// }
 
 //TODO: fix by implementing iterator on regslattice and using zip + all
 // impl<T:Lattice + Clone> PartialOrd for X86RegsLattice<T> {

@@ -1,4 +1,5 @@
 // use lucet_module::Module;
+use crate::utils::load_program;
 use lucet_runtime::{self, DlModule, Limits, MmapRegion, PublicKey, Region, RunResult};
 use lucet_module::{self,
     FunctionSpec, ModuleData, SerializedModule, TableElement, TrapManifest, TrapSite,
@@ -10,6 +11,7 @@ use lucet_module::{
     FunctionHandle, FunctionIndex, FunctionPointer, Global, GlobalSpec, GlobalValue,
     HeapSpec, Signature, TrapCode,  ValueType, Module
 };
+
 // use lucet_module::{
 //     FunctionSpec, Module, ModuleData, SerializedModule, TableElement, TrapManifest, TrapSite,
 //     VersionInfo,
@@ -128,32 +130,34 @@ impl<'a> ArtifactSummary<'a> {
     }
 }
 
-//TODO: finish loading metadata
-pub fn load_metadata(path : String){
-    //TODO: is there a better way to load that doesnt require loading the full module?
-    // let module = DlModule::load(path).unwrap();
 
-    // // let module = DlModule::load(path).expect("module can be loaded");
-    // let min_globals_size = module.initial_globals_size();
-    // let globals_size = ((min_globals_size + 4096 - 1) / 4096) * 4096;
-    // println!("{0}", globals_size);
 
-    // let functions = module.function_manifest();
-    // for function in functions.iter(){
-    //     println!("{:?}", function.ptr());
-    // }
-    println!("Loading metadata");
-    let mut fd = File::open(path).expect("open");
-    let mut buffer = Vec::new();
-    fd.read_to_end(&mut buffer).expect("read");
-    let object = object::File::parse(&buffer).expect("parse");
-    println!("Summarizing Metadata");
-    let mut summary = ArtifactSummary::new(&buffer, &object);
-    println!("Gathering Summary");
-    summary.gather();
-    println!("Printing Summary");
-    print_summary(summary);
-}
+// //TODO: finish loading metadata
+// pub fn load_metadata(path : String){
+//     //TODO: is there a better way to load that doesnt require loading the full module?
+//     // let module = DlModule::load(path).unwrap();
+
+//     // // let module = DlModule::load(path).expect("module can be loaded");
+//     // let min_globals_size = module.initial_globals_size();
+//     // let globals_size = ((min_globals_size + 4096 - 1) / 4096) * 4096;
+//     // println!("{0}", globals_size);
+
+//     // let functions = module.function_manifest();
+//     // for function in functions.iter(){
+//     //     println!("{:?}", function.ptr());
+//     // }
+//     println!("Loading metadata");
+//     let mut fd = File::open(path).expect("open");
+//     let mut buffer = Vec::new();
+//     fd.read_to_end(&mut buffer).expect("read");
+//     let object = object::File::parse(&buffer).expect("parse");
+//     println!("Summarizing Metadata");
+//     let mut summary = ArtifactSummary::new(&buffer, &object);
+//     println!("Gathering Summary");
+//     summary.gather();
+//     println!("Printing Summary");
+//     print_summary(summary);
+// }
 
 
 
