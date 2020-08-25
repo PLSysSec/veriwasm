@@ -53,7 +53,7 @@ impl Default for ReachingDefnLattice {
 }
 
 pub fn singleton(addr : u64) -> ReachingDefnLattice{
-    let bset = BTreeSet::new();
+    let mut bset = BTreeSet::new();
     bset.insert( ReachingDefn{addr: addr});
     ReachingDefnLattice{defs: bset}
 }

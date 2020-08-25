@@ -1,14 +1,17 @@
-use crate::lattices::{ConstLattice, Lattice};
+use crate::lattices::VariableState;
+use crate::lattices::{ConstLattice};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum SwitchValue {
+pub enum SwitchValue {
     SwitchBase(u32),
     UpperBound(u32),
     JmpOffset(u32),
     JmpTarget(u32),
 }
 
-type SwitchValueLattice = ConstLattice<SwitchValue>;
+pub type SwitchValueLattice = ConstLattice<SwitchValue>;
+
+pub type SwitchLattice =  VariableState<SwitchValueLattice>;
 
 #[test]
 fn switch_lattice_test() {

@@ -10,6 +10,8 @@ use std::collections::HashMap;
 use crate::lifter::{IRMap, IRBlock, Stmt};
 
 
+type AnalysisResult<T>  = HashMap<u64, T>;
+
 //TODO: finish analyzer
 pub trait AbstractAnalyzer<State:Lattice + Clone> {
     fn init_state(&self) -> State; 
@@ -17,6 +19,14 @@ pub trait AbstractAnalyzer<State:Lattice + Clone> {
     fn process_branch(&self, in_state : State) -> Vec<State>{
         vec![in_state.clone(), in_state.clone()]
     }
+    /*
+    pub fn aeval_clear(&self, in_state : &State, value : &Value) -> AbstractVal{
+
+    }
+    pub fn aeval_unop( &self, in_state : &State, value : &Value) -> AbstractVal;
+    pub fn aeval_binop(&self, in_state : &State, value : &Value) -> AbstractVal;
+    pub fn aeval_call( &self, in_state : &State, value : &Value) -> AbstractVal;
+    */
 }
 
 //TODO: implement analyze_block
