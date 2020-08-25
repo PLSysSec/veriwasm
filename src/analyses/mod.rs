@@ -2,6 +2,7 @@ pub mod stack_analyzer;
 pub mod heap_analyzer;
 pub mod call_analyzer;
 pub mod jump_analyzer;
+pub mod reaching_defs;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::{Lattice};
 use std::collections::VecDeque;
@@ -12,24 +13,19 @@ use crate::lifter::{IRMap, IRBlock, Stmt};
 //TODO: finish analyzer
 pub trait AbstractAnalyzer<State:Lattice + Clone> {
     fn init_state(&self) -> State; 
-    fn aexec(&self, in_state : &mut State, instr : &Stmt) -> ();
+    fn aexec(&self, in_state : &mut State, instr : &Stmt, addr : &u64) -> ();
     fn process_branch(&self, in_state : State) -> Vec<State>{
         vec![in_state.clone(), in_state.clone()]
     }
 }
 
-// impl AbstractAnalyzer<State:Lattice + Clone>{
-//     fn process_branch(&self, in_state : State) -> Vec<State>{
-//         vec![in_state.clone(), in_state.clone()]
-//     }
-// }
-
 //TODO: implement analyze_block
+//TODO: swap out addr for a unique index
 fn analyze_block<T:AbstractAnalyzer<State>, State:Lattice + Clone> (analyzer : &T, state : &State, irblock : &IRBlock) -> State {
     let mut new_state = state.clone();
-    for (_,instruction) in irblock.iter(){
+    for (addr,instruction) in irblock.iter(){
         for ir_insn in instruction.iter(){
-            analyzer.aexec(&mut new_state, ir_insn);
+            analyzer.aexec(&mut new_state, ir_insn, &addr);
         }
     }
     new_state

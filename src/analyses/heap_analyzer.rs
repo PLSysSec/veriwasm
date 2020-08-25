@@ -22,7 +22,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     }
 
     // TODO - handle stack offset tracking
-    fn aexec(&self, in_state : &mut HeapLattice, ir_instr : &Stmt) -> () {
+    fn aexec(&self, in_state : &mut HeapLattice, ir_instr : &Stmt, addr : &u64) -> () {
         match ir_instr{
             Stmt::Clear(dst) => in_state.set_to_bot(dst),
             Stmt::Unop(_, dst, src) => in_state.set(dst, self.aeval_unop(in_state, src)), //in_state.set_to_bot(dst),

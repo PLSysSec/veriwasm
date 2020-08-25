@@ -1,4 +1,4 @@
-use crate::lattices::{ConstLattice, Lattice};
+use crate::lattices::{ConstLattice, Lattice, VariableState};
 use std::collections::BTreeSet;
 use std::cmp::Ordering;
 
@@ -6,14 +6,15 @@ use std::cmp::Ordering;
 //TODO: unimplemented
 #[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub struct ReachingDefn{
-    assigned_to: u64,
-    offset: u64,
+    addr: u64,
 }
 
 #[derive(Eq, Clone)]
 pub struct ReachingDefnLattice{
     defs: BTreeSet<ReachingDefn>
 }
+
+pub type ReachLattice =  VariableState<ReachingDefnLattice>;
 
 impl PartialOrd for ReachingDefnLattice {
     fn partial_cmp(&self, other: &ReachingDefnLattice) -> Option<Ordering> {
@@ -51,12 +52,19 @@ impl Default for ReachingDefnLattice {
     }
 }
 
+pub fn singleton(addr : u64) -> ReachingDefnLattice{
+    let bset = BTreeSet::new();
+    bset.insert( ReachingDefn{addr: addr});
+    ReachingDefnLattice{defs: bset}
+}
+
+
 //TODO: test reaching defs lattice
 #[test]
 fn heap_reaching_defs_test() {
-    let d1 = ReachingDefn{assigned_to: 1, offset: 1};
-    let d2 = ReachingDefn{assigned_to: 2, offset: 2};
-    let d3 = ReachingDefn{assigned_to: 3, offset: 3};
+    let d1 = ReachingDefn{addr: 1};
+    let d2 = ReachingDefn{addr: 2};
+    let d3 = ReachingDefn{addr: 3};
 
 
     let bset = BTreeSet::new();

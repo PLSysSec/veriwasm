@@ -14,7 +14,7 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
         StackGrowthLattice {v : Some(0)}
     }
 
-    fn aexec(&self, in_state : &mut StackGrowthLattice, ir_instr : &Stmt) -> () {
+    fn aexec(&self, in_state : &mut StackGrowthLattice, ir_instr : &Stmt, addr : &u64) -> () {
         match ir_instr{
             Stmt::Clear(dst) => 
             if let Value::Reg(regnum,_) = dst {
