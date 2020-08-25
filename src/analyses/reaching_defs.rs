@@ -1,3 +1,4 @@
+use crate::lattices::reachingdefslattice::LocIdx;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::reachingdefslattice::{ReachLattice, singleton};
 use crate::analyses::{AbstractAnalyzer, run_worklist};
@@ -19,11 +20,11 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
     }
 
     // TODO - handle stack offset tracking
-    fn aexec(&self, in_state : &mut ReachLattice, ir_instr : &Stmt, addr : &u64) -> () {
+    fn aexec(&self, in_state : &mut ReachLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
         match ir_instr{
-            Stmt::Clear(dst) => in_state.set(dst, singleton(addr.clone())),
-            Stmt::Unop(_, dst, _) =>  in_state.set(dst, singleton(addr.clone())),
-            Stmt::Binop(_, dst, _, _) =>  in_state.set(dst, singleton(addr.clone())),
+            Stmt::Clear(dst) => in_state.set(dst, singleton(loc_idx.clone())),
+            Stmt::Unop(_, dst, _) =>  in_state.set(dst, singleton(loc_idx.clone())),
+            Stmt::Binop(_, dst, _, _) =>  in_state.set(dst, singleton(loc_idx.clone())),
             Stmt::Call(_) => in_state.regs.clear_regs(),
             _ => ()
         }

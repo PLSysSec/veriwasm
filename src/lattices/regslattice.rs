@@ -1,6 +1,5 @@
 use crate::lattices::{Lattice, BooleanLattice};
 
-//TODO: fix constructor so we only need to pass some arguments?
 #[derive(Default, PartialEq, Eq, Clone, PartialOrd)]
 pub struct X86RegsLattice<T:Lattice + Clone>{
     pub rax : T,

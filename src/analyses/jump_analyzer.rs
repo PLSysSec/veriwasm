@@ -1,3 +1,4 @@
+use crate::lattices::reachingdefslattice::LocIdx;
 use crate::analyses::AnalysisResult;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::switchlattice::{SwitchLattice};
@@ -24,7 +25,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
 
     // TODO - handle stack offset tracking
     // TODO: complete this aexec function
-    fn aexec(&self, in_state : &mut SwitchLattice, ir_instr : &Stmt, addr : &u64) -> () {
+    fn aexec(&self, in_state : &mut SwitchLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
         match ir_instr{
             Stmt::Clear(dst) => in_state.set_to_bot(dst),
             Stmt::Unop(_, dst, src) => in_state.set_to_bot(dst),

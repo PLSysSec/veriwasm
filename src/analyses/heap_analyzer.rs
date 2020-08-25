@@ -1,3 +1,4 @@
+use crate::lattices::reachingdefslattice::LocIdx;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::heaplattice::{HeapValueLattice, HeapLattice, HeapValue};
 use crate::analyses::{AbstractAnalyzer, run_worklist};
@@ -22,7 +23,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     }
 
     // TODO - handle stack offset tracking
-    fn aexec(&self, in_state : &mut HeapLattice, ir_instr : &Stmt, addr : &u64) -> () {
+    fn aexec(&self, in_state : &mut HeapLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
         match ir_instr{
             Stmt::Clear(dst) => in_state.set_to_bot(dst),
             Stmt::Unop(_, dst, src) => in_state.set(dst, self.aeval_unop(in_state, src)), //in_state.set_to_bot(dst),

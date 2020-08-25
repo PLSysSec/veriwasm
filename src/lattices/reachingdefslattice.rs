@@ -1,17 +1,16 @@
-use crate::lattices::{ConstLattice, Lattice, VariableState};
+use crate::lattices::{Lattice, VariableState};
 use std::collections::BTreeSet;
 use std::cmp::Ordering;
 
-
-//TODO: unimplemented
 #[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
-pub struct ReachingDefn{
-    addr: u64,
+pub struct LocIdx{
+    pub addr: u64,
+    pub idx : u32
 }
 
 #[derive(Eq, Clone)]
 pub struct ReachingDefnLattice{
-    defs: BTreeSet<ReachingDefn>
+    defs: BTreeSet<LocIdx>
 }
 
 pub type ReachLattice =  VariableState<ReachingDefnLattice>;
@@ -41,7 +40,7 @@ impl PartialEq for ReachingDefnLattice {
 
 impl Lattice for ReachingDefnLattice {
     fn meet(&self, other : &Self) -> Self {
-        let newdefs :  BTreeSet<ReachingDefn> =  self.defs.intersection(&other.defs).cloned().collect();
+        let newdefs :  BTreeSet<LocIdx> =  self.defs.intersection(&other.defs).cloned().collect();
         ReachingDefnLattice {defs : newdefs}
     }
 } 
@@ -52,9 +51,9 @@ impl Default for ReachingDefnLattice {
     }
 }
 
-pub fn singleton(addr : u64) -> ReachingDefnLattice{
+pub fn singleton(loc_idx : LocIdx) -> ReachingDefnLattice{
     let mut bset = BTreeSet::new();
-    bset.insert( ReachingDefn{addr: addr});
+    bset.insert(loc_idx);
     ReachingDefnLattice{defs: bset}
 }
 
@@ -62,9 +61,9 @@ pub fn singleton(addr : u64) -> ReachingDefnLattice{
 //TODO: test reaching defs lattice
 #[test]
 fn heap_reaching_defs_test() {
-    let d1 = ReachingDefn{addr: 1};
-    let d2 = ReachingDefn{addr: 2};
-    let d3 = ReachingDefn{addr: 3};
+    let d1 = LocIdx{addr: 1, idx : 1};
+    let d2 = LocIdx{addr: 2, idx : 2};
+    let d3 = LocIdx{addr: 3, idx : 3};
 
 
     let bset = BTreeSet::new();

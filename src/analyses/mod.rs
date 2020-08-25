@@ -3,6 +3,7 @@ pub mod heap_analyzer;
 pub mod call_analyzer;
 pub mod jump_analyzer;
 pub mod reaching_defs;
+use crate::lattices::reachingdefslattice::LocIdx;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::{Lattice};
 use std::collections::VecDeque;
@@ -15,7 +16,7 @@ type AnalysisResult<T>  = HashMap<u64, T>;
 //TODO: finish analyzer
 pub trait AbstractAnalyzer<State:Lattice + Clone> {
     fn init_state(&self) -> State; 
-    fn aexec(&self, in_state : &mut State, instr : &Stmt, addr : &u64) -> ();
+    fn aexec(&self, in_state : &mut State, instr : &Stmt, loc_idx : &LocIdx) -> ();
     fn process_branch(&self, in_state : State) -> Vec<State>{
         vec![in_state.clone(), in_state.clone()]
     }
@@ -29,13 +30,11 @@ pub trait AbstractAnalyzer<State:Lattice + Clone> {
     */
 }
 
-//TODO: implement analyze_block
-//TODO: swap out addr for a unique index
 fn analyze_block<T:AbstractAnalyzer<State>, State:Lattice + Clone> (analyzer : &T, state : &State, irblock : &IRBlock) -> State {
     let mut new_state = state.clone();
     for (addr,instruction) in irblock.iter(){
-        for ir_insn in instruction.iter(){
-            analyzer.aexec(&mut new_state, ir_insn, &addr);
+        for (idx,ir_insn) in instruction.iter().enumerate(){
+            analyzer.aexec(&mut new_state, ir_insn, &LocIdx {addr : *addr, idx : idx as u32});
         }
     }
     new_state

@@ -3,6 +3,7 @@ pub mod utils;
 pub mod analyses;
 pub mod metadata;
 pub mod lifter;
+pub mod ir_utils;
 use utils::{load_program, get_cfgs, load_metadata};
 use analyses::stack_analyzer::analyze_stack;
 use clap::{Arg, App};
@@ -36,11 +37,9 @@ fn run(config : Config){
             
         // }
 
-        //TODO: check instruction legality
         println!("Analyzing: {:?}", func_name);
         println!("Checking Instruction Legality");
         let irmap = lift_cfg(&program, cfg);
-        //TODO: check stack safety
         println!("Checking Stack Safety");
         let stack_result = analyze_stack(cfg, irmap);
         //TODO: check heap safety
