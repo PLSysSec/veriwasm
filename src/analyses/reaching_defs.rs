@@ -6,7 +6,7 @@ use crate::utils::{LucetMetadata};
 use std::default::Default;
 
 //Top level function
-pub fn analyze_reaching_defs(cfg : &ControlFlowGraph<u64>, irmap : IRMap, _metadata : LucetMetadata){
+pub fn analyze_reaching_defs(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, _metadata : LucetMetadata){
     run_worklist(cfg, irmap, ReachingDefnAnalyzer{});    
 }
 

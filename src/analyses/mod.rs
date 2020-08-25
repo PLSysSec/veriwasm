@@ -32,7 +32,7 @@ fn analyze_block<T:AbstractAnalyzer<State>, State:Lattice + Clone> (analyzer : &
 }
 
 //TODO: split between branches, and jumps, and many target jumps
-pub fn run_worklist<T:AbstractAnalyzer<State>, State:Lattice + Clone> (cfg : &ControlFlowGraph<u64>, irmap : IRMap, analyzer : T) -> HashMap<u64, State>{
+pub fn run_worklist<T:AbstractAnalyzer<State>, State:Lattice + Clone> (cfg : &ControlFlowGraph<u64>, irmap : &IRMap, analyzer : T) -> HashMap<u64, State>{
     let mut statemap : HashMap<u64, State> = HashMap::new();
     let mut worklist: VecDeque<u64> = VecDeque::new();
     worklist.push_back(cfg.entrypoint);

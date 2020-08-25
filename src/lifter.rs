@@ -210,11 +210,13 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt>{
 
         Opcode::CALL => instrs.push(call(instr)), 
 
-        Opcode::PUSH => { let width = 64; //TODO: do not fix width
+        Opcode::PUSH => { let width = instr.operand(0).width(); 
+            assert_eq!(width, 64);
             instrs.push(Stmt::Binop(Binopcode::Sub, Value::Reg(4, ValSize::Size64), Value::Reg(4, ValSize::Size64), mk_value_i64(width / 8)));
             instrs.push(Stmt::Unop(Unopcode::Mov, Value::Mem(valsize(width as u32), MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64))), convert_operand(instr.operand(0))))
         },
-        Opcode::POP => { let width = 64; //TODO: do not fix width
+        Opcode::POP => { let width = instr.operand(0).width(); 
+            assert_eq!(width, 64);
             instrs.push(Stmt::Unop(Unopcode::Mov, convert_operand(instr.operand(0)), Value::Mem(valsize(width as u32), MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)))  ));
             instrs.push(Stmt::Binop(Binopcode::Add, Value::Reg(4, ValSize::Size64), Value::Reg(4, ValSize::Size64), mk_value_i64(width / 8)))
         },

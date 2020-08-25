@@ -128,6 +128,7 @@ fn get_symbol_addr(symbols : &Vec<ELFSymbol>, name : &str)-> std::option::Option
     x
 }
 
+#[derive(Clone)]
 pub struct LucetMetadata {
     pub guest_table_0: u64,
     pub lucet_tables: u64

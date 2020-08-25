@@ -2,12 +2,12 @@ use crate::lattices::reachingdefslattice::LocIdx;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::heaplattice::{HeapValueLattice, HeapLattice, HeapValue};
 use crate::analyses::{AbstractAnalyzer, run_worklist};
-use crate::lifter::{IRMap, Stmt, Value};
+use crate::lifter::{IRMap, Stmt, Value, MemArgs, MemArg};
 use crate::utils::{LucetMetadata, get_rsp_offset};
 use std::default::Default;
 
 //Top level function
-pub fn analyze_heap(cfg : &ControlFlowGraph<u64>, irmap : IRMap, metadata : LucetMetadata){
+pub fn analyze_heap(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, metadata : LucetMetadata){
     run_worklist(cfg, irmap, HeapAnalyzer{metadata : metadata});    
 }
 
@@ -33,14 +33,34 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     }
 }
 
-// TODO: Need to handle load from globals table
+pub fn is_globalbase_access(in_state : &HeapLattice, memargs : &MemArgs) -> bool {
+    match memargs{
+        MemArgs::Mem2Args(arg1, arg2) => 
+            if let MemArg::Reg(regnum,size) = arg1{
+                assert_eq!(size.to_u32(), 64);
+                let base = in_state.regs.get(regnum);
+                if let Some(v) = base.v {
+                    if let HeapValue::HeapBase = v {
+                        return true
+                    }
+                    else{false}
+                }
+                else{false}
+            } else {false},
+        _ => false
+    }
+}
+
 impl HeapAnalyzer{
     pub fn aeval_unop(&self, in_state : &HeapLattice, value : &Value) -> HeapValueLattice{
         match value{
                 Value::Mem(memsize, memargs) => 
                 match get_rsp_offset(memargs){ 
                     Some(offset) => in_state.stack.get(offset, memsize.to_u32()),
-                    None => Default::default()
+                    None => if is_globalbase_access(in_state, memargs){
+                        HeapValueLattice{ v : Some(HeapValue::GlobalsBase)}
+                    }
+                    else {Default::default()}
                 }
                 Value::Reg(regnum, size) => {if size.to_u32() <= 32 {
                     HeapValueLattice{ v : Some(HeapValue::Bounded4GB)}} 

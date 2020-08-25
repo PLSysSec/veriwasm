@@ -4,6 +4,7 @@ pub mod analyses;
 pub mod metadata;
 pub mod lifter;
 pub mod ir_utils;
+use crate::analyses::heap_analyzer::analyze_heap;
 use utils::{load_program, get_cfgs, load_metadata};
 use analyses::stack_analyzer::analyze_stack;
 use clap::{Arg, App};
@@ -41,8 +42,9 @@ fn run(config : Config){
         println!("Checking Instruction Legality");
         let irmap = lift_cfg(&program, cfg);
         println!("Checking Stack Safety");
-        let stack_result = analyze_stack(cfg, irmap);
-        //TODO: check heap safety
+        let stack_result = analyze_stack(cfg, &irmap);
+        //check heap safety
+        let heap_result = analyze_heap(cfg, &irmap, metadata.clone());
         println!("Checking Heap Safety");
         //TODO: check call safety
         println!("Checking Call Safety");

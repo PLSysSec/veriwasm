@@ -8,7 +8,7 @@ use crate::utils::{LucetMetadata};
 use std::default::Default;
 
 //Top level function
-pub fn analyze_jumps(cfg : &ControlFlowGraph<u64>, irmap : IRMap, metadata : LucetMetadata, reaching_defs : AnalysisResult<ReachLattice>){
+pub fn analyze_jumps(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, metadata : LucetMetadata, reaching_defs : AnalysisResult<ReachLattice>){
     run_worklist(cfg, irmap, SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs});    
 }
 
@@ -26,7 +26,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
     fn aexec(&self, in_state : &mut SwitchLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
         match ir_instr{
             Stmt::Clear(dst) => in_state.set_to_bot(dst),
-            Stmt::Unop(_, dst, src) => in_state.set_to_bot(dst),
+            Stmt::Unop(_, dst, _) => in_state.set_to_bot(dst),
             Stmt::Binop(_, dst, src1, src2) =>  in_state.default_exec_binop(dst,src1,src2),
             Stmt::Call(_) => in_state.regs.clear_regs(),
             _ => ()
