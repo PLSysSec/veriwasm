@@ -13,21 +13,12 @@ use crate::lifter::{IRMap, IRBlock, Stmt};
 
 type AnalysisResult<T>  = HashMap<u64, T>;
 
-//TODO: finish analyzer
 pub trait AbstractAnalyzer<State:Lattice + Clone> {
     fn init_state(&self) -> State; 
     fn aexec(&self, in_state : &mut State, instr : &Stmt, loc_idx : &LocIdx) -> ();
     fn process_branch(&self, in_state : State) -> Vec<State>{
         vec![in_state.clone(), in_state.clone()]
     }
-    /*
-    pub fn aeval_clear(&self, in_state : &State, value : &Value) -> AbstractVal{
-
-    }
-    pub fn aeval_unop( &self, in_state : &State, value : &Value) -> AbstractVal;
-    pub fn aeval_binop(&self, in_state : &State, value : &Value) -> AbstractVal;
-    pub fn aeval_call( &self, in_state : &State, value : &Value) -> AbstractVal;
-    */
 }
 
 fn analyze_block<T:AbstractAnalyzer<State>, State:Lattice + Clone> (analyzer : &T, state : &State, irblock : &IRBlock) -> State {

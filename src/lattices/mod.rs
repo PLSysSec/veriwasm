@@ -1,3 +1,5 @@
+use crate::ir_utils::is_rsp;
+use crate::ir_utils::get_imm_offset;
 use std::cmp::Ordering;
 pub mod regslattice;
 pub mod heaplattice;
@@ -101,15 +103,20 @@ impl<T:Lattice + Clone> Lattice for VariableState<T> {
     }
 } 
 
-
+//TODO: complete transition to default aexec
 impl<T:Lattice + Clone> VariableState<T>{
-//     pub fn get(&self, index : &Value) -> T{
-//         match index{
-//             Mem(_) => (),
-//             Reg(_,_) => (),
-//             Imm(_,_,_) => panic!(""),
-//         }
-//     }
+
+    pub fn adjust_stack_offset(&mut self, dst: &Value, src1: &Value, src2: &Value){
+        if is_rsp(dst) {
+            if is_rsp(src1){ 
+                let adjustment = get_imm_offset(src2);
+                self.stack.update_stack_offset(adjustment)
+            }
+            else{ panic!("Illegal RSP write") }
+        }        
+    }
+
+    
 
     pub fn set(&mut self, index : &Value, value : T) -> (){
         match index{
@@ -140,6 +147,11 @@ impl<T:Lattice + Clone> VariableState<T>{
 
     pub fn set_to_bot(&mut self, index : &Value){
         self.set(index, Default::default())
+    }
+
+    pub fn default_exec_binop(&mut self, dst: &Value, src1: &Value, src2: &Value){
+        self.adjust_stack_offset(dst, src1, src2); 
+        self.set_to_bot(dst)
     }
 }
 

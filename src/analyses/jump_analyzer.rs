@@ -1,11 +1,10 @@
-use crate::lattices::reachingdefslattice::LocIdx;
 use crate::analyses::AnalysisResult;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::switchlattice::{SwitchLattice};
 use crate::analyses::{AbstractAnalyzer, run_worklist};
-use crate::lattices::reachingdefslattice::{ReachLattice};
+use crate::lattices::reachingdefslattice::{ReachLattice, LocIdx};
 use crate::lifter::{IRMap, Stmt};
-use crate::utils::{LucetMetadata, get_rsp_offset};
+use crate::utils::{LucetMetadata};
 use std::default::Default;
 
 //Top level function
@@ -23,13 +22,12 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         Default::default()
     }
 
-    // TODO - handle stack offset tracking
     // TODO: complete this aexec function
     fn aexec(&self, in_state : &mut SwitchLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
         match ir_instr{
             Stmt::Clear(dst) => in_state.set_to_bot(dst),
             Stmt::Unop(_, dst, src) => in_state.set_to_bot(dst),
-            Stmt::Binop(_, dst, _, _) =>  in_state.set_to_bot(dst),
+            Stmt::Binop(_, dst, src1, src2) =>  in_state.default_exec_binop(dst,src1,src2),
             Stmt::Call(_) => in_state.regs.clear_regs(),
             _ => ()
         }
