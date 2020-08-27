@@ -16,8 +16,9 @@ type AnalysisResult<T>  = HashMap<u64, T>;
 pub trait AbstractAnalyzer<State:Lattice + Clone> {
     fn init_state(&self) -> State; 
     fn aexec(&self, in_state : &mut State, instr : &Stmt, loc_idx : &LocIdx) -> ();
-    fn process_branch(&self, in_state : State) -> Vec<State>{
-        vec![in_state.clone(), in_state.clone()]
+    fn process_branch(&self, in_state : &State, succ_addrs : &Vec<u64>) -> Vec<(u64,State)>{
+        //vec![in_state.clone(), in_state.clone()]
+        succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
     }
 }
 
@@ -31,7 +32,6 @@ fn analyze_block<T:AbstractAnalyzer<State>, State:Lattice + Clone> (analyzer : &
     new_state
 }
 
-//TODO: split between branches, and jumps, and many target jumps
 pub fn run_worklist<T:AbstractAnalyzer<State>, State:Lattice + Clone> (cfg : &ControlFlowGraph<u64>, irmap : &IRMap, analyzer : T) -> HashMap<u64, State>{
     let mut statemap : HashMap<u64, State> = HashMap::new();
     let mut worklist: VecDeque<u64> = VecDeque::new();
@@ -42,20 +42,21 @@ pub fn run_worklist<T:AbstractAnalyzer<State>, State:Lattice + Clone> (cfg : &Co
         let irblock = irmap.get(&addr).unwrap();
         let state = statemap.get(&addr).unwrap(); 
         let new_state = analyze_block(&analyzer, state, irblock);
-        for succ_addr in cfg.graph.neighbors(addr){
-            let mut has_change = false;
+        let succ_addrs : Vec<u64> = cfg.graph.neighbors(addr).collect();
 
+        for (succ_addr,branch_state) in analyzer.process_branch(&new_state, &succ_addrs){
+            let mut has_change = false;
             if statemap.contains_key(&succ_addr){
                 let old_state = statemap.get(&succ_addr).unwrap();
-                let merged_state = old_state.meet(&new_state);   
+                let merged_state = old_state.meet(&branch_state);   
                 if merged_state > *old_state {
                     panic!("Meet monoticity error");
                 }
-                has_change = *old_state != new_state;
+                has_change = *old_state != branch_state;
                 statemap.insert(succ_addr, merged_state);
             }
             else{
-                statemap.insert(succ_addr, new_state.clone());
+                statemap.insert(succ_addr, branch_state.clone());
                 has_change = true;
             }
 

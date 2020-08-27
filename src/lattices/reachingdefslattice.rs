@@ -82,21 +82,4 @@ fn heap_reaching_defs_test() {
     assert_eq!(x1 >= x2, false);
     assert_eq!(x1 <= x2, false);
     assert_eq!(x1.meet(&x2) == Default::default(), true);
-
-    // let x2  = ReachingDefnLattice {v : Some([])};
-    // let x3  = ReachingDefnLattice {v : Some([d1.clone(), d2.clone()])};
-    // let x4  = ReachingDefnLattice {v : Some(d2.clone(), d3.clone())};
-
-    // assert_eq!(x1 == x2, false);
-    // assert_eq!(x2 == x3, false);
-    // assert_eq!(x3 == x4, false);
-
-    // assert_eq!(x2 > x3, false);
-    // assert_eq!(x3 > x4, false);
-
-    // assert_eq!(x2 < x3, true);
-    // assert_eq!(x3 < x4, false);
-
-    // assert_eq!(x2.meet(x3) == ReachingDefnLattice {v : Some([])}, true);
-    // assert_eq!(x3.meet(x4) == ReachingDefnLattice {v : Some([d2])}, true);
 }
