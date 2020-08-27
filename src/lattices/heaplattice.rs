@@ -1,4 +1,4 @@
-use crate::lattices::{ConstLattice, VariableState};
+use crate::lattices::{ConstLattice, VariableState, Lattice};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum HeapValue {

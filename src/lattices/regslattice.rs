@@ -113,7 +113,6 @@ impl<T:Lattice + Clone> X86RegsLattice<T>{
 //     }
 // }
 
-//TODO: fix by implementing iterator on regslattice and using zip + all
 // impl<T:Lattice + Clone> PartialOrd for X86RegsLattice<T> {
 //     fn partial_cmp(&self, other: &X86RegsLattice<T>) -> Option<Ordering> {
 //         if 

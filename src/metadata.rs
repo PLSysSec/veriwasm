@@ -132,9 +132,7 @@ impl<'a> ArtifactSummary<'a> {
 
 
 
-// //TODO: finish loading metadata
 // pub fn load_metadata(path : String){
-//     //TODO: is there a better way to load that doesnt require loading the full module?
 //     // let module = DlModule::load(path).unwrap();
 
 //     // // let module = DlModule::load(path).expect("module can be loaded");

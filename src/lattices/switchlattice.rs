@@ -1,5 +1,5 @@
 use crate::lattices::VariableState;
-use crate::lattices::{ConstLattice};
+use crate::lattices::{ConstLattice, Lattice};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum SwitchValue {

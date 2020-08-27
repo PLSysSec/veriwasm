@@ -58,16 +58,31 @@ pub fn singleton(loc_idx : LocIdx) -> ReachingDefnLattice{
 }
 
 
-//TODO: test reaching defs lattice
 #[test]
 fn heap_reaching_defs_test() {
     let d1 = LocIdx{addr: 1, idx : 1};
     let d2 = LocIdx{addr: 2, idx : 2};
     let d3 = LocIdx{addr: 3, idx : 3};
+    let d4 = LocIdx{addr: 4, idx : 4};
 
 
-    let bset = BTreeSet::new();
-    let x1  = ReachingDefnLattice {defs : bset};
+    let mut bset1 = BTreeSet::new();
+    bset1.insert(d1);
+    bset1.insert(d2);
+    let x1  = ReachingDefnLattice {defs : bset1};
+
+    let mut bset2 = BTreeSet::new();
+    bset2.insert(d3);
+    bset2.insert(d4);
+    let x2  = ReachingDefnLattice {defs : bset2};
+
+    assert_eq!(x1 == x2, false);
+    assert_eq!(x1 > x2, false);
+    assert_eq!(x1 < x2, false);
+    assert_eq!(x1 >= x2, false);
+    assert_eq!(x1 <= x2, false);
+    assert_eq!(x1.meet(&x2) == Default::default(), true);
+
     // let x2  = ReachingDefnLattice {v : Some([])};
     // let x3  = ReachingDefnLattice {v : Some([d1.clone(), d2.clone()])};
     // let x4  = ReachingDefnLattice {v : Some(d2.clone(), d3.clone())};
