@@ -9,14 +9,14 @@ pub enum DAV {
     Checked,
 }
 
-#[derive(Eq, Clone, Copy)]
-pub struct DAVLattice{
-    v: DAV
-}
+// #[derive(Eq, Clone, Copy)]
+// pub struct DAVLattice{
+//     v: DAV
+// }
 
-impl PartialOrd for DAVLattice {
-    fn partial_cmp(&self, other: &DAVLattice) -> Option<Ordering> {
-        match (self.v, other.v){
+impl PartialOrd for DAV {
+    fn partial_cmp(&self, other: &DAV) -> Option<Ordering> {
+        match (self, other){
             (DAV::Unknown,DAV::Unknown) => Some(Ordering::Equal),
             (DAV::Unknown,_) => Some(Ordering::Less),
             (DAV::Unchecked(x),DAV::Unchecked(y)) =>  
@@ -31,42 +31,42 @@ impl PartialOrd for DAVLattice {
     }
 }
 
-impl PartialEq for DAVLattice {
-    fn eq(&self, other: &DAVLattice) -> bool {
-        self.v == other.v
-    }
-}
+// impl PartialEq for DAV {
+//     fn eq(&self, other: &DAV) -> bool {
+//         self.v == other.v
+//     }
+// }
 
-impl Lattice for DAVLattice {
+impl Lattice for DAV {
     fn meet(&self, other : &Self) -> Self {
-        match (self.v, other.v){
-            (DAV::Unknown,_) => DAVLattice {v : DAV::Unknown},
-            (_,DAV::Unknown) => DAVLattice {v : DAV::Unknown},
+        match (self, other){
+            (DAV::Unknown,_) => DAV::Unknown,
+            (_,DAV::Unknown) => DAV::Unknown,
             (DAV::Unchecked(x),DAV::Unchecked(y)) =>  
-                if x == y { DAVLattice {v : self.v} }
-                else {DAVLattice {v : DAV::Unknown}},
-            (DAV::Checked,DAV::Checked) => DAVLattice {v : self.v},
-            (DAV::Unchecked(_),DAV::Checked) => { DAVLattice {v : self.v} },
-            (DAV::Checked,DAV::Unchecked(_)) => { DAVLattice {v : other.v} }
+                if x == y {self.clone()}
+                else {DAV::Unknown},
+            (DAV::Checked,DAV::Checked) => self.clone(),
+            (DAV::Unchecked(_),DAV::Checked) => self.clone(),
+            (DAV::Checked,DAV::Unchecked(_)) => other.clone()
         }
     }
 } 
 
 //What is a default index? This might be wrong.
 //Perhaps default is what index should be at start of function.
-impl Default for DAVLattice {
+impl Default for DAV {
     fn default() -> Self {
-        DAVLattice {v : DAV::Unknown}
+         DAV::Unknown
     }
 }
 
 #[test]
 fn dav_lattice_test() {
-    let x1 = DAVLattice {v : DAV::Unknown};
-    let x2 = DAVLattice {v : DAV::Unchecked(1)};
-    let x3 = DAVLattice {v : DAV::Unchecked(1)};
-    let x4 = DAVLattice {v : DAV::Unchecked(2)};
-    let x5 = DAVLattice {v : DAV::Checked};
+    let x1 = DAV::Unknown;
+    let x2 = DAV::Unchecked(1);
+    let x3 = DAV::Unchecked(1);
+    let x4 = DAV::Unchecked(2);
+    let x5 = DAV::Checked;
 
     assert_eq!(x1 == x2, false);
     assert_eq!(x2 == x3, true);
@@ -88,9 +88,9 @@ fn dav_lattice_test() {
     assert_eq!(x3 < x4, false);
     assert_eq!(x4 < x5, true);
 
-    assert_eq!(x1.meet(&x2) == DAVLattice {v : DAV::Unknown}, true);
-    assert_eq!(x2.meet(&x3) == DAVLattice {v : DAV::Unchecked(1)}, true);
-    assert_eq!(x3.meet(&x4) == DAVLattice {v : DAV::Unknown}, true);
-    assert_eq!(x4.meet(&x5) == DAVLattice {v : DAV::Unchecked(2)}, true);
+    assert_eq!(x1.meet(&x2) == DAV::Unknown, true);
+    assert_eq!(x2.meet(&x3) == DAV::Unchecked(1), true);
+    assert_eq!(x3.meet(&x4) == DAV::Unknown, true);
+    assert_eq!(x4.meet(&x5) == DAV::Unchecked(2), true);
 }
 

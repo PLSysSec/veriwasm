@@ -1,10 +1,9 @@
-use crate::lattices::{ConstLattice, Lattice};
-use crate::lattices::davlattice::{DAVLattice, DAV};
+use crate::lattices::Lattice;
+use crate::lattices::davlattice::{DAV};
+use std::cmp::Ordering;
 
-//TODO: I think this does not treat the PtrOffset correctly
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum CallCheckValue {
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd)]
+pub enum CallCheckValue {
     GuestTableBase,
     LucetTablesBase,
     TableSize,
@@ -14,7 +13,47 @@ enum CallCheckValue {
     CheckFlag(u32)
 }
 
-pub type CallCheckValueLattice = ConstLattice<CallCheckValue>;
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub struct CallCheckValueLattice{
+    pub v: Option<CallCheckValue>
+}
+
+impl Default for CallCheckValueLattice {
+    fn default() -> Self {
+        CallCheckValueLattice {v : None}
+    }
+}
+
+impl Lattice for CallCheckValueLattice {
+    fn meet(&self, other : &Self) -> Self {
+        if self.v == other.v {CallCheckValueLattice {v : self.v}}
+        else {
+            match (self.v, other.v){
+                (Some(CallCheckValue::PtrOffset(x)),Some(CallCheckValue::PtrOffset(y))) => 
+                    CallCheckValueLattice { v : Some(CallCheckValue::PtrOffset(x.meet(&y)))},
+                (_,_) => CallCheckValueLattice { v : None}
+            }
+        }
+    }
+} 
+
+impl PartialOrd for CallCheckValueLattice {
+    fn partial_cmp(&self, other: &CallCheckValueLattice) -> Option<Ordering> {
+        match (self.v, other.v){
+            (None,None) => Some(Ordering::Equal),
+            (None,_) => Some(Ordering::Less),
+            (_,None) => Some(Ordering::Greater),
+            (Some(x), Some(y)) =>{ 
+                match (x, y){
+                    (CallCheckValue::PtrOffset(x), CallCheckValue::PtrOffset(y) ) => x.partial_cmp(&y),
+                    (_,_) =>  {
+                        if x == y {Some(Ordering::Equal) }
+                        else {None}}
+                }
+            } 
+        }
+    }
+}
 
 
 #[test]
