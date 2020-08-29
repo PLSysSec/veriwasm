@@ -17,7 +17,7 @@ pub trait Lattice: PartialOrd + Eq + Default {
     fn meet(&self, other : &Self) -> Self;
 }
 
-#[derive(Eq, Clone, Copy)]
+#[derive(Eq, Clone, Copy, Debug)]
 pub struct BooleanLattice{
     v: bool
 }
