@@ -46,7 +46,8 @@ pub fn mk_value_i64(num : i64) -> Value{
 pub enum MemArgs {
     Mem1Arg(MemArg),
     Mem2Args(MemArg, MemArg),
-    Mem3Args(MemArg, MemArg, MemArg)
+    Mem3Args(MemArg, MemArg, MemArg),
+    MemScale(MemArg, MemArg, MemArg)
 }
 
 pub enum MemArg {
@@ -139,7 +140,7 @@ fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{
         Operand::RegIndexBaseDisp(reg1, reg2, imm) => Value::Mem(valsize(reg1.width() as u32), MemArgs::Mem3Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) ), //mem[reg1 + reg2 + c]
         Operand::RegScale(_,_) => panic!("Memory operations with scaling prohibited"), // mem[reg * c]
         Operand::RegScaleDisp(_,_,_) => panic!("Memory operations with scaling prohibited"), //mem[reg*c1 + c2]
-        Operand::RegIndexBaseScale(_,_,_) => panic!("Memory operations with scaling prohibited"),//mem[reg1 + reg2*c]
+        Operand::RegIndexBaseScale(reg1,reg2,scale) => Value::Mem(valsize(reg1.width() as u32), MemArgs::MemScale(convert_memarg_reg(reg1), convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, ValSize::Size32, scale as i64)) ),//mem[reg1 + reg2*c]
         Operand::RegIndexBaseScaleDisp(_,_,_,_) => panic!("Memory operations with scaling prohibited"),//mem[reg1 + reg2*c1 + c2]
         Operand::Nothing => panic!("Nothing Operand?"),
     }

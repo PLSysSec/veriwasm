@@ -5,8 +5,8 @@ use crate::lattices::{ConstLattice, Lattice};
 pub enum SwitchValue {
     SwitchBase(u32),
     UpperBound(u32),
-    JmpOffset(u32),
-    JmpTarget(u32),
+    JmpOffset(u32, u32),
+    JmpTarget(u32, u32),
 }
 
 pub type SwitchValueLattice = ConstLattice<SwitchValue>;

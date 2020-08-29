@@ -138,7 +138,7 @@ impl<T:Lattice + Clone> VariableState<T>{
                             }
                         }
                     },
-                MemArgs::Mem3Args(_, _, _) => ()
+                _ => ()
             },
             Value::Reg(regnum,_) => self.regs.set(regnum, value),
             Value::Imm(_,_,_) => panic!("Trying to write to an immediate value"),

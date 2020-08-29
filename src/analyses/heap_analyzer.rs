@@ -62,9 +62,11 @@ impl HeapAnalyzer{
                     }
                     else {Default::default()}
                 }
+
                 Value::Reg(regnum, size) => {if size.to_u32() <= 32 {
                     HeapValueLattice{ v : Some(HeapValue::Bounded4GB)}} 
                     else {in_state.regs.get(regnum)} },
+                    
                 Value::Imm(_,_,immval) => 
                     if (*immval as u64) == self.metadata.guest_table_0 {
                         HeapValueLattice{ v : Some(HeapValue::GuestTable0)}

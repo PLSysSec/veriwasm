@@ -18,7 +18,7 @@ pub struct Config{
     quiet : bool
 }
 
-
+//TODO: add tests to make sure none of the analyses fail out
 
 fn run(config : Config){
     let program = load_program(&config.module_path);
@@ -44,8 +44,8 @@ fn run(config : Config){
         println!("Checking Stack Safety");
         let stack_result = analyze_stack(cfg, &irmap);
         //check heap safety
-        let heap_result = analyze_heap(cfg, &irmap, metadata.clone());
         println!("Checking Heap Safety");
+        let heap_result = analyze_heap(cfg, &irmap, metadata.clone());
         //TODO: check call safety
         println!("Checking Call Safety");
 
