@@ -23,6 +23,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     }
 
     fn aexec(&self, in_state : &mut HeapLattice, ir_instr : &Stmt, _loc_idx : &LocIdx) -> () {
+        println!("Heap aexec: {:?}", ir_instr);
         match ir_instr{
             Stmt::Clear(dst) => in_state.set_to_bot(dst),
             Stmt::Unop(_, dst, src) => in_state.set(dst, self.aeval_unop(in_state, src)), 

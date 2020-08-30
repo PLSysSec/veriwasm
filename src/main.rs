@@ -99,3 +99,102 @@ fn main() {
     // load_metadata(metadata_path.to_string());
 }
 
+//TODO: get all tests to pass
+
+fn lift_test_helper(path: &str){
+    let program = load_program(path);
+    let metadata = load_metadata(path);
+    for (func_name,cfg) in get_cfgs(&path).iter(){
+        println!("{}",func_name);
+        let irmap = lift_cfg(&program, cfg);
+    }
+}
+
+#[test]
+fn full_test_unit_tests() {
+    lift_test_helper("./veriwasm_data/stack_check_unit_tests.so")
+}
+
+#[test]
+fn full_test_libgraphite() {
+    lift_test_helper("./veriwasm_data/firefox_libs/libgraphitewasm.so")
+}
+
+#[test]
+fn full_test_libogg() {
+    lift_test_helper("./veriwasm_data/firefox_libs/liboggwasm.so")
+}
+
+#[test]
+fn full_test_shootout() {
+    lift_test_helper("./veriwasm_data/shootout/shootout.so")
+}
+
+
+#[test]
+fn full_test_astar() {
+    lift_test_helper("./veriwasm_data/spec/astar_base.wasm_lucet")
+}
+
+#[test]
+fn full_test_gobmk() {
+    lift_test_helper("./veriwasm_data/spec/gobmk_base.wasm_lucet")
+}
+
+#[test]
+fn full_test_lbm() {
+    lift_test_helper("./veriwasm_data/spec/lbm_base.wasm_lucet")
+}
+
+
+#[test]
+fn full_test_mcf() {
+    lift_test_helper("./veriwasm_data/spec/mcf_base.wasm_lucet")
+}
+
+#[test]
+fn full_test_namd() {
+    lift_test_helper("./veriwasm_data/spec/namd_base.wasm_lucet")
+}
+
+#[test]
+fn full_test_sjeng() {
+    lift_test_helper("./veriwasm_data/spec/sjeng_base.wasm_lucet")
+}
+
+
+#[test]
+fn full_test_sphinx_livepretend() {
+    lift_test_helper("./veriwasm_data/spec/sphinx_livepretend_base.wasm_lucet")
+}
+
+#[test]
+fn full_test_bzip2() {
+    lift_test_helper("./veriwasm_data/spec/bzip2_base.wasm_lucet")
+}
+
+#[test]
+fn full_test_h264ref() {
+    lift_test_helper("./veriwasm_data/spec/h264ref_base.wasm_lucet")
+}
+
+#[test]
+fn full_test_libquantum() {
+    lift_test_helper("./veriwasm_data/spec/libquantum_base.wasm_lucet")
+}
+
+#[test]
+fn full_test_milc() {
+    lift_test_helper("./veriwasm_data/spec/milc_base.wasm_lucet")
+}
+
+#[test]
+fn full_test_povray() {
+    lift_test_helper("./veriwasm_data/spec/povray_base.wasm_lucet")
+}
+
+#[test]
+fn full_test_soplex() {
+    lift_test_helper("./veriwasm_data/spec/soplex_base.wasm_lucet")
+}
+

@@ -18,6 +18,7 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
     }
 
     fn aexec(&self, in_state : &mut StackGrowthLattice, ir_instr : &Stmt, _loc_idx : &LocIdx) -> () {
+        println!("Stack aexec: {:?}", ir_instr);
         match ir_instr{
             Stmt::Clear(dst) => if is_rsp(dst){*in_state = StackGrowthLattice {v : None}},
             Stmt::Unop(_, dst, _) => if is_rsp(dst){*in_state = StackGrowthLattice {v : None}},

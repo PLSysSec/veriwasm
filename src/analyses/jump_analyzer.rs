@@ -1,13 +1,10 @@
-use crate::lifter::ValSize;
-use crate::lifter::{MemArgs, MemArg};
+use crate::lifter::{MemArgs, MemArg, ValSize, Binopcode, IRMap, Stmt, Value};
 use crate::utils::get_rsp_offset;
-use crate::lifter::Binopcode;
 use crate::analyses::AnalysisResult;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::switchlattice::{SwitchLattice, SwitchValueLattice, SwitchValue};
 use crate::analyses::{AbstractAnalyzer, run_worklist};
 use crate::lattices::reachingdefslattice::{ReachLattice, LocIdx};
-use crate::lifter::{IRMap, Stmt, Value};
 use crate::utils::{LucetMetadata};
 use std::default::Default;
 
@@ -37,6 +34,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
     }
 }
 
+//TODO: implement process_bounds for switch analyzer
 
 impl SwitchAnalyzer{
     fn aeval_unop_mem(&self, in_state : &SwitchLattice, memargs : &MemArgs, memsize : &ValSize)-> SwitchValueLattice {
