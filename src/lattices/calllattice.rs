@@ -1,3 +1,4 @@
+use crate::lattices::VariableState;
 use crate::lattices::Lattice;
 use crate::lattices::davlattice::{DAV};
 use std::cmp::Ordering;
@@ -17,6 +18,9 @@ pub enum CallCheckValue {
 pub struct CallCheckValueLattice{
     pub v: Option<CallCheckValue>
 }
+
+pub type CallCheckLattice =  VariableState<CallCheckValueLattice>;
+
 
 impl Default for CallCheckValueLattice {
     fn default() -> Self {

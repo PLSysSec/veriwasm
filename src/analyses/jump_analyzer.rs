@@ -81,4 +81,13 @@ impl SwitchAnalyzer{
         else {Default::default()}
         }
 
+    //TODO: need to add final instruction to process_branch args
+    //TODO: figure out how to extract zflag
+    fn process_branch(&self, in_state : &SwitchLattice, succ_addrs : &Vec<u64>) -> Vec<(u64,SwitchLattice)>{
+        if succ_addrs.len() == 2{
+        succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
+        }
+        else {succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()}
     }
+
+}
