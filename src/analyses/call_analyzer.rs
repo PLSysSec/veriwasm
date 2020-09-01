@@ -1,3 +1,4 @@
+// use crate::analyses::VarStateAnalyzer;
 use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
 use crate::lattices::davlattice::DAV;
 use crate::lifter::{MemArgs, MemArg, ValSize, Binopcode, IRMap, Stmt, Value};
@@ -18,6 +19,7 @@ pub struct CallAnalyzer{
     metadata: LucetMetadata,
     reaching_defs : AnalysisResult<ReachLattice>
 }
+// pub type CallAnalyzer = VarStateAnalyzer<CallCheckLattice>;
 
 impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 

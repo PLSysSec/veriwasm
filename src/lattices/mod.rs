@@ -17,6 +17,14 @@ pub trait Lattice: PartialOrd + Eq + Default {
     fn meet(&self, other : &Self) -> Self;
 }
 
+pub trait VarLattice : Lattice {
+    type Var;
+    fn set(&self, index : &Value, v : Self::Var) -> ();
+    fn set_to_bot(&self, index : &Value) -> ();
+    fn clear_regs(&self) -> ();
+    // fn get_reg(&self, index : &Value) -> Self::Var; 
+}
+
 #[derive(Eq, Clone, Copy, Debug)]
 pub struct BooleanLattice{
     v: bool
@@ -121,8 +129,6 @@ impl<T:Lattice + Clone> VariableState<T>{
         }        
     }
 
-    
-
     pub fn set(&mut self, index : &Value, value : T) -> (){
         match index{
             Value::Mem(_, memargs) => match memargs{
@@ -136,9 +142,6 @@ impl<T:Lattice + Clone> VariableState<T>{
                     if let MemArg::Reg(regnum, size) = arg1{
                         if *regnum == 4{
                             if let MemArg::Imm(imm_sign,_,offset) = arg2{
-                                // if let ImmType::Signed = imm_sign{
-                                //     assert_eq!(false,true);
-                                // }
                                 self.stack.update(*offset, value, size.to_u32())
                             }
                         }

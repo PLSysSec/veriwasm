@@ -3,6 +3,11 @@ pub mod heap_analyzer;
 pub mod call_analyzer;
 pub mod jump_analyzer;
 pub mod reaching_defs;
+use crate::lifter::Binopcode;
+use crate::lifter::Value;
+use crate::lattices::VarLattice;
+use crate::lattices::reachingdefslattice::ReachLattice;
+use crate::utils::LucetMetadata;
 use crate::lattices::VariableState;
 use crate::lattices::reachingdefslattice::LocIdx;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
@@ -22,6 +27,31 @@ pub trait AbstractAnalyzer<State:Lattice + Clone> {
         succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
     }
 }
+
+pub trait VarStateAnalyzer<State: VarLattice + Clone> : AbstractAnalyzer<State>{
+    fn aexec(&self, in_state : &mut State, ir_instr : &Stmt, loc_idx : &LocIdx) -> (){
+        match ir_instr{
+            Stmt::Clear(dst) => in_state.set_to_bot(dst),
+            Stmt::Unop(_, dst, src) => self.aexec_unop(in_state, &dst, &src),//in_state.set(dst, self.aeval_unop(in_state, src)),
+            Stmt::Binop(opcode, dst, src1, src2) =>  self.aexec_binop(in_state, opcode, dst, src1, src2),
+            Stmt::Call(_) => in_state.clear_regs(),//in_state.regs.clear_regs(),
+            _ => ()
+        }
+    }
+    fn aexec_unop(&self, in_state : &State, dst : &Value, src : &Value) -> ();
+    fn aexec_binop(&self, in_state : &State, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value) -> ();
+}
+
+// pub struct VarStateAnalyzer<Value: Lattice + Clone>{
+//     metadata: LucetMetadata,
+//     reaching_defs : AnalysisResult<ReachLattice>
+// }
+
+// impl<Value:Lattice + Clone> AbstractAnalyzer<VariableState<Value>> for VarStateAnalyzer<Value> {
+//     fn aexec(&self, in_state : &mut VariableState<Value>, instr : &Stmt, loc_idx : &LocIdx) -> (){
+//         unimplemented!();
+//     }
+// }
 
 fn analyze_block<T:AbstractAnalyzer<State>, State:Lattice + Clone> (analyzer : &T, state : &State, irblock : &IRBlock) -> State {
     let mut new_state = state.clone();
