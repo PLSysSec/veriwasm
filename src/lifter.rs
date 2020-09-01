@@ -5,6 +5,7 @@ use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_x86::long_mode::{Arch as AMD64, Operand, RegSpec, RegisterBank, Opcode};
 use yaxpeax_arch::Arch;
 use yaxpeax_core::arch::InstructionSpan;
+use yaxpeax_arch::LengthedInstruction;
 
 #[derive(Debug)]
 pub enum ImmType {
@@ -180,9 +181,18 @@ fn call(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
     Stmt::Call(convert_operand(instr.operand(0)))
 }
 
-fn lea(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
+fn lea(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Stmt{
     let dst = instr.operand(0);
-    match convert_operand(instr.operand(1)){
+    let src1 = instr.operand(1);
+    //TODO: deal with when src1 is RIP
+    // if let Operand::Register(reg) = src1{
+    //     if reg.bank == RegisterBank::RIP{
+    //         //addr + instruction length + 
+    //         let target = (*addr as i64) + (instr.length) + (instr.disp as i64);
+    //         return Stmt::Unop(Unopcode::Mov, convert_operand(dst), Value::Imm(ImmType::Signed, ValSize::Size64, target)) 
+    //     }
+    // }
+    match convert_operand(src1){
         Value::Mem(_, memargs) => 
             match memargs {
                 MemArgs::Mem1Arg(arg) => match arg{
@@ -196,7 +206,7 @@ fn lea(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
 }
 
 
-pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt>{
+pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Vec<Stmt>{
     let mut instrs = Vec::new();
     println!("{:?}", instr);
     match instr.opcode{
@@ -207,7 +217,7 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt>{
         Opcode::MOVD => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::MOVQ => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::MOVZX_b => instrs.push(unop(Unopcode::Mov, instr)),
-        Opcode::LEA => instrs.push(lea(instr)),
+        Opcode::LEA => instrs.push(lea(instr, addr)),
 
         Opcode::TEST => instrs.push(binop(Binopcode::Test,instr)), 
         Opcode::CMP => instrs.push(binop(Binopcode::Cmp,instr)),
@@ -369,7 +379,7 @@ pub fn lift_cfg(program : &ModuleData, cfg : &ControlFlowGraph<u64>) -> IRMap{
         let mut iter = program.instructions_spanning(<AMD64 as Arch>::Decoder::default(), block.start, block.end);
         while let Some((addr, instr)) = iter.next() {
             println!("{:x?}", addr);
-            let ir = (addr,lift(instr));
+            let ir = (addr,lift(instr, &addr));
             block_ir.push(ir);
         }
         irmap.insert(block_addr, block_ir);

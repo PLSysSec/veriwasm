@@ -3,6 +3,7 @@ pub mod heap_analyzer;
 pub mod call_analyzer;
 pub mod jump_analyzer;
 pub mod reaching_defs;
+use crate::lattices::VariableState;
 use crate::lattices::reachingdefslattice::LocIdx;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::{Lattice};
@@ -14,7 +15,7 @@ use crate::lifter::{IRMap, IRBlock, Stmt};
 type AnalysisResult<T>  = HashMap<u64, T>;
 
 pub trait AbstractAnalyzer<State:Lattice + Clone> {
-    fn init_state(&self) -> State; 
+    fn init_state(&self) -> State{Default::default()}
     fn aexec(&self, in_state : &mut State, instr : &Stmt, loc_idx : &LocIdx) -> ();
     fn process_branch(&self, in_state : &State, succ_addrs : &Vec<u64>) -> Vec<(u64,State)>{
         //vec![in_state.clone(), in_state.clone()]

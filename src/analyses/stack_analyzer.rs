@@ -1,10 +1,9 @@
-use crate::ir_utils::get_imm_offset;
 use crate::lattices::reachingdefslattice::LocIdx;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::stackgrowthlattice::StackGrowthLattice;
 use crate::analyses::{AbstractAnalyzer, run_worklist};
 use crate::lifter::{IRMap, Stmt, Value};
-use crate::ir_utils::{is_rsp};
+use crate::ir_utils::{is_rsp, get_imm_offset};
 
 pub fn analyze_stack(cfg : &ControlFlowGraph<u64>, irmap : &IRMap){
     run_worklist(cfg, &irmap, StackAnalyzer{});    
@@ -14,14 +13,14 @@ pub struct StackAnalyzer{}
 
 impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
     fn init_state(&self) -> StackGrowthLattice {
-        StackGrowthLattice {v : Some(0)}
+        StackGrowthLattice::new(0)
     }
 
     fn aexec(&self, in_state : &mut StackGrowthLattice, ir_instr : &Stmt, _loc_idx : &LocIdx) -> () {
         println!("Stack aexec: {:?}", ir_instr);
         match ir_instr{
-            Stmt::Clear(dst) => if is_rsp(dst){*in_state = StackGrowthLattice {v : None}},
-            Stmt::Unop(_, dst, _) => if is_rsp(dst){*in_state = StackGrowthLattice {v : None}},
+            Stmt::Clear(dst) => if is_rsp(dst){*in_state = Default::default()},
+            Stmt::Unop(_, dst, _) => if is_rsp(dst){*in_state = Default::default()},
             Stmt::Binop(_, dst, src1, src2) =>  
             if is_rsp(dst) {
                 if is_rsp(src1){ 
@@ -30,7 +29,6 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
                 }
                 else{ panic!("Illegal RSP write") }
             },
-            Stmt::Call(_) => (),
             _ => ()
         }
     }

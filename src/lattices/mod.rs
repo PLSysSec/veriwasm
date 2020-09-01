@@ -85,6 +85,11 @@ impl<T:Eq + Copy> Default for ConstLattice<T> {
     }
 }
 
+impl<T:Eq + Copy> ConstLattice<T>{
+    pub fn new(v : T) -> Self{
+        ConstLattice{ v : Some(v)}
+    }
+}
 
 
 
@@ -131,9 +136,9 @@ impl<T:Lattice + Clone> VariableState<T>{
                     if let MemArg::Reg(regnum, size) = arg1{
                         if *regnum == 4{
                             if let MemArg::Imm(imm_sign,_,offset) = arg2{
-                                if let ImmType::Signed = imm_sign{
-                                    assert_eq!(false,true);
-                                }
+                                // if let ImmType::Signed = imm_sign{
+                                //     assert_eq!(false,true);
+                                // }
                                 self.stack.update(*offset, value, size.to_u32())
                             }
                         }

@@ -18,7 +18,7 @@ pub struct HeapAnalyzer{
 impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     fn init_state(&self) -> HeapLattice {
         let mut result : HeapLattice = Default::default();
-        result.regs.rdi = HeapValueLattice { v : Some(HeapValue::HeapBase)};
+        result.regs.rdi = HeapValueLattice::new(HeapValue::HeapBase);
         result
     }
 
@@ -41,46 +41,44 @@ pub fn is_globalbase_access(in_state : &HeapLattice, memargs : &MemArgs) -> bool
                 assert_eq!(size.to_u32(), 64);
                 let base = in_state.regs.get(regnum);
                 if let Some(v) = base.v {
-                    if let HeapValue::HeapBase = v {
-                        return true
-                    }
-                    else{false}
+                    if let HeapValue::HeapBase = v {return true}
                 }
-                else{false}
-            } else {false},
-        _ => false
-    }
+            },
+        _ => return false
+    };
+    false
 }
 
 impl HeapAnalyzer{
     pub fn aeval_unop(&self, in_state : &HeapLattice, value : &Value) -> HeapValueLattice{
         match value{
-                Value::Mem(memsize, memargs) => 
-                match get_rsp_offset(memargs){ 
-                    Some(offset) => in_state.stack.get(offset, memsize.to_u32()),
-                    None => if is_globalbase_access(in_state, memargs){
-                        HeapValueLattice{ v : Some(HeapValue::GlobalsBase)}
-                    }
-                    else {Default::default()}
+            Value::Mem(memsize, memargs) => 
+            match get_rsp_offset(memargs){ 
+                Some(offset) => return in_state.stack.get(offset, memsize.to_u32()),
+                None => if is_globalbase_access(in_state, memargs){
+                    return HeapValueLattice::new(HeapValue::GlobalsBase)
                 }
+            }
 
-                Value::Reg(regnum, size) => {if size.to_u32() <= 32 {
-                    HeapValueLattice{ v : Some(HeapValue::Bounded4GB)}} 
-                    else {in_state.regs.get(regnum)} },
-                    
-                Value::Imm(_,_,immval) => 
-                    if (*immval as u64) == self.metadata.guest_table_0 {
-                        HeapValueLattice{ v : Some(HeapValue::GuestTable0)}
-                    }
-                    else {
-                        if (*immval as u64) == self.metadata.lucet_tables {
-                            HeapValueLattice{ v : Some(HeapValue::LucetTables)}
-                        }
-                        else{
-                            if (*immval > 0) && (*immval < (1 << 32) ) {HeapValueLattice{ v : Some(HeapValue::Bounded4GB)}}
-                            else {Default::default()}
-                    }
+            Value::Reg(regnum, size) => 
+                if size.to_u32() <= 32 {
+                    return HeapValueLattice::new(HeapValue::Bounded4GB)
+                } 
+                else {
+                    return in_state.regs.get(regnum)
+                },
+                
+            Value::Imm(_,_,immval) => 
+                if (*immval as u64) == self.metadata.guest_table_0 {
+                    return HeapValueLattice::new(HeapValue::GuestTable0) 
                 }
-            }    
+                else if (*immval as u64) == self.metadata.lucet_tables {
+                    return HeapValueLattice::new(HeapValue::LucetTables)
+                }
+                else if (*immval > 0) && (*immval < (1 << 32) ) {
+                    return HeapValueLattice::new(HeapValue::Bounded4GB)
+                }
+            }
+                Default::default()
         }
     }
