@@ -5,6 +5,7 @@ use crate::analyses::{AbstractAnalyzer, run_worklist};
 use crate::lifter::{IRMap, Stmt, Value, MemArgs, MemArg};
 use crate::utils::{LucetMetadata, get_rsp_offset};
 use std::default::Default;
+use crate::lattices::VarState;
 
 //Top level function
 pub fn analyze_heap(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, metadata : LucetMetadata){
@@ -22,15 +23,18 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         result
     }
 
-    fn aexec(&self, in_state : &mut HeapLattice, ir_instr : &Stmt, _loc_idx : &LocIdx) -> () {
-        println!("Heap aexec: {:?}", ir_instr);
-        match ir_instr{
-            Stmt::Clear(dst) => in_state.set_to_bot(dst),
-            Stmt::Unop(_, dst, src) => in_state.set(dst, self.aeval_unop(in_state, src)), 
-            Stmt::Binop(_, dst, src1, src2) =>  in_state.default_exec_binop(dst,src1,src2),
-            Stmt::Call(_) => in_state.regs.clear_regs(),
-            _ => ()
-        }
+    // fn aexec(&self, in_state : &mut HeapLattice, ir_instr : &Stmt, _loc_idx : &LocIdx) -> () {
+    //     println!("Heap aexec: {:?}", ir_instr);
+    //     match ir_instr{
+    //         Stmt::Clear(dst) => in_state.set_to_bot(dst),
+    //         Stmt::Unop(_, dst, src) => in_state.set(dst, self.aeval_unop(in_state, src)), 
+    //         Stmt::Binop(opcode, dst, src1, src2) =>  self.aexec_binop(in_state, opcode, dst, src1, src2),//in_state.default_exec_binop(dst,src1,src2),
+    //         Stmt::Call(_) => in_state.regs.clear_regs(),
+    //         _ => ()
+    //     }
+    // }
+    fn aexec_unop(&self, in_state : &mut HeapLattice, dst : &Value, src : &Value) -> (){
+        in_state.set(dst, self.aeval_unop(in_state, src))
     }
 }
 
@@ -53,12 +57,9 @@ impl HeapAnalyzer{
     pub fn aeval_unop(&self, in_state : &HeapLattice, value : &Value) -> HeapValueLattice{
         match value{
             Value::Mem(memsize, memargs) => 
-            match get_rsp_offset(memargs){ 
-                Some(offset) => return in_state.stack.get(offset, memsize.to_u32()),
-                None => if is_globalbase_access(in_state, memargs){
+                if is_globalbase_access(in_state, memargs){
                     return HeapValueLattice::new(HeapValue::GlobalsBase)
                 }
-            }
 
             Value::Reg(regnum, size) => 
                 if size.to_u32() <= 32 {

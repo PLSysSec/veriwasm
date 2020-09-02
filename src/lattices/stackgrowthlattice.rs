@@ -1,8 +1,16 @@
+use crate::lifter::Value;
 use std::cmp::Ordering;
-use crate::lattices::{Lattice, ConstLattice};
+use crate::lattices::{Lattice, ConstLattice, VarState};
 
 pub type StackGrowthLattice = ConstLattice<i64>;
 
+impl VarState for StackGrowthLattice {
+    type Var = i64;
+    fn set(&mut self, index : &Value, v : Self::Var) -> (){unimplemented!()}
+    fn set_to_bot(&mut self, index : &Value) -> (){unimplemented!()}
+    fn on_call(&mut self) -> (){unimplemented!()}
+    fn adjust_stack_offset(&mut self, dst: &Value, src1: &Value, src2: &Value){unimplemented!()}
+}
 
 #[test]
 fn stack_growth_lattice_test() {

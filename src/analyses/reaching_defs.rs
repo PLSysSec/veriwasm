@@ -4,6 +4,7 @@ use crate::analyses::{AbstractAnalyzer, run_worklist};
 use crate::lifter::{IRMap, Stmt};
 use crate::utils::{LucetMetadata};
 use std::default::Default;
+use crate::lattices::VarState;
 
 //Top level function
 pub fn analyze_reaching_defs(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, _metadata : LucetMetadata){

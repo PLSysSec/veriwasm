@@ -17,11 +17,12 @@ pub trait Lattice: PartialOrd + Eq + Default {
     fn meet(&self, other : &Self) -> Self;
 }
 
-pub trait VarLattice : Lattice {
+pub trait VarState{
     type Var;
-    fn set(&self, index : &Value, v : Self::Var) -> ();
-    fn set_to_bot(&self, index : &Value) -> ();
-    fn clear_regs(&self) -> ();
+    fn set(&mut self, index : &Value, v : Self::Var) -> ();
+    fn set_to_bot(&mut self, index : &Value) -> ();
+    fn on_call(&mut self) -> ();
+    fn adjust_stack_offset(&mut self, dst: &Value, src1: &Value, src2: &Value);
     // fn get_reg(&self, index : &Value) -> Self::Var; 
 }
 
@@ -116,20 +117,10 @@ impl<T:Lattice + Clone> Lattice for VariableState<T> {
     }
 } 
 
-//TODO: complete transition to default aexec
-impl<T:Lattice + Clone> VariableState<T>{
 
-    pub fn adjust_stack_offset(&mut self, dst: &Value, src1: &Value, src2: &Value){
-        if is_rsp(dst) {
-            if is_rsp(src1){ 
-                let adjustment = get_imm_offset(src2);
-                self.stack.update_stack_offset(adjustment)
-            }
-            else{ panic!("Illegal RSP write") }
-        }        
-    }
-
-    pub fn set(&mut self, index : &Value, value : T) -> (){
+impl<T:Lattice + Clone> VarState for VariableState<T> {
+    type Var = T;
+    fn set(&mut self, index : &Value, value : T) -> (){
         match index{
             Value::Mem(_, memargs) => match memargs{
                 MemArgs::Mem1Arg(arg) => 
@@ -151,17 +142,34 @@ impl<T:Lattice + Clone> VariableState<T>{
             Value::Reg(regnum,_) => self.regs.set(regnum, value),
             Value::Imm(_,_,_) => panic!("Trying to write to an immediate value"),
         }
-    }
+    } 
 
-    pub fn set_to_bot(&mut self, index : &Value){
+    fn set_to_bot(&mut self, index : &Value){
         self.set(index, Default::default())
     }
 
-    pub fn default_exec_binop(&mut self, dst: &Value, src1: &Value, src2: &Value){
-        self.adjust_stack_offset(dst, src1, src2); 
-        self.set_to_bot(dst)
+    fn on_call(&mut self){
+        self.regs.clear_regs()
     }
-}
+
+    fn adjust_stack_offset(&mut self, dst: &Value, src1: &Value, src2: &Value){
+        if is_rsp(dst) {
+            if is_rsp(src1){ 
+                let adjustment = get_imm_offset(src2);
+                self.stack.update_stack_offset(adjustment)
+            }
+            else{ panic!("Illegal RSP write") }
+        }        
+    }
+} 
+
+// //TODO: complete transition to default aexec
+// impl<T:Lattice + Clone> VariableState<T>{
+//     pub fn default_exec_binop(&mut self, dst: &Value, src1: &Value, src2: &Value){
+//         self.adjust_stack_offset(dst, src1, src2); 
+//         self.set_to_bot(dst)
+//     }
+// }
 
 
 

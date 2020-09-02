@@ -5,6 +5,7 @@ use crate::analyses::{AbstractAnalyzer, run_worklist, AnalysisResult};
 use crate::lattices::reachingdefslattice::{ReachLattice, LocIdx};
 use crate::utils::{LucetMetadata, get_rsp_offset};
 use std::default::Default;
+use crate::lattices::VarState;
 
 //Top level function
 pub fn analyze_jumps(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, metadata : LucetMetadata, reaching_defs : AnalysisResult<ReachLattice>){
@@ -17,19 +18,15 @@ pub struct SwitchAnalyzer{
 }
 
 impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
+    fn aexec_unop(&self, in_state : &mut SwitchLattice, dst : &Value, src : &Value) -> (){
+        in_state.set(dst, self.aeval_unop(in_state, src))
+    }
 
-    fn aexec(&self, in_state : &mut SwitchLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
-        match ir_instr{
-            Stmt::Clear(dst) => in_state.set_to_bot(dst),
-            Stmt::Unop(_, dst, src) => in_state.set(dst, self.aeval_unop(in_state, src)),
-            Stmt::Binop(opcode, dst, src1, src2) =>  in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2)),
-            Stmt::Call(_) => in_state.regs.clear_regs(),
-            _ => ()
-        }
+    fn aexec_binop(&self, in_state : &mut SwitchLattice, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value) -> (){
+        in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2))
     }
 }
 
-//TODO: implement process_bounds for switch analyzer
 impl SwitchAnalyzer{
     fn aeval_unop_mem(&self, in_state : &SwitchLattice, memargs : &MemArgs, memsize : &ValSize)-> SwitchValueLattice {
         if let Some(offset) = get_rsp_offset(memargs){

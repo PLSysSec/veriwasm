@@ -9,6 +9,8 @@ use crate::analyses::{AbstractAnalyzer, run_worklist};
 use crate::lattices::reachingdefslattice::{ReachLattice, LocIdx};
 use crate::utils::{LucetMetadata};
 use std::default::Default;
+use crate::lattices::VarState;
+
 
 //Top level function
 pub fn analyze_calls(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, metadata : LucetMetadata, reaching_defs : AnalysisResult<ReachLattice>){
@@ -19,19 +21,14 @@ pub struct CallAnalyzer{
     metadata: LucetMetadata,
     reaching_defs : AnalysisResult<ReachLattice>
 }
-// pub type CallAnalyzer = VarStateAnalyzer<CallCheckLattice>;
 
 impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
+    fn aexec_unop(&self, in_state : &mut CallCheckLattice, dst : &Value, src : &Value) -> (){
+        in_state.set(dst, self.aeval_unop(in_state, src))
+    }
 
-    //TODO: complete this aexec function
-    fn aexec(&self, in_state : &mut CallCheckLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
-        match ir_instr{
-            Stmt::Clear(dst) => in_state.set_to_bot(dst),
-            Stmt::Unop(_, dst, src) => in_state.set_to_bot(dst),//in_state.set(dst, self.aeval_unop(in_state, src)),
-            Stmt::Binop(opcode, dst, src1, src2) =>  in_state.default_exec_binop(dst,src1,src2),
-            Stmt::Call(_) => in_state.regs.clear_regs(),
-            _ => ()
-        }
+    fn aexec_binop(&self, in_state : &mut CallCheckLattice, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value) -> (){
+        in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2))
     }
 
     //TODO: need to add final instruction to process_branch args
@@ -73,15 +70,12 @@ impl CallAnalyzer{
     pub fn aeval_unop(&self, in_state : &CallCheckLattice, value : &Value) -> CallCheckValueLattice{
         match value{
                 Value::Mem(memsize, memargs) => 
-                if let Some(offset) = get_rsp_offset(memargs) { 
-                    return in_state.stack.get(offset, memsize.to_u32())
-                }
-                else if is_table_size(in_state, memargs){
-                    return CallCheckValueLattice{ v : Some(CallCheckValue::TableSize)} 
-                }
-                else if is_fn_ptr(in_state, memargs){
-                    return CallCheckValueLattice{ v : Some(CallCheckValue::FnPtr)} 
-                },
+                    if is_table_size(in_state, memargs){
+                        return CallCheckValueLattice{ v : Some(CallCheckValue::TableSize)} 
+                    }
+                    else if is_fn_ptr(in_state, memargs){
+                        return CallCheckValueLattice{ v : Some(CallCheckValue::FnPtr)} 
+                    },
 
                 Value::Reg(regnum, size) => return in_state.regs.get(regnum),
                     
