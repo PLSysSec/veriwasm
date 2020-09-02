@@ -1,12 +1,10 @@
-// use crate::analyses::VarStateAnalyzer;
 use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
 use crate::lattices::davlattice::DAV;
-use crate::lifter::{MemArgs, MemArg, ValSize, Binopcode, IRMap, Stmt, Value};
-use crate::utils::get_rsp_offset;
+use crate::lifter::{MemArgs, MemArg, Binopcode, IRMap, Value};
 use crate::analyses::AnalysisResult;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::analyses::{AbstractAnalyzer, run_worklist};
-use crate::lattices::reachingdefslattice::{ReachLattice, LocIdx};
+use crate::lattices::reachingdefslattice::{ReachLattice};
 use crate::utils::{LucetMetadata};
 use std::default::Default;
 use crate::lattices::VarState;

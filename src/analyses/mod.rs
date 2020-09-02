@@ -25,7 +25,7 @@ pub trait AbstractAnalyzer<State:Lattice + VarState + Clone> {
         succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
     }
     fn aexec_unop(&self, in_state : &mut State, dst : &Value, src : &Value) -> (){
-        unimplemented!()
+        in_state.set_to_bot(dst)
     }
     fn aexec_binop(&self, in_state : &mut State, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value) -> (){
         in_state.set_to_bot(dst)
@@ -34,7 +34,7 @@ pub trait AbstractAnalyzer<State:Lattice + VarState + Clone> {
     fn aexec(&self, in_state : &mut State, ir_instr : &Stmt, loc_idx : &LocIdx) -> (){
         match ir_instr{
             Stmt::Clear(dst) => in_state.set_to_bot(dst),
-            Stmt::Unop(_, dst, src) => self.aexec_unop(in_state, &dst, &src),//in_state.set(dst, self.aeval_unop(in_state, src)),
+            Stmt::Unop(_, dst, src) => self.aexec_unop(in_state, &dst, &src),
             Stmt::Binop(opcode, dst, src1, src2) =>  {self.aexec_binop(in_state, opcode, dst, src1, src2); in_state.adjust_stack_offset(dst,src1,src2)},
             Stmt::Call(_) => in_state.on_call(),
             _ => ()

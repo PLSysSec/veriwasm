@@ -1,9 +1,8 @@
-use crate::lattices::reachingdefslattice::LocIdx;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::heaplattice::{HeapValueLattice, HeapLattice, HeapValue};
 use crate::analyses::{AbstractAnalyzer, run_worklist};
-use crate::lifter::{IRMap, Stmt, Value, MemArgs, MemArg};
-use crate::utils::{LucetMetadata, get_rsp_offset};
+use crate::lifter::{IRMap, Value, MemArgs, MemArg};
+use crate::utils::{LucetMetadata};
 use std::default::Default;
 use crate::lattices::VarState;
 
@@ -23,16 +22,6 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         result
     }
 
-    // fn aexec(&self, in_state : &mut HeapLattice, ir_instr : &Stmt, _loc_idx : &LocIdx) -> () {
-    //     println!("Heap aexec: {:?}", ir_instr);
-    //     match ir_instr{
-    //         Stmt::Clear(dst) => in_state.set_to_bot(dst),
-    //         Stmt::Unop(_, dst, src) => in_state.set(dst, self.aeval_unop(in_state, src)), 
-    //         Stmt::Binop(opcode, dst, src1, src2) =>  self.aexec_binop(in_state, opcode, dst, src1, src2),//in_state.default_exec_binop(dst,src1,src2),
-    //         Stmt::Call(_) => in_state.regs.clear_regs(),
-    //         _ => ()
-    //     }
-    // }
     fn aexec_unop(&self, in_state : &mut HeapLattice, dst : &Value, src : &Value) -> (){
         in_state.set(dst, self.aeval_unop(in_state, src))
     }

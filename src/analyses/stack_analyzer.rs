@@ -2,7 +2,7 @@ use crate::lattices::reachingdefslattice::LocIdx;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::stackgrowthlattice::StackGrowthLattice;
 use crate::analyses::{AbstractAnalyzer, run_worklist};
-use crate::lifter::{IRMap, Stmt, Value};
+use crate::lifter::{IRMap, Stmt};
 use crate::ir_utils::{is_rsp, get_imm_offset};
 
 pub fn analyze_stack(cfg : &ControlFlowGraph<u64>, irmap : &IRMap){
