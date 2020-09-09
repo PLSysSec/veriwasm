@@ -4,3 +4,6 @@
 [submodule "veriwasm_data"]
 	path = veriwasm_data
 	url = git@github.com:PLSysSec/veriwasm_data.git
+[submodule "yaxpeax-x86"]
+	path = yaxpeax-x86
+	url = git@github.com:iximeow/yaxpeax-x86.git

@@ -28,7 +28,7 @@ impl ValSize{
         ValSize::Size16 => 16,
         ValSize::Size32 => 32,
         ValSize::Size64 => 64,
-        ValSize::SizeOther => panic!("unknown size?")
+        ValSize::SizeOther => panic!("unknown size? {:?}")
         }
     }
 }
@@ -184,14 +184,13 @@ fn call(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
 fn lea(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Stmt{
     let dst = instr.operand(0);
     let src1 = instr.operand(1);
-    //TODO: deal with when src1 is RIP
-    // if let Operand::Register(reg) = src1{
-    //     if reg.bank == RegisterBank::RIP{
-    //         //addr + instruction length + 
-    //         let target = (*addr as i64) + (instr.length) + (instr.disp as i64);
-    //         return Stmt::Unop(Unopcode::Mov, convert_operand(dst), Value::Imm(ImmType::Signed, ValSize::Size64, target)) 
-    //     }
-    // }
+    if let Operand::RegDisp(reg, imm) = src1{
+        if reg.bank == RegisterBank::RIP{
+            //addr + instruction length + displacement
+            let target = (*addr as i64) + (instr.length as i64) + (instr.disp as i64);
+            return Stmt::Unop(Unopcode::Mov, convert_operand(dst), Value::Imm(ImmType::Signed, ValSize::Size64, target)) 
+        }
+    }
     match convert_operand(src1){
         Value::Mem(_, memargs) => 
             match memargs {
@@ -217,6 +216,9 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Vec<St
         Opcode::MOVD => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::MOVQ => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::MOVZX_b => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVSX_b => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVZX_w => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVSX_w => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::LEA => instrs.push(lea(instr, addr)),
 
         Opcode::TEST => instrs.push(binop(Binopcode::Test,instr)), 

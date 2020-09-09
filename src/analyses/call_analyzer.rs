@@ -9,7 +9,6 @@ use crate::utils::{LucetMetadata};
 use std::default::Default;
 use crate::lattices::VarState;
 
-
 //Top level function
 pub fn analyze_calls(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, metadata : LucetMetadata, reaching_defs : AnalysisResult<ReachLattice>){
     run_worklist(cfg, irmap, CallAnalyzer{metadata : metadata, reaching_defs : reaching_defs});    
@@ -40,28 +39,25 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 }
 
 pub fn is_table_size(in_state : &CallCheckLattice, memargs : &MemArgs) -> bool{
-    match memargs{
-        MemArgs::Mem2Args(MemArg::Reg(regnum1,_), MemArg::Imm(_,_,immval)) => 
-            if let Some(CallCheckValue::LucetTablesBase) = in_state.regs.get(regnum1).v{
-                return *immval == 8 
-            },
-        _ => return false
+    if let MemArgs::Mem2Args(MemArg::Reg(regnum1,_), MemArg::Imm(_,_,8)) = memargs{ 
+        if let Some(CallCheckValue::LucetTablesBase) = in_state.regs.get(regnum1).v{
+            return true 
+        }
     }
     false
 }
 
 pub fn is_fn_ptr(in_state : &CallCheckLattice, memargs : &MemArgs) -> bool{
-    match memargs{
-        MemArgs::Mem3Args(MemArg::Reg(regnum1,_), MemArg::Reg(regnum2,_), MemArg::Imm(_,_,immval)) => 
-            {
-                match (in_state.regs.get(regnum1).v,in_state.regs.get(regnum2).v,immval){
-                    (Some(CallCheckValue::GuestTableBase),Some(CallCheckValue::PtrOffset(DAV::Checked)),8) => return true,
-                    (Some(CallCheckValue::PtrOffset(DAV::Checked)),Some(CallCheckValue::GuestTableBase),8) => return true,
-                    _ => return false
-                }
-            },
-        _ => return false
+    if let MemArgs::Mem3Args(MemArg::Reg(regnum1,_), MemArg::Reg(regnum2,_), MemArg::Imm(_,_,immval))  = memargs{ 
+        {
+        match (in_state.regs.get(regnum1).v,in_state.regs.get(regnum2).v,immval){
+            (Some(CallCheckValue::GuestTableBase),Some(CallCheckValue::PtrOffset(DAV::Checked)),8) => return true,
+            (Some(CallCheckValue::PtrOffset(DAV::Checked)),Some(CallCheckValue::GuestTableBase),8) => return true,
+            _ => return false
+            }
+        }
     }
+    false
 }
 
 impl CallAnalyzer{

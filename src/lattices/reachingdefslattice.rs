@@ -2,7 +2,7 @@ use crate::lattices::{Lattice, VariableState};
 use std::collections::BTreeSet;
 use std::cmp::Ordering;
 
-#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Debug)]
 pub struct LocIdx{
     pub addr: u64,
     pub idx : u32

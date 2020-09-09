@@ -1,13 +1,10 @@
-use crate::lifter::{Value};
+use crate::lifter::{Value,ValSize};
 
 pub fn is_rsp(v : &Value) -> bool{
-    if let Value::Reg(regnum,size) = v {
-         if *regnum == 4{
-             assert_eq!(size.to_u32(), 64);
-             return true
-        } else  {return false} 
+    if let Value::Reg(4, ValSize::Size64) = v {
+        return true
     }
-    else{false}
+    false
 }
 
 pub fn get_imm_offset(v: &Value) -> i64{

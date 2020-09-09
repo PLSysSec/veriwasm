@@ -28,16 +28,14 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
 }
 
 pub fn is_globalbase_access(in_state : &HeapLattice, memargs : &MemArgs) -> bool {
-    match memargs{
-        MemArgs::Mem2Args(arg1, arg2) => 
-            if let MemArg::Reg(regnum,size) = arg1{
-                assert_eq!(size.to_u32(), 64);
-                let base = in_state.regs.get(regnum);
-                if let Some(v) = base.v {
-                    if let HeapValue::HeapBase = v {return true}
-                }
-            },
-        _ => return false
+    if let MemArgs::Mem2Args(arg1, arg2) = memargs{ 
+        if let MemArg::Reg(regnum,size) = arg1{
+            assert_eq!(size.to_u32(), 64);
+            let base = in_state.regs.get(regnum);
+            if let Some(v) = base.v {
+                if let HeapValue::HeapBase = v {return true}
+            }
+        }
     };
     false
 }
