@@ -1,7 +1,7 @@
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::heaplattice::{HeapValueLattice, HeapLattice, HeapValue};
 use crate::analyses::{AbstractAnalyzer, run_worklist};
-use crate::lifter::{IRMap, Value, MemArgs, MemArg};
+use crate::lifter::{IRMap, Value, MemArgs, MemArg, ValSize};
 use crate::utils::{LucetMetadata};
 use std::default::Default;
 use crate::lattices::VarState;
@@ -48,13 +48,14 @@ impl HeapAnalyzer{
                     return HeapValueLattice::new(HeapValue::GlobalsBase)
                 }
 
-            Value::Reg(regnum, size) => 
+            Value::Reg(regnum, size) => {
+                if let ValSize::SizeOther = size {return Default::default()};
                 if size.to_u32() <= 32 {
                     return HeapValueLattice::new(HeapValue::Bounded4GB)
                 } 
                 else {
                     return in_state.regs.get(regnum)
-                },
+                }},
                 
             Value::Imm(_,_,immval) => 
                 if (*immval as u64) == self.metadata.guest_table_0 {

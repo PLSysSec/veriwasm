@@ -5,7 +5,7 @@ pub mod metadata;
 pub mod lifter;
 pub mod ir_utils;
 use crate::analyses::heap_analyzer::analyze_heap;
-use utils::{load_program, get_cfgs, load_metadata};
+use utils::{load_program, get_cfgs, load_metadata, is_valid_func_name};
 use analyses::stack_analyzer::analyze_stack;
 use clap::{Arg, App};
 use lifter::lift_cfg;
@@ -37,6 +37,10 @@ fn run(config : Config){
         //     }
             
         // }
+
+        if !is_valid_func_name(func_name) { 
+            continue 
+        }
 
         println!("Analyzing: {:?}", func_name);
         println!("Checking Instruction Legality");

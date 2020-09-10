@@ -191,3 +191,16 @@ pub fn get_rsp_offset(memargs : &MemArgs) -> Option<i64>{
         _ => None
     }
 }
+
+
+pub fn is_valid_func_name(name : &String) -> bool{
+    if name.starts_with("guest_func_"){
+        return true
+    };
+    let split_name : Vec<&str> = name.split("_").collect();
+    if split_name.len() > 1 && split_name[split_name.len() - 1].parse::<u64>().is_ok(){
+        return true
+    };
+    false
+    
+}
