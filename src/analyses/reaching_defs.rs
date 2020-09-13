@@ -1,3 +1,4 @@
+use crate::analyses::AnalysisResult;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::reachingdefslattice::{ReachLattice, singleton, LocIdx};
 use crate::analyses::{AbstractAnalyzer, run_worklist};
@@ -6,8 +7,8 @@ use crate::utils::{LucetMetadata};
 use crate::lattices::VarState;
 
 //Top level function
-pub fn analyze_reaching_defs(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, _metadata : LucetMetadata){
-    run_worklist(cfg, irmap, ReachingDefnAnalyzer{});    
+pub fn analyze_reaching_defs(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, _metadata : LucetMetadata) -> AnalysisResult<ReachLattice>{
+    run_worklist(cfg, irmap, &ReachingDefnAnalyzer{})    
 }
 
 pub struct ReachingDefnAnalyzer{}

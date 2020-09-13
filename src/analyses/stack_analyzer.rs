@@ -4,10 +4,11 @@ use crate::lattices::stackgrowthlattice::StackGrowthLattice;
 use crate::analyses::{AbstractAnalyzer, run_worklist};
 use crate::lifter::{IRMap, Stmt};
 use crate::ir_utils::{is_rsp, get_imm_offset};
+use crate::analyses::AnalysisResult;
 
-pub fn analyze_stack(cfg : &ControlFlowGraph<u64>, irmap : &IRMap){
-    run_worklist(cfg, &irmap, StackAnalyzer{});    
-}
+// pub fn analyze_stack(cfg : &ControlFlowGraph<u64>, irmap : &IRMap) -> AnalysisResult<StackGrowthLattice>{
+//     run_worklist(cfg, &irmap, StackAnalyzer{})    
+// }
 
 pub struct StackAnalyzer{}
 

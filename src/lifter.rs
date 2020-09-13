@@ -248,7 +248,7 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Vec<St
             instrs.push(Stmt::Binop(Binopcode::Add, Value::Reg(4, ValSize::Size64), Value::Reg(4, ValSize::Size64), mk_value_i64(width.into())))
         },
 
-        Opcode::NOP | Opcode::FILD | Opcode::STD | Opcode::CLD => (),
+        Opcode::NOP | Opcode::FILD | Opcode::STD | Opcode::CLD | Opcode::STI => (),
 
         Opcode::OR | Opcode::SHR | Opcode::RCL | Opcode::RCR | Opcode::ROL | Opcode::ROR | 
         Opcode::CMOVA|Opcode::CMOVB|Opcode::CMOVG|Opcode::CMOVGE|Opcode::CMOVL|Opcode::CMOVLE|Opcode::CMOVNA|Opcode::CMOVNB|

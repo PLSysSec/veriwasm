@@ -4,11 +4,27 @@ pub mod analyses;
 pub mod metadata;
 pub mod lifter;
 pub mod ir_utils;
-use crate::analyses::heap_analyzer::analyze_heap;
+pub mod checkers;
+use crate::analyses::call_analyzer::CallAnalyzer;
+use crate::analyses::heap_analyzer::HeapAnalyzer;
+use crate::analyses::run_worklist;
+use crate::analyses::stack_analyzer::StackAnalyzer;
+use crate::lifter::IRMap;
+// use std::collections::hash_map::HashMap;
+use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
+use yaxpeax_core::memory::repr::process::ModuleData;
+// use crate::analyses::call_analyzer::analyze_calls;
+use crate::analyses::jump_analyzer::analyze_jumps;
+use crate::analyses::reaching_defs::analyze_reaching_defs;
+// use crate::analyses::heap_analyzer::analyze_heap;
 use utils::{load_program, get_cfgs, load_metadata, is_valid_func_name};
-use analyses::stack_analyzer::analyze_stack;
+// use analyses::stack_analyzer::analyze_stack;
 use clap::{Arg, App};
 use lifter::lift_cfg;
+use crate::checkers::stack_checker::check_stack;
+use crate::checkers::heap_checker::check_heap;
+use crate::checkers::call_checker::check_calls;
+use std::rc::Rc;
 
 pub struct Config{
     module_path: String,
@@ -18,25 +34,24 @@ pub struct Config{
     quiet : bool
 }
 
-//TODO: add tests to make sure none of the analyses fail out
+fn fully_resolved_cfg(program : &ModuleData, 
+    cfg : &ControlFlowGraph<u64>, 
+    metadata : utils::LucetMetadata) -> IRMap{
+    let irmap = lift_cfg(&program, cfg);
+    println!("Recovering Reaching Defs");
+    let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
+    // println!("Checking 1 Round of Jump Safety");
+    let jump_results = analyze_jumps(cfg, &irmap, metadata.clone(), reaching_defs.clone());
+    irmap
+}
 
+//TODO: add tests to make sure none of the analyses fail out
 fn run(config : Config){
     let program = load_program(&config.module_path);
     // let cfgs = get_cfgs(binpath);
     println!("Loading Metadata");
     let metadata = load_metadata(&config.module_path);
     for (func_name,cfg) in get_cfgs(&config.module_path).iter(){
-        // let g = &cfg.graph;
-        // let blocks = &cfg.blocks;
-        // for node in g.nodes(){
-        //     let block = cfg.get_block(node);
-        //     let mut iter = program.instructions_spanning(<AMD64 as Arch>::Decoder::default(), block.start, block.end);
-        //     while let Some((address, instr)) = iter.next() {
-        //         lift(instr);
-        //         println!("{:?}\n", instr);
-        //     }
-            
-        // }
 
         if !is_valid_func_name(func_name) { 
             continue 
@@ -44,15 +59,29 @@ fn run(config : Config){
 
         println!("Analyzing: {:?}", func_name);
         println!("Checking Instruction Legality");
-        let irmap = lift_cfg(&program, cfg);
+        let irmap = fully_resolved_cfg(&program, cfg, metadata.clone());
+        let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
+        // let irmap = lift_cfg(&program, cfg);
+        // println!("Recovering Reaching Defs");
+        // let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
+        // println!("Checking 1 Round of Jump Safety");
+        // let jump_results = analyze_jumps(cfg, &irmap, metadata.clone(), reaching_defs.clone());
         println!("Checking Stack Safety");
-        let stack_result = analyze_stack(cfg, &irmap);
-        //check heap safety
+        //let stack_result = analyze_stack(cfg, &irmap);
+        let stack_analyzer = StackAnalyzer{};
+        let stack_result = run_worklist(cfg, &irmap, &stack_analyzer); 
+        let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
+        assert!(stack_safe);
         println!("Checking Heap Safety");
-        let heap_result = analyze_heap(cfg, &irmap, metadata.clone());
-        //TODO: check call safety
+        let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
+        let heap_result = run_worklist(cfg, &irmap, &heap_analyzer); 
+        let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
+        assert!(heap_safe);
         println!("Checking Call Safety");
-
+        let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone()};
+        let call_result = run_worklist(cfg, &irmap, &call_analyzer);    
+        let call_safe = check_calls(call_result, &irmap, &call_analyzer);
+        assert!(call_safe);
     }
     println!("Done!");
 }
@@ -111,7 +140,20 @@ fn lift_test_helper(path: &str){
     for (func_name,cfg) in get_cfgs(&path).iter(){
         println!("{}",func_name);
         let irmap = lift_cfg(&program, cfg);
-    }
+        let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
+        let jump_results = analyze_jumps(cfg, &irmap, metadata.clone(), reaching_defs.clone());
+        
+        let stack_analyzer = StackAnalyzer{};
+        let stack_result = run_worklist(cfg, &irmap, &stack_analyzer); 
+        let stack_safe = check_stack(stack_result, &irmap, &StackAnalyzer{});
+
+        let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
+        let heap_result = run_worklist(cfg, &irmap, &heap_analyzer); 
+        let heap_safe = check_heap(heap_result, &irmap, &HeapAnalyzer{metadata : metadata.clone()});
+
+        let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone()};
+        let call_result = run_worklist(cfg, &irmap, &call_analyzer);    
+        let call_safe = check_calls(call_result, &irmap, &CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs});    }
 }
 
 #[test]

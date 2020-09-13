@@ -1,3 +1,4 @@
+use crate::analyses::AnalysisResult;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::heaplattice::{HeapValueLattice, HeapLattice, HeapValue};
 use crate::analyses::{AbstractAnalyzer, run_worklist};
@@ -7,12 +8,12 @@ use std::default::Default;
 use crate::lattices::VarState;
 
 //Top level function
-pub fn analyze_heap(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, metadata : LucetMetadata){
-    run_worklist(cfg, irmap, HeapAnalyzer{metadata : metadata});    
-}
+// pub fn analyze_heap(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, metadata : LucetMetadata) -> AnalysisResult<HeapLattice>{
+//     run_worklist(cfg, irmap, HeapAnalyzer{metadata : metadata})    
+// }
 
 pub struct HeapAnalyzer{
-    metadata: LucetMetadata
+    pub metadata: LucetMetadata
 }
 
 impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {

@@ -10,13 +10,18 @@ use std::default::Default;
 use crate::lattices::VarState;
 
 //Top level function
-pub fn analyze_calls(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, metadata : LucetMetadata, reaching_defs : AnalysisResult<ReachLattice>){
-    run_worklist(cfg, irmap, CallAnalyzer{metadata : metadata, reaching_defs : reaching_defs});    
-}
+// pub fn analyze_calls(
+//     cfg : &ControlFlowGraph<u64>, 
+//     irmap : &IRMap, 
+//     metadata : LucetMetadata, 
+//     reaching_defs : AnalysisResult<ReachLattice>
+//     ) -> AnalysisResult<CallCheckLattice>{
+//     run_worklist(cfg, irmap, CallAnalyzer{metadata : metadata, reaching_defs : reaching_defs})    
+// }
 
 pub struct CallAnalyzer{
-    metadata: LucetMetadata,
-    reaching_defs : AnalysisResult<ReachLattice>
+    pub metadata: LucetMetadata,
+    pub reaching_defs : AnalysisResult<ReachLattice>
 }
 
 impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {

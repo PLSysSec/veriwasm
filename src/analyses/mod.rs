@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use crate::lifter::{IRMap, IRBlock, Stmt};
 
 
-type AnalysisResult<T>  = HashMap<u64, T>;
+pub type AnalysisResult<T>  = HashMap<u64, T>;
 
 pub trait AbstractAnalyzer<State:Lattice + VarState + Clone> {
     fn init_state(&self) -> State{Default::default()}
@@ -52,7 +52,7 @@ fn analyze_block<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone> (a
     new_state
 }
 
-pub fn run_worklist<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone> (cfg : &ControlFlowGraph<u64>, irmap : &IRMap, analyzer : T) -> HashMap<u64, State>{
+pub fn run_worklist<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone> (cfg : &ControlFlowGraph<u64>, irmap : &IRMap, analyzer : &T) -> AnalysisResult<State>{
     let mut statemap : HashMap<u64, State> = HashMap::new();
     let mut worklist: VecDeque<u64> = VecDeque::new();
     worklist.push_back(cfg.entrypoint);
@@ -61,7 +61,7 @@ pub fn run_worklist<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone>
         let addr = worklist.pop_front().unwrap();
         let irblock = irmap.get(&addr).unwrap();
         let state = statemap.get(&addr).unwrap(); 
-        let new_state = analyze_block(&analyzer, state, irblock);
+        let new_state = analyze_block(analyzer, state, irblock);
         let succ_addrs : Vec<u64> = cfg.graph.neighbors(addr).collect();
 
         for (succ_addr,branch_state) in analyzer.process_branch(&new_state, &succ_addrs){
