@@ -1,3 +1,4 @@
+use crate::utils::LucetMetadata;
 use yaxpeax_x86::long_mode::Opcode::*;
 use std::collections::HashMap;
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
@@ -78,7 +79,8 @@ pub enum Stmt {
     Undefined,
     Ret,
     Branch(yaxpeax_x86::long_mode::Opcode, Value),
-    Call(Value)
+    Call(Value),
+    ProbeStack(u64)
 }
 
 impl Stmt{
@@ -177,8 +179,16 @@ fn branch(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
     Stmt::Branch(instr.opcode, convert_operand(instr.operand(0)))
 }
 
-fn call(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
-    Stmt::Call(convert_operand(instr.operand(0)))
+fn call(instr : &yaxpeax_x86::long_mode::Instruction, metadata : &LucetMetadata) -> Stmt{
+    let dst = convert_operand(instr.operand(0));
+    // if let Value::Imm(_,_,offset) = dst {
+    //     // if offset == metadata.lucet_probestack{
+    //     //     Stmt::ProbeStack()
+    //     // }
+    //     println!("Lifting Call dst = {:x} lucet_probestack = {:x}", offset, metadata.lucet_probestack);
+    // }
+    
+    Stmt::Call(dst)
 }
 
 fn lea(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Stmt{
@@ -205,9 +215,9 @@ fn lea(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Stmt{
 }
 
 
-pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Vec<Stmt>{
+pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata : &LucetMetadata) -> Vec<Stmt>{
     let mut instrs = Vec::new();
-    println!("{:?} {:?} instr", addr, instr);
+    //println!("{:?} {:?} instr", addr, instr);
     match instr.opcode{
         Opcode::MOV => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::MOVSX => instrs.push(unop(Unopcode::Mov, instr)),
@@ -235,7 +245,7 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Vec<St
         Opcode::JMP => instrs.push(branch(instr)),
         Opcode::JO|Opcode::JNO|Opcode::JB|Opcode::JNB|Opcode::JZ|Opcode::JNZ|Opcode::JA|Opcode::JNA|Opcode::JS|Opcode::JNS|Opcode::JP|Opcode::JNP|Opcode::JL|Opcode::JGE|Opcode::JLE|Opcode::JG => instrs.push(branch(instr)),
 
-        Opcode::CALL => instrs.push(call(instr)), 
+        Opcode::CALL => instrs.push(call(instr, metadata)), 
 
         Opcode::PUSH => { let width = instr.operand(0).width(); 
             assert_eq!(width, 8);//8 bytes
@@ -372,17 +382,88 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Vec<St
 pub type IRBlock = Vec< (u64, Vec<Stmt>) >;
 pub type IRMap =  HashMap<u64, IRBlock>;
 
-pub fn lift_cfg(program : &ModuleData, cfg : &ControlFlowGraph<u64>) -> IRMap{
+fn is_probestack(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata : &LucetMetadata) -> bool {
+    if let Opcode::CALL = instr.opcode{
+        if let Value::Imm(_,_,offset) = convert_operand(instr.operand(0)){
+            // 5 = size of call instruction
+            if 5 + offset + (*addr as i64) == metadata.lucet_probestack as i64{
+                return true
+            }
+        }
+    }
+    false
+}
+
+fn extract_probestack_arg(instr : &yaxpeax_x86::long_mode::Instruction) -> Option<u64> {
+    // if let Some(instr) = maybe_instr{
+        if let Opcode::MOV = instr.opcode{
+            if let Value::Reg(0,ValSize::Size32) = convert_operand(instr.operand(0)){
+                if let Value::Imm(_,_,x) = convert_operand(instr.operand(1)){
+                    if instr.operand_count() == 2{
+                        return Some(x as u64)
+                    }
+                }
+            } 
+        // }
+    }
+    None
+    // panic!("Broken Probestack?")
+}
+
+fn check_probestack_suffix(instr : &yaxpeax_x86::long_mode::Instruction) -> bool {
+        if let Opcode::SUB = instr.opcode{
+            if let Value::Reg(4,ValSize::Size64) = convert_operand(instr.operand(0)){
+                if let Value::Reg(0,ValSize::Size64) = convert_operand(instr.operand(1)){
+                    if instr.operand_count() == 2{
+                        return true
+                    }
+                }
+            } 
+        }
+    panic!("Broken Probestack?")
+}
+
+pub fn lift_cfg(program : &ModuleData, cfg : &ControlFlowGraph<u64>, metadata : &LucetMetadata) -> IRMap{
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
     for block_addr in g.nodes(){
         let mut block_ir : Vec<(u64, Vec<Stmt>)> = Vec::new();
         let block = cfg.get_block(block_addr);
+        println!("Lifting Block: {:x} : {:x}", block_addr, block.end);
         let mut iter = program.instructions_spanning(<AMD64 as Arch>::Decoder::default(), block.start, block.end);
+        let mut probestack_suffix = false;
+        let mut x : Option<u64> = None;
+        // let mut last_instr : Option<&yaxpeax_x86::long_mode::Instruction> = None;
         while let Some((addr, instr)) = iter.next() {
-            println!("{:x?}", addr);
-            let ir = (addr,lift(instr, &addr));
+
+            if probestack_suffix {
+                //1. fail if it isnt sub, rsp, rax
+                //2. skip 
+                probestack_suffix = false;
+                check_probestack_suffix(instr);
+               
+                continue;
+            }
+            //println!("{:x?}", addr);
+            if is_probestack(instr, &addr, &metadata){
+                //TODO: append probestack
+                //let x = extract_probestack_arg(&last_instr);
+                println!("x = {:?}", x);
+                match x {
+                    Some(v) => {
+                        let ir = (addr,vec![Stmt::ProbeStack(v)]);
+                        block_ir.push(ir);
+                        probestack_suffix = true;
+                        continue
+                    }
+                    None => panic!("probestack broken")
+                }
+            }
+            let ir = (addr,lift(instr, &addr, metadata));
             block_ir.push(ir);
+            x = extract_probestack_arg(instr);
+            // last_instr = Some(*instr);
+            
         }
         irmap.insert(block_addr, block_ir);
     };

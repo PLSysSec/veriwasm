@@ -77,7 +77,7 @@ fn function_cfg_for_addr(program: &ModuleData,
             &mut data.contexts,
             &mut data.cfg,
             vec![addr],
-            &yaxpeax_core::arch::x86_64::analyses::all_instruction_analyses
+            &yaxpeax_core::arch::x86_64::analyses::compute_next_state,
         );
     }
     data.cfg.get_function(addr, &*data.contexts.functions.borrow())
@@ -110,8 +110,10 @@ pub fn get_cfgs(binpath : &str) -> Vec<(String, ControlFlowGraph<u64>)>{
         // x86_64_data.contexts.function_at(addr).unwrap().name();
         if let Some(symbol) = x86_64_data.symbol_for(addr)
         {
-        // println!("Generating CFG for: {:?}", symbol.1);
-        cfgs.push((symbol.1.clone(), function_cfg_for_addr(&program, &mut x86_64_data, addr)));
+        if is_valid_func_name(&symbol.1) { 
+            println!("Generating CFG for: {:?}", symbol.1);
+            cfgs.push((symbol.1.clone(), function_cfg_for_addr(&program, &mut x86_64_data, addr)));
+            }
         }
     }
     cfgs
@@ -131,7 +133,8 @@ fn get_symbol_addr(symbols : &Vec<ELFSymbol>, name : &str)-> std::option::Option
 #[derive(Clone)]
 pub struct LucetMetadata {
     pub guest_table_0: u64,
-    pub lucet_tables: u64
+    pub lucet_tables: u64,
+    pub lucet_probestack: u64
 }
 
 
@@ -154,8 +157,9 @@ pub fn load_metadata(binpath : &str) -> LucetMetadata{
     // let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
     let guest_table_0 = get_symbol_addr(symbols, "guest_table_0").unwrap();
     let lucet_tables = get_symbol_addr(symbols, "lucet_tables").unwrap();
-    println!("guest_table_0 = {:x} lucet_tables = {:x}", guest_table_0, lucet_tables);
-    LucetMetadata {guest_table_0 : guest_table_0, lucet_tables : lucet_tables}
+    let lucet_probestack = get_symbol_addr(symbols, "lucet_probestack").unwrap();
+    println!("guest_table_0 = {:x} lucet_tables = {:x} probestack = {:x}", guest_table_0, lucet_tables, lucet_probestack);
+    LucetMetadata {guest_table_0 : guest_table_0, lucet_tables : lucet_tables, lucet_probestack : lucet_probestack}
     // for symbol in symbols.iter(){
     //     if symbol.name == "guest_table_0"{
     //         println!("{:?} @ {:x} in section {:?}", symbol.name, symbol.addr, symbol.section_index);
@@ -194,6 +198,10 @@ pub fn get_rsp_offset(memargs : &MemArgs) -> Option<i64>{
 
 
 pub fn is_valid_func_name(name : &String) -> bool{
+    // if name == "guest_func_switch_body"{
+    //     return true
+    // }
+    // else { return false}
     if name.starts_with("guest_func_"){
         return true
     };
