@@ -6,17 +6,13 @@ use crate::checkers::Checker;
 use crate::analyses::{AnalysisResult};
 use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue};
 use crate::analyses::AbstractAnalyzer;
-use crate::lattices;
 use crate::lattices::davlattice::{DAV};
 
 pub struct CallChecker<'a>{
     irmap : &'a  IRMap, 
     analyzer : &'a CallAnalyzer
 }
-
-// TODO
-// if not has indirect_calls:
-//      return true     
+ 
 pub fn check_calls(result : AnalysisResult<CallCheckLattice>,
     irmap : &IRMap, 
     analyzer : &CallAnalyzer) -> bool{
@@ -28,25 +24,11 @@ impl Checker<CallCheckLattice> for CallChecker<'_> {
         self.check_state_at_statements(result)
     }
 
-    fn check_state(&self, state : &CallCheckLattice) -> bool {
-        true
+    fn irmap(&self) -> &IRMap {self.irmap}
+    fn aexec(&self, state: &mut CallCheckLattice, ir_stmt: &Stmt, loc: &LocIdx){
+        self.analyzer.aexec(state, ir_stmt, loc)
     }
-}
 
-impl CallChecker<'_> {
-    fn check_state_at_statements(&self, result : AnalysisResult<CallCheckLattice>) -> bool{
-        for (block_addr,mut state) in result {
-            for (addr,ir_stmts) in self.irmap.get(&block_addr).unwrap(){
-                for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
-                    self.analyzer.aexec(&mut state, ir_stmt, &LocIdx {addr : *addr, idx : idx as u32});
-                    if !self.check_state(&state){
-                        return false
-                    }
-                }
-            }
-        }
-        true
-    }
     // TODO check lookups
     fn check_statement(&self, state : &CallCheckLattice, ir_stmt : &Stmt) -> bool {
         if let Stmt::Call(value) = ir_stmt{
@@ -55,7 +37,7 @@ impl CallChecker<'_> {
                     if let Some(CallCheckValue::FnPtr) = state.regs.get(regnum).v{    
                         return true
                     },
-                _ => ()//return true
+                _ => ()
             }
         }
 
@@ -76,5 +58,4 @@ impl CallChecker<'_> {
         false
     }
 }
-
 

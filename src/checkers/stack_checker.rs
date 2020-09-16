@@ -8,8 +8,6 @@ use crate::analyses::{AnalysisResult};
 use crate::lattices::stackgrowthlattice::StackGrowthLattice;
 use crate::analyses::AbstractAnalyzer;
 
-//TODO: how to iterate over statements as opposed to blocks?
-
 pub struct StackChecker<'a>{
     irmap : &'a  IRMap, 
     analyzer : &'a StackAnalyzer
@@ -23,70 +21,13 @@ pub fn check_stack(result : AnalysisResult<StackGrowthLattice>,
 
 impl Checker<StackGrowthLattice> for StackChecker<'_> {
     fn check(&self, result : AnalysisResult<StackGrowthLattice>) -> bool{
-        // self.check_state_at_blocks(result)
         self.check_state_at_statements(result)
     }
 
-    fn check_state(&self, state : &StackGrowthLattice) -> bool {
-        unimplemented!();
+    fn irmap(&self) -> &IRMap {self.irmap}
+    fn aexec(&self, state: &mut StackGrowthLattice, ir_stmt: &Stmt, loc: &LocIdx){
+        self.analyzer.aexec(state, ir_stmt, loc)
     }
-
-    // fn check_state(&self, state : &StackGrowthLattice) -> bool {
-    //     match state.v {
-    //         None => return false,
-    //         Some((stackgrowth,_)) => if stackgrowth >= 0 {
-    //             return false
-    //         } 
-    //     }
-    //     true
-    // }
-}
-
-impl StackChecker<'_> {
-    fn check_state_at_statements(&self, result : AnalysisResult<StackGrowthLattice>) -> bool{
-        for (block_addr,mut state) in result {
-            for (addr,ir_stmts) in self.irmap.get(&block_addr).unwrap(){
-                for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
-                    self.analyzer.aexec(&mut state, ir_stmt, &LocIdx {addr : *addr, idx : idx as u32});
-                    if !self.check_statement(&state, ir_stmt){
-                        return false
-                    }
-                }
-            }
-        }
-        true
-    }
-
-    fn check_stack_read(&self, state : &StackGrowthLattice, src: &Value) -> bool{
-        if let Value::Mem(size, memargs) = src {
-            match memargs{
-                MemArgs::Mem1Arg(memarg) => 
-                    return (state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <=8096),
-                MemArgs::Mem2Args(memarg1, memarg2) => {
-                    let offset = get_imm_mem_offset(memarg2);
-                    return (state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap() + offset) && (state.get_stackgrowth().unwrap() <=8096)
-                },
-                _ => return false //stack accesses should never have 3 args
-            }
-        }
-        panic!("Unreachable")
-    }
-
-    fn check_stack_write(&self, state : &StackGrowthLattice, dst: &Value) -> bool{
-        if let Value::Mem(size, memargs) = dst {
-            match memargs{
-                MemArgs::Mem1Arg(memarg) => 
-                    return (state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <=0),
-                MemArgs::Mem2Args(memarg1, memarg2) => {
-                    let offset = get_imm_mem_offset(memarg2);
-                    return (state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap() + offset) && (state.get_stackgrowth().unwrap() <=0)
-                },
-                _ => return false //stack accesses should never have 3 args
-            }
-        }
-        panic!("Unreachable")
-    }
-
 
     fn check_statement(&self, state : &StackGrowthLattice, ir_stmt : &Stmt) -> bool {
         //1, stackgrowth is never Bottom or >= 0
@@ -123,6 +64,54 @@ impl StackChecker<'_> {
         
         true
     }
+
 }
 
+impl StackChecker<'_> {
+    // fn check_state_at_statements(&self, result : AnalysisResult<StackGrowthLattice>) -> bool{
+    //     for (block_addr,mut state) in result {
+    //         for (addr,ir_stmts) in self.irmap.get(&block_addr).unwrap(){
+    //             for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
+    //                 self.analyzer.aexec(&mut state, ir_stmt, &LocIdx {addr : *addr, idx : idx as u32});
+    //                 if !self.check_statement(&state, ir_stmt){
+    //                     return false
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     true
+    // }
 
+    fn check_stack_read(&self, state : &StackGrowthLattice, src: &Value) -> bool{
+        if let Value::Mem(size, memargs) = src {
+            match memargs{
+                MemArgs::Mem1Arg(memarg) => 
+                    return (state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <=8096),
+                MemArgs::Mem2Args(memarg1, memarg2) => {
+                    let offset = get_imm_mem_offset(memarg2);
+                    return (state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap() + offset) && (state.get_stackgrowth().unwrap() <=8096)
+                },
+                _ => return false //stack accesses should never have 3 args
+            }
+        }
+        panic!("Unreachable")
+    }
+
+    fn check_stack_write(&self, state : &StackGrowthLattice, dst: &Value) -> bool{
+        if let Value::Mem(size, memargs) = dst {
+            match memargs{
+                MemArgs::Mem1Arg(memarg) => 
+                    return (state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <=0),
+                MemArgs::Mem2Args(memarg1, memarg2) => {
+                    let offset = get_imm_mem_offset(memarg2);
+                    return (state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap() + offset) && (state.get_stackgrowth().unwrap() <=0)
+                },
+                _ => return false //stack accesses should never have 3 args
+            }
+        }
+        panic!("Unreachable")
+    }
+
+
+    
+}
