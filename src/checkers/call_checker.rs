@@ -1,12 +1,13 @@
-use crate::lifter::{Stmt, Value};
+use crate::lifter::{Stmt, Value, ValSize, MemArg, MemArgs};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::analyses::call_analyzer::CallAnalyzer;
 use crate::lifter::IRMap;
 use crate::checkers::Checker;
 use crate::analyses::{AnalysisResult};
-use crate::lattices::calllattice::CallCheckLattice;
+use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue};
 use crate::analyses::AbstractAnalyzer;
 use crate::lattices;
+use crate::lattices::davlattice::{DAV};
 
 pub struct CallChecker<'a>{
     irmap : &'a  IRMap, 
@@ -46,16 +47,33 @@ impl CallChecker<'_> {
         }
         true
     }
-    // TODO Complete
+    // TODO check lookups
     fn check_statement(&self, state : &CallCheckLattice, ir_stmt : &Stmt) -> bool {
         if let Stmt::Call(value) = ir_stmt{
             match value {
-                Value::Reg(regnum, size) => return false,
+                Value::Reg(regnum, size) => 
+                    if let Some(CallCheckValue::FnPtr) = state.regs.get(regnum).v{    
+                        return true
+                    },
                 _ => ()//return true
             }
         }
+
+        // Check that lookup is using resolved DAV
+        if let Stmt::Unop(_,_,Value::Mem(_,memargs)) = ir_stmt{
+            match memargs{
+                MemArgs::Mem3Args(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,8)) =>
+                match (state.regs.get(regnum1).v,state.regs.get(regnum2).v){
+                    (Some(CallCheckValue::GuestTableBase),Some(CallCheckValue::PtrOffset(DAV::Checked))) => return true,
+                    (Some(CallCheckValue::PtrOffset(DAV::Checked)),Some(CallCheckValue::GuestTableBase)) => return true,
+                    _ => ()
+                }
+                _ => ()
+            }
+        }
+
         
-        true
+        false
     }
 }
 

@@ -23,7 +23,7 @@ use clap::{Arg, App};
 use lifter::lift_cfg;
 use crate::checkers::stack_checker::check_stack;
 use crate::checkers::heap_checker::check_heap;
-use crate::checkers::call_checker::check_calls;
+// use crate::checkers::call_checker::check_calls;
 use std::rc::Rc;
 
 pub struct Config{
@@ -70,8 +70,8 @@ fn run(config : Config){
         //let stack_result = analyze_stack(cfg, &irmap);
         let stack_analyzer = StackAnalyzer{};
         let stack_result = run_worklist(cfg, &irmap, &stack_analyzer); 
-        // let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
-        // assert!(stack_safe);
+        let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
+        assert!(stack_safe);
         println!("Checking Heap Safety");
         let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
         let heap_result = run_worklist(cfg, &irmap, &heap_analyzer); 
@@ -145,7 +145,8 @@ fn lift_test_helper(path: &str){
         
         let stack_analyzer = StackAnalyzer{};
         let stack_result = run_worklist(cfg, &irmap, &stack_analyzer); 
-        //let stack_safe = check_stack(stack_result, &irmap, &StackAnalyzer{});
+        let stack_safe = check_stack(stack_result, &irmap, &StackAnalyzer{});
+        assert!(stack_safe);
 
         let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
         let heap_result = run_worklist(cfg, &irmap, &heap_analyzer); 

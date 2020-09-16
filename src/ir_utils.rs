@@ -31,8 +31,20 @@ pub fn is_stack_access(v: &Value) -> bool {
     false
 }
 
+pub fn is_mem_access(v: &Value) -> bool {
+    if let Value::Mem(size, memargs) = v { true }
+    else { false }
+}
+
 pub fn get_imm_offset(v: &Value) -> i64{
     if let Value::Imm(_,_,v) = v {*v}
+    else{
+        panic!("get_imm_offset called on something that is not an imm offset")
+    }
+}
+
+pub fn get_imm_mem_offset(v: &MemArg) -> i64{
+    if let MemArg::Imm(_,_,v) = v {*v}
     else{
         panic!("get_imm_offset called on something that is not an imm offset")
     }

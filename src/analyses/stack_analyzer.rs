@@ -10,11 +10,13 @@ use crate::analyses::AnalysisResult;
 //     run_worklist(cfg, &irmap, StackAnalyzer{})    
 // }
 
+//(offset, probestack)
+
 pub struct StackAnalyzer{}
 
 impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
     fn init_state(&self) -> StackGrowthLattice {
-        StackGrowthLattice::new(0)
+        StackGrowthLattice::new((0,4096))
     }
 
     fn aexec(&self, in_state : &mut StackGrowthLattice, ir_instr : &Stmt, _loc_idx : &LocIdx) -> () {
@@ -26,10 +28,19 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
             if is_rsp(dst) {
                 if is_rsp(src1){ 
                     let offset = get_imm_offset(src2);
-                    *in_state = StackGrowthLattice {v : in_state.v.map(|x| x + offset)} 
+                    if let Some((x,probestack)) = in_state.v{
+                        *in_state = StackGrowthLattice {v : Some ((x + offset, probestack)) }
+                    }
+                    else {*in_state = Default::default() }
+                    // *in_state = StackGrowthLattice {v : (x + offset, probestack) } 
                 }
                 else{ panic!("Illegal RSP write") }
             },
+            Stmt::ProbeStack(new_probestack) => 
+            if let Some((x,probestack)) = in_state.v{
+                *in_state = StackGrowthLattice {v : Some ((x, *new_probestack as i64)) }
+            }
+            else {*in_state = Default::default() },
             _ => ()
         }
     }

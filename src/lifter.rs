@@ -429,7 +429,7 @@ pub fn lift_cfg(program : &ModuleData, cfg : &ControlFlowGraph<u64>, metadata : 
     for block_addr in g.nodes(){
         let mut block_ir : Vec<(u64, Vec<Stmt>)> = Vec::new();
         let block = cfg.get_block(block_addr);
-        println!("Lifting Block: {:x} : {:x}", block_addr, block.end);
+        // println!("Lifting Block: {:x} : {:x}", block_addr, block.end);
         let mut iter = program.instructions_spanning(<AMD64 as Arch>::Decoder::default(), block.start, block.end);
         let mut probestack_suffix = false;
         let mut x : Option<u64> = None;

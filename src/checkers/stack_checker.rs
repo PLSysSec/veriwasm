@@ -1,6 +1,6 @@
-use crate::ir_utils::is_stack_access;
+use crate::ir_utils::{is_stack_access, get_imm_mem_offset};
 use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lifter::{Stmt,Value};
+use crate::lifter::{Stmt,Value, MemArgs, MemArg};
 use crate::lifter::IRMap;
 use crate::analyses::stack_analyzer::StackAnalyzer;
 use crate::checkers::Checker;
@@ -23,21 +23,24 @@ pub fn check_stack(result : AnalysisResult<StackGrowthLattice>,
 
 impl Checker<StackGrowthLattice> for StackChecker<'_> {
     fn check(&self, result : AnalysisResult<StackGrowthLattice>) -> bool{
-        self.check_state_at_blocks(result)
+        // self.check_state_at_blocks(result)
+        self.check_state_at_statements(result)
     }
 
     fn check_state(&self, state : &StackGrowthLattice) -> bool {
-        match state.v {
-            None => return false,
-            Some(stackgrowth) => if stackgrowth >= 0 {
-                return false
-            } 
-        }
-        true
+        unimplemented!();
     }
+
+    // fn check_state(&self, state : &StackGrowthLattice) -> bool {
+    //     match state.v {
+    //         None => return false,
+    //         Some((stackgrowth,_)) => if stackgrowth >= 0 {
+    //             return false
+    //         } 
+    //     }
+    //     true
+    // }
 }
-
-
 
 impl StackChecker<'_> {
     fn check_state_at_statements(&self, result : AnalysisResult<StackGrowthLattice>) -> bool{
@@ -54,12 +57,42 @@ impl StackChecker<'_> {
         true
     }
 
-    // TODO Complete
+    fn check_stack_read(&self, state : &StackGrowthLattice, src: &Value) -> bool{
+        if let Value::Mem(size, memargs) = src {
+            match memargs{
+                MemArgs::Mem1Arg(memarg) => 
+                    return (state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <=8096),
+                MemArgs::Mem2Args(memarg1, memarg2) => {
+                    let offset = get_imm_mem_offset(memarg2);
+                    return (state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap() + offset) && (state.get_stackgrowth().unwrap() <=8096)
+                },
+                _ => return false //stack accesses should never have 3 args
+            }
+        }
+        panic!("Unreachable")
+    }
+
+    fn check_stack_write(&self, state : &StackGrowthLattice, dst: &Value) -> bool{
+        if let Value::Mem(size, memargs) = dst {
+            match memargs{
+                MemArgs::Mem1Arg(memarg) => 
+                    return (state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <=0),
+                MemArgs::Mem2Args(memarg1, memarg2) => {
+                    let offset = get_imm_mem_offset(memarg2);
+                    return (state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap() + offset) && (state.get_stackgrowth().unwrap() <=0)
+                },
+                _ => return false //stack accesses should never have 3 args
+            }
+        }
+        panic!("Unreachable")
+    }
+
+
     fn check_statement(&self, state : &StackGrowthLattice, ir_stmt : &Stmt) -> bool {
         //1, stackgrowth is never Bottom or >= 0
         match state.v {
             None => return false,
-            Some(stackgrowth) => if stackgrowth >= 0 {
+            Some((stackgrowth,_)) => if stackgrowth >= 0 {
                 return false
             } 
         }
@@ -70,18 +103,18 @@ impl StackChecker<'_> {
             Stmt::Unop(_,dst,src) => 
             // stack write: probestack <= stackgrowth + c < 0
             if is_stack_access(dst){
-                ()
+                if !self.check_stack_write(state, dst){return false}
             }
             //stack read: probestack <= stackgrowth + c < 8K
             else if is_stack_access(src) {
-                ()
+                if !self.check_stack_read(state, src){return false}
             },
             _ => (),
         }
         
         // 3. For all rets stackgrowth = 0
         if let Stmt::Ret = ir_stmt{
-            if let Some(stackgrowth) = state.v {
+            if let Some((stackgrowth,_)) = state.v {
                 if stackgrowth != 0 {
                     return false
                 }

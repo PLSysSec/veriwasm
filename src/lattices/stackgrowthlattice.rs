@@ -2,7 +2,7 @@ use crate::lifter::Value;
 use std::cmp::Ordering;
 use crate::lattices::{Lattice, ConstLattice, VarState};
 
-pub type StackGrowthLattice = ConstLattice<i64>;
+pub type StackGrowthLattice = ConstLattice<(i64,i64)>;
 
 impl VarState for StackGrowthLattice {
     type Var = i64;
@@ -12,12 +12,29 @@ impl VarState for StackGrowthLattice {
     fn adjust_stack_offset(&mut self, dst: &Value, src1: &Value, src2: &Value){unimplemented!()}
 }
 
+impl StackGrowthLattice{
+    pub fn get_stackgrowth(&self) -> Option<i64>{ 
+        match self.v{
+            Some((stackgrowth,_)) => Some(stackgrowth),
+            None => None
+        } 
+    }
+
+    pub fn get_probestack(&self) -> Option<i64>{ 
+        match self.v{
+            Some((_,probestack)) => Some(probestack),
+            None => None
+        } 
+    }
+
+}
+
 #[test]
 fn stack_growth_lattice_test() {
     let x1  = StackGrowthLattice {v : None};
-    let x2  = StackGrowthLattice {v : Some(1)};
-    let x3  = StackGrowthLattice {v : Some(1)};
-    let x4  = StackGrowthLattice {v : Some(2)};
+    let x2  = StackGrowthLattice {v : Some((1,4096))};
+    let x3  = StackGrowthLattice {v : Some((1,4096))};
+    let x4  = StackGrowthLattice {v : Some((2,4096))};
 
 
     assert_eq!(x1 == x2, false);
@@ -37,6 +54,6 @@ fn stack_growth_lattice_test() {
     assert_eq!(x3 < x4, false);
 
     assert_eq!(x1.meet(&x2) == StackGrowthLattice {v : None}, true);
-    assert_eq!(x2.meet(&x3) == StackGrowthLattice {v : Some(1)}, true);
+    assert_eq!(x2.meet(&x3) == StackGrowthLattice {v : Some((1,4096))}, true);
     assert_eq!(x3.meet(&x4) == StackGrowthLattice {v : None}, true);
 }
