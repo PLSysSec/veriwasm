@@ -12,14 +12,6 @@ pub mod call_checker;
 
 pub trait Checker<State:Lattice + Clone> {
     fn check(&self, result : AnalysisResult<State>) -> bool;
-    // fn check_state_at_blocks(&self, result : AnalysisResult<State>) -> bool{
-    //     for (block_addr,state) in result {
-    //         return self.check_state(&state)
-    //         }
-    //     //empty irmap is safe I guess
-    //     true
-    // }
-
     fn irmap(&self) -> &IRMap;
     fn aexec(&self, state: &mut State, ir_stmt: &Stmt, loc: &LocIdx);
 

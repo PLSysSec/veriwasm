@@ -64,24 +64,9 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
         
         true
     }
-
 }
 
 impl StackChecker<'_> {
-    // fn check_state_at_statements(&self, result : AnalysisResult<StackGrowthLattice>) -> bool{
-    //     for (block_addr,mut state) in result {
-    //         for (addr,ir_stmts) in self.irmap.get(&block_addr).unwrap(){
-    //             for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
-    //                 self.analyzer.aexec(&mut state, ir_stmt, &LocIdx {addr : *addr, idx : idx as u32});
-    //                 if !self.check_statement(&state, ir_stmt){
-    //                     return false
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     true
-    // }
-
     fn check_stack_read(&self, state : &StackGrowthLattice, src: &Value) -> bool{
         if let Value::Mem(size, memargs) = src {
             match memargs{
@@ -111,7 +96,4 @@ impl StackChecker<'_> {
         }
         panic!("Unreachable")
     }
-
-
-    
 }

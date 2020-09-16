@@ -1,12 +1,11 @@
-use crate::lifter::{Stmt, Value, ValSize, MemArg, MemArgs};
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::analyses::call_analyzer::CallAnalyzer;
-use crate::lifter::IRMap;
 use crate::checkers::Checker;
-use crate::analyses::{AnalysisResult};
+use crate::lifter::{Stmt, Value, ValSize, MemArg, MemArgs, IRMap};
+use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue};
-use crate::analyses::AbstractAnalyzer;
 use crate::lattices::davlattice::{DAV};
+use crate::analyses::call_analyzer::CallAnalyzer;
+use crate::analyses::{AnalysisResult};
+use crate::analyses::AbstractAnalyzer;
 
 pub struct CallChecker<'a>{
     irmap : &'a  IRMap, 

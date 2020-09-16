@@ -1,14 +1,10 @@
-use crate::ir_utils::get_imm_mem_offset;
-use crate::ir_utils::is_stack_access;
-use crate::ir_utils::is_mem_access;
-use crate::lifter::{Stmt, Value, ValSize, MemArg, MemArgs};
+use crate::ir_utils::{is_stack_access, is_mem_access};
+use crate::lifter::{Stmt, Value, ValSize, MemArg, MemArgs, IRMap};
 use crate::lattices::reachingdefslattice::LocIdx;
-use crate::analyses::heap_analyzer::HeapAnalyzer;
-use crate::lifter::IRMap;
-use crate::checkers::Checker;
-use crate::analyses::{AnalysisResult};
 use crate::lattices::heaplattice::{HeapLattice, HeapValue};
-use crate::analyses::AbstractAnalyzer;
+use crate::checkers::Checker;
+use crate::analyses::{AnalysisResult, AbstractAnalyzer};
+use crate::analyses::heap_analyzer::HeapAnalyzer;
 
 pub struct HeapChecker<'a>{
     irmap : &'a  IRMap, 
@@ -50,33 +46,11 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
             },
              _ => ()
         }
-        
-        
         true
     }
-
-    // //TODO: finish check_state
-    // fn check_state(&self, state : &HeapLattice) -> bool {
-    //     true
-    // }
-
 }
 
 impl HeapChecker<'_> {
-    // fn check_state_at_statements(&self, result : AnalysisResult<HeapLattice>) -> bool{
-    //     for (block_addr,mut state) in result {
-    //         for (addr,ir_stmts) in self.irmap.get(&block_addr).unwrap(){
-    //             for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
-    //                 self.analyzer.aexec(&mut state, ir_stmt, &LocIdx {addr : *addr, idx : idx as u32});
-    //                 if !self.check_state(&state){
-    //                     return false
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     true
-    // }
-    
     fn check_global_access(&self, state : &HeapLattice, access: &Value) -> bool{
         if let Value::Mem(size, memargs) = access {
             match memargs{
