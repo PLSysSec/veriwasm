@@ -1,3 +1,4 @@
+use crate::lifter::Binopcode;
 use crate::lifter::Value;
 use std::cmp::Ordering;
 use crate::lattices::{Lattice, ConstLattice, VarState};
@@ -9,7 +10,7 @@ impl VarState for StackGrowthLattice {
     fn set(&mut self, index : &Value, v : Self::Var) -> (){unimplemented!()}
     fn set_to_bot(&mut self, index : &Value) -> (){unimplemented!()}
     fn on_call(&mut self) -> (){unimplemented!()}
-    fn adjust_stack_offset(&mut self, dst: &Value, src1: &Value, src2: &Value){unimplemented!()}
+    fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value, src1: &Value, src2: &Value){unimplemented!()}
 }
 
 impl StackGrowthLattice{

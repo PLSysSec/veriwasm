@@ -30,31 +30,49 @@ impl Checker<CallCheckLattice> for CallChecker<'_> {
 
     // TODO check lookups
     fn check_statement(&self, state : &CallCheckLattice, ir_stmt : &Stmt) -> bool {
-        if let Stmt::Call(value) = ir_stmt{
-            match value {
-                Value::Reg(regnum, size) => 
-                    if let Some(CallCheckValue::FnPtr) = state.regs.get(regnum).v{    
-                        return true
-                    },
-                _ => ()
+        //1. Check that all indirect calls use resolved function pointer
+        if let Stmt::Call(v) = ir_stmt{
+            if !check_indirect_call(state, v){
+                println!("Failure Case: Indirect Call"); 
+                return false
             }
         }
+        
 
-        // Check that lookup is using resolved DAV
+        // 2. Check that lookup is using resolved DAV
         if let Stmt::Unop(_,_,Value::Mem(_,memargs)) = ir_stmt{
-            match memargs{
-                MemArgs::Mem3Args(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,8)) =>
-                match (state.regs.get(regnum1).v,state.regs.get(regnum2).v){
-                    (Some(CallCheckValue::GuestTableBase),Some(CallCheckValue::PtrOffset(DAV::Checked))) => return true,
-                    (Some(CallCheckValue::PtrOffset(DAV::Checked)),Some(CallCheckValue::GuestTableBase)) => return true,
-                    _ => ()
-                }
-                _ => ()
+            if !check_calltable_lookup(state, memargs){
+                println!("Failure Case: Lookup Call"); 
+                return false
             }
         }
 
         
-        false
+        true
     }
 }
 
+fn check_indirect_call(state: &CallCheckLattice, target: &Value) -> bool {
+    match target{
+        Value::Reg(regnum, size) => 
+            if let Some(CallCheckValue::FnPtr) = state.regs.get(regnum).v{    
+                return true
+        },
+        Value::Mem(_,_) => return false,
+        Value::Imm(_,_,_) => return true
+    }
+    false
+}
+
+fn check_calltable_lookup(state: &CallCheckLattice, memargs: &MemArgs) -> bool {
+    match memargs{
+        MemArgs::Mem3Args(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,8)) =>
+        match (state.regs.get(regnum1).v,state.regs.get(regnum2).v){
+            (Some(CallCheckValue::GuestTableBase),Some(CallCheckValue::PtrOffset(DAV::Checked))) => return true,
+            (Some(CallCheckValue::PtrOffset(DAV::Checked)),Some(CallCheckValue::GuestTableBase)) => return true,
+            (x,Some(CallCheckValue::GuestTableBase)) | (Some(CallCheckValue::GuestTableBase),x) => {println!("{:?} ", x); return false},
+            (x,y) => return true // not a calltable lookup
+        }
+        _ => return true //not a calltable lookup?
+    }
+}

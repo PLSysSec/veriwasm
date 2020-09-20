@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use crate::lattices::{Lattice};
 
 // Dependent Abstract Value
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DAV {
     Unknown,
     Unchecked(u64),

@@ -1,3 +1,4 @@
+use crate::lifter::Binopcode;
 use crate::ir_utils::is_rsp;
 use crate::ir_utils::get_imm_offset;
 use std::cmp::Ordering;
@@ -22,7 +23,7 @@ pub trait VarState{
     fn set(&mut self, index : &Value, v : Self::Var) -> ();
     fn set_to_bot(&mut self, index : &Value) -> ();
     fn on_call(&mut self) -> ();
-    fn adjust_stack_offset(&mut self, dst: &Value, src1: &Value, src2: &Value);
+    fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value, src1: &Value, src2: &Value);
     // fn get_reg(&self, index : &Value) -> Self::Var; 
 }
 
@@ -57,7 +58,7 @@ impl Default for BooleanLattice {
 
 pub type Constu32Lattice = ConstLattice::<u32>;
 
-#[derive(Eq, Clone, Copy)]
+#[derive(Eq, Clone, Copy, Debug)]
 pub struct ConstLattice<T:Eq + Copy>{
     pub v: Option<T>
 }
@@ -126,14 +127,14 @@ impl<T:Lattice + Clone> VarState for VariableState<T> {
                 MemArgs::Mem1Arg(arg) => 
                     if let MemArg::Reg(regnum, size) = arg{
                         if *regnum == 4{
-                            self.stack.update(0, value, size.to_u32())
+                            self.stack.update(0, value, size.to_u32() / 8)
                         }
                     },
                 MemArgs::Mem2Args(arg1, arg2) => 
                     if let MemArg::Reg(regnum, size) = arg1{
                         if *regnum == 4{
                             if let MemArg::Imm(imm_sign,_,offset) = arg2{
-                                self.stack.update(*offset, value, size.to_u32())
+                                self.stack.update(*offset, value, size.to_u32() / 8)
                             }
                         }
                     },
@@ -152,11 +153,17 @@ impl<T:Lattice + Clone> VarState for VariableState<T> {
         self.regs.clear_regs()
     }
 
-    fn adjust_stack_offset(&mut self, dst: &Value, src1: &Value, src2: &Value){
+    fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value, src1: &Value, src2: &Value){
         if is_rsp(dst) {
-            if is_rsp(src1){ 
+            if is_rsp(src1){
                 let adjustment = get_imm_offset(src2);
-                self.stack.update_stack_offset(adjustment)
+                //println!("opcode = {:?} {:?} = {:?} {:?} {:?}", opcode, dst, src1, src2, adjustment); 
+                match opcode{
+                    Binopcode::Add => self.stack.update_stack_offset(adjustment),
+                    Binopcode::Sub => self.stack.update_stack_offset(-adjustment),
+                    _ => panic!("Illegal RSP write")
+                }
+                
             }
             else{ panic!("Illegal RSP write") }
         }        

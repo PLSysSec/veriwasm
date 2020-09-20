@@ -1,6 +1,6 @@
 use crate::lattices::{ConstLattice, VariableState, Lattice};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum HeapValue {
     HeapBase,
     Bounded4GB,

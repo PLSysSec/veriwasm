@@ -4,6 +4,7 @@ use crate::lattices::heaplattice::{HeapValueLattice, HeapLattice, HeapValue};
 use crate::analyses::{AbstractAnalyzer, run_worklist};
 use crate::lifter::{IRMap, Value, MemArgs, MemArg, ValSize};
 use crate::utils::{LucetMetadata};
+use crate::ir_utils::{is_stack_access, extract_stack_offset};
 use std::default::Default;
 use crate::lattices::VarState;
 
@@ -24,7 +25,9 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     }
 
     fn aexec_unop(&self, in_state : &mut HeapLattice, dst : &Value, src : &Value) -> (){
-        in_state.set(dst, self.aeval_unop(in_state, src))
+        let v = self.aeval_unop(in_state, src);
+        println!("dst = {:?} = {:?}", dst, v);
+        in_state.set(dst, v)
     }
 }
 
@@ -44,10 +47,18 @@ pub fn is_globalbase_access(in_state : &HeapLattice, memargs : &MemArgs) -> bool
 impl HeapAnalyzer{
     pub fn aeval_unop(&self, in_state : &HeapLattice, value : &Value) -> HeapValueLattice{
         match value{
-            Value::Mem(memsize, memargs) => 
+            Value::Mem(memsize, memargs) => {
                 if is_globalbase_access(in_state, memargs){
                     return HeapValueLattice::new(HeapValue::GlobalsBase)
                 }
+                // put stack access here?
+                if is_stack_access(value){
+                    let offset = extract_stack_offset(memargs);
+                    let v = in_state.stack.get(offset, memsize.to_u32());
+                    println!("stack load({:?}) = {:?}", offset, v);
+                    return v
+                }
+            }
 
             Value::Reg(regnum, size) => {
                 if let ValSize::SizeOther = size {return Default::default()};

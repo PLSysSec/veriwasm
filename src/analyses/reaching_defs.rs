@@ -18,8 +18,8 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
         match ir_instr{
             Stmt::Clear(dst) => in_state.set(dst, singleton(loc_idx.clone())),
             Stmt::Unop(_, dst, _) =>  in_state.set(dst, singleton(loc_idx.clone())),
-            Stmt::Binop(_, dst, src1, src2) =>  {
-                in_state.adjust_stack_offset(dst, src1, src2);  
+            Stmt::Binop(opcode, dst, src1, src2) =>  {
+                in_state.adjust_stack_offset(opcode, dst, src1, src2);  
                 in_state.set(dst, singleton(loc_idx.clone()))
             },
             Stmt::Call(_) => in_state.regs.clear_regs(),

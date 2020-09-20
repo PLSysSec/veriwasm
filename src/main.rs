@@ -5,6 +5,7 @@ pub mod metadata;
 pub mod lifter;
 pub mod ir_utils;
 pub mod checkers;
+use crate::checkers::call_checker::check_calls;
 use crate::analyses::call_analyzer::CallAnalyzer;
 use crate::analyses::heap_analyzer::HeapAnalyzer;
 use crate::analyses::run_worklist;
@@ -66,7 +67,7 @@ fn run(config : Config){
         // let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
         // println!("Checking 1 Round of Jump Safety");
         // let jump_results = analyze_jumps(cfg, &irmap, metadata.clone(), reaching_defs.clone());
-        println!("Checking Stack Safety");
+        // println!("===========================================Checking Stack Safety================================================");
         //let stack_result = analyze_stack(cfg, &irmap);
         let stack_analyzer = StackAnalyzer{};
         let stack_result = run_worklist(cfg, &irmap, &stack_analyzer); 
@@ -75,7 +76,7 @@ fn run(config : Config){
         println!("Checking Heap Safety");
         let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
         let heap_result = run_worklist(cfg, &irmap, &heap_analyzer); 
-        // let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
+        let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
         // assert!(heap_safe);
         println!("Checking Call Safety");
         let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone()};
@@ -150,11 +151,14 @@ fn lift_test_helper(path: &str){
 
         let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
         let heap_result = run_worklist(cfg, &irmap, &heap_analyzer); 
-        //let heap_safe = check_heap(heap_result, &irmap, &HeapAnalyzer{metadata : metadata.clone()});
+        let heap_safe = check_heap(heap_result, &irmap, &HeapAnalyzer{metadata : metadata.clone()});
+        // assert!(heap_safe);
 
         let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone()};
         let call_result = run_worklist(cfg, &irmap, &call_analyzer);    
-        //let call_safe = check_calls(call_result, &irmap,
+        let call_safe = check_calls(call_result, &irmap, &call_analyzer);
+        // assert!(call_safe);
+
         //&CallAnalyzer{metadata : metadata.clone(), reaching_defs :
         //reaching_defs});    
     }

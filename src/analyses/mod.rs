@@ -35,7 +35,7 @@ pub trait AbstractAnalyzer<State:Lattice + VarState + Clone> {
         match ir_instr{
             Stmt::Clear(dst) => in_state.set_to_bot(dst),
             Stmt::Unop(_, dst, src) => self.aexec_unop(in_state, &dst, &src),
-            Stmt::Binop(opcode, dst, src1, src2) =>  {self.aexec_binop(in_state, opcode, dst, src1, src2); in_state.adjust_stack_offset(dst,src1,src2)},
+            Stmt::Binop(opcode, dst, src1, src2) =>  {self.aexec_binop(in_state, opcode, dst, src1, src2); in_state.adjust_stack_offset(opcode,dst,src1,src2)},
             Stmt::Call(_) => in_state.on_call(),
             _ => ()
         }
@@ -76,6 +76,7 @@ pub fn run_worklist<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone>
                 statemap.insert(succ_addr, merged_state);
             }
             else{
+                //TODO: pretty sure this is an unnecessary state clone
                 statemap.insert(succ_addr, branch_state.clone());
                 has_change = true;
             }

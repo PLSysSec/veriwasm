@@ -147,8 +147,18 @@ fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{
         Operand::RegIndexBaseDisp(reg1, reg2, imm) => Value::Mem(valsize(reg1.width() as u32), MemArgs::Mem3Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) ), //mem[reg1 + reg2 + c]
         Operand::RegScale(_,_) => panic!("Memory operations with scaling prohibited"), // mem[reg * c]
         Operand::RegScaleDisp(_,_,_) => panic!("Memory operations with scaling prohibited"), //mem[reg*c1 + c2]
-        Operand::RegIndexBaseScale(reg1,reg2,scale) => Value::Mem(valsize(reg1.width() as u32), MemArgs::MemScale(convert_memarg_reg(reg1), convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, ValSize::Size32, scale as i64)) ),//mem[reg1 + reg2*c]
-        Operand::RegIndexBaseScaleDisp(reg1,reg2,scale,imm) => {assert_eq!(scale,1); Value::Mem(valsize(reg1.width() as u32), MemArgs::Mem3Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) )},//mem[reg1 + reg2*c1 + c2]
+        Operand::RegIndexBaseScale(reg1,reg2,scale) => //mem[reg1 + reg2*c]
+            if scale == 1 {
+                Value::Mem(valsize(reg1.width() as u32), 
+                MemArgs::Mem2Args(convert_memarg_reg(reg1), 
+                convert_memarg_reg(reg2)) )
+            } else {
+            Value::Mem(valsize(reg1.width() as u32), 
+                MemArgs::MemScale(convert_memarg_reg(reg1), 
+                convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, 
+                ValSize::Size32, scale as i64)) )
+            },
+            Operand::RegIndexBaseScaleDisp(reg1,reg2,scale,imm) => {assert_eq!(scale,1); Value::Mem(valsize(reg1.width() as u32), MemArgs::Mem3Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) )},//mem[reg1 + reg2*c1 + c2]
         Operand::Nothing => panic!("Nothing Operand?"),
     }
 }

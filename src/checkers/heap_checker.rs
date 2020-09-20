@@ -28,13 +28,15 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
     }
 
     fn check_statement(&self, state : &HeapLattice, ir_stmt : &Stmt) -> bool {
+        // println!("rdi = {:?} r15 = {:?} stack = {:?}", state.regs.rdi, state.regs.r15, state.stack);
         match ir_stmt{
             //1. Check that at each call rdi = HeapBase
-            Stmt::Call(_) => 
+            Stmt::Call(_) => {
+            //  println!("=============== call rdi = {:?}", state.regs.rdi.v);
              match state.regs.rdi.v{
                  Some(HeapValue::HeapBase) => (),
                  _ => return false
-             },
+             }},
              //2. Check that all load and store are safe
              Stmt::Unop(_, dst, src) => 
              if is_mem_access(dst){
@@ -70,6 +72,7 @@ impl HeapChecker<'_> {
     }
 
     fn check_heap_access(&self, state : &HeapLattice, access: &Value) -> bool{
+        // println!("ch");
         if let Value::Mem(size, memargs) = access {
             match memargs{
                 // if only arg is heapbase
@@ -112,6 +115,7 @@ impl HeapChecker<'_> {
     }
 
     fn check_metadata_access(&self, state : &HeapLattice, access: &Value) -> bool{
+        //TODO: allow metadata access if global_table_base is either of the args
         if let Value::Mem(size, memargs) = access {
             match memargs{
                 //Case 1: mem[globals_base]
@@ -139,6 +143,7 @@ impl HeapChecker<'_> {
     }
 
     fn check_mem_access(&self, state : &HeapLattice, access: &Value) -> bool{
+        println!("Memory Access: {:?} {:?}", access, state.regs);
         // Case 1: its a stack access
         if is_stack_access(access) { return true}
         // Case 2: its a heap access

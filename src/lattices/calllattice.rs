@@ -3,7 +3,7 @@ use crate::lattices::Lattice;
 use crate::lattices::davlattice::{DAV};
 use std::cmp::Ordering;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Debug)]
 pub enum CallCheckValue {
     GuestTableBase,
     LucetTablesBase,

@@ -1,3 +1,5 @@
+use crate::ir_utils::extract_stack_offset;
+use crate::ir_utils::is_stack_access;
 use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
 use crate::lattices::davlattice::DAV;
 use crate::lifter::{MemArgs, MemArg, Binopcode, IRMap, Value};
@@ -74,6 +76,10 @@ impl CallAnalyzer{
                     }
                     else if is_fn_ptr(in_state, memargs){
                         return CallCheckValueLattice{ v : Some(CallCheckValue::FnPtr)} 
+                    }
+                    else if is_stack_access(value){
+                        let offset = extract_stack_offset(memargs);
+                        return in_state.stack.get(offset, memsize.to_u32())
                     },
 
                 Value::Reg(regnum, size) => return in_state.regs.get(regnum),

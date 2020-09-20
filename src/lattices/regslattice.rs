@@ -1,6 +1,6 @@
 use crate::lattices::{Lattice, BooleanLattice};
 
-#[derive(Default, PartialEq, Eq, Clone, PartialOrd)]
+#[derive(Default, PartialEq, Eq, Clone, PartialOrd, Debug)]
 pub struct X86RegsLattice<T:Lattice + Clone>{
     pub rax : T,
     pub rbx : T,
