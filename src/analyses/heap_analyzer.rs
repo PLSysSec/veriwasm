@@ -26,7 +26,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
 
     fn aexec_unop(&self, in_state : &mut HeapLattice, dst : &Value, src : &Value) -> (){
         let v = self.aeval_unop(in_state, src);
-        println!("dst = {:?} = {:?}", dst, v);
+        //println!("dst = {:?} = {:?}", dst, v);
         in_state.set(dst, v)
     }
 }
@@ -55,7 +55,7 @@ impl HeapAnalyzer{
                 if is_stack_access(value){
                     let offset = extract_stack_offset(memargs);
                     let v = in_state.stack.get(offset, memsize.to_u32());
-                    println!("stack load({:?}) = {:?}", offset, v);
+                    //println!("stack load({:?}) = {:?}", offset, v);
                     return v
                 }
             }

@@ -83,6 +83,27 @@ impl<T:Lattice + Clone> X86RegsLattice<T>{
         self.r13 = Default::default();
         self.r14 = Default::default();
         self.r15 = Default::default();
+        self.zf = Default::default();
+    }
+
+    pub fn show(&self) -> (){
+        println!("State = ");
+        if self.rax != Default::default() {println!("rax = {:?}", self.rax)}
+        if self.rcx != Default::default() {println!("rcx = {:?}", self.rcx)}
+        if self.rdx != Default::default() {println!("rdx = {:?}", self.rdx)}
+        if self.rbx != Default::default() {println!("rbx = {:?}", self.rbx)}
+        if self.rbp != Default::default() {println!("rbp = {:?}", self.rbp)}
+        if self.rsi != Default::default() {println!("rsi = {:?}", self.rsi)}
+        if self.rdi != Default::default() {println!("rdi = {:?}", self.rdi)}
+        if self.r8 != Default::default() {println!("r8 = {:?}", self.r8)}
+        if self.r9 != Default::default() {println!("r9 = {:?}", self.r9)}
+        if self.r10 != Default::default() {println!("r10 = {:?}", self.r10)}
+        if self.r11 != Default::default() {println!("r11 = {:?}", self.r11)}
+        if self.r12 != Default::default() {println!("r12 = {:?}", self.r12)}
+        if self.r13 != Default::default() {println!("r13 = {:?}", self.r13)}
+        if self.r14 != Default::default() {println!("r14 = {:?}", self.r14)}
+        if self.r15 != Default::default() {println!("r15 = {:?}", self.r15)}
+        if self.zf != Default::default() {println!("zf = {:?}", self.zf)}
     }
 }
 

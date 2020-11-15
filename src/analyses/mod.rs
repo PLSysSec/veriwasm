@@ -21,7 +21,7 @@ pub type AnalysisResult<T>  = HashMap<u64, T>;
 
 pub trait AbstractAnalyzer<State:Lattice + VarState + Clone> {
     fn init_state(&self) -> State{Default::default()}
-    fn process_branch(&self, in_state : &State, succ_addrs : &Vec<u64>) -> Vec<(u64,State)>{
+    fn process_branch(&self, irmap : &IRMap, in_state : &State, succ_addrs : &Vec<u64>) -> Vec<(u64,State)>{
         succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
     }
     fn aexec_unop(&self, in_state : &mut State, dst : &Value, src : &Value) -> (){
@@ -52,19 +52,41 @@ fn analyze_block<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone> (a
     new_state
 }
 
+fn align_succ_addrs(addr : u64, succ_addrs : Vec<u64>) -> Vec<u64>{
+    if succ_addrs.len() != 2{
+        return succ_addrs;
+    }
+    let a1 = succ_addrs[0];
+    let a2 = succ_addrs[1];
+    if a1 < addr {return vec![a2,a1];}
+    if a2 < addr {return vec![a1,a2];}
+    if a1 < a2 {return vec![a1, a2];}
+    if a1 >= a2 {return vec![a2, a1];}
+    panic!("Unreachable");
+
+}
+
 pub fn run_worklist<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone> (cfg : &ControlFlowGraph<u64>, irmap : &IRMap, analyzer : &T) -> AnalysisResult<State>{
     let mut statemap : HashMap<u64, State> = HashMap::new();
     let mut worklist: VecDeque<u64> = VecDeque::new();
     worklist.push_back(cfg.entrypoint);
     statemap.insert(cfg.entrypoint, analyzer.init_state());
+    println!("============ irmap ==========");
+    for (a, b) in irmap.iter(){
+        // let bl = cfg.get_block(*a);
+        let dsts = cfg.destinations(*a);
+        //let v : Vec<u64> = b.into_iter().map(|x| x.0).rev().collect();
+        println!("{:x} -> {:?}", a, dsts);
+    }
     while !worklist.is_empty(){
         let addr = worklist.pop_front().unwrap();
         let irblock = irmap.get(&addr).unwrap();
         let state = statemap.get(&addr).unwrap(); 
         let new_state = analyze_block(analyzer, state, irblock);
-        let succ_addrs : Vec<u64> = cfg.graph.neighbors(addr).collect();
-
-        for (succ_addr,branch_state) in analyzer.process_branch(&new_state, &succ_addrs){
+        let succ_addrs_unaligned : Vec<u64> = cfg.graph.neighbors(addr).collect();
+        let succ_addrs : Vec<u64> = align_succ_addrs(addr, succ_addrs_unaligned);
+        println!("Processing Block: 0x{:x} -> {:?}", addr, succ_addrs);
+        for (succ_addr,branch_state) in analyzer.process_branch(irmap, &new_state, &succ_addrs){
             let mut has_change = false;
             if statemap.contains_key(&succ_addr){
                 let old_state = statemap.get(&succ_addr).unwrap();

@@ -10,16 +10,16 @@ use crate::lattices::VarState;
 //Top level function
 pub fn analyze_jumps(
     cfg : &ControlFlowGraph<u64>, 
-    irmap : &IRMap, metadata : LucetMetadata, 
-    reaching_defs : AnalysisResult<ReachLattice>
+    irmap : &IRMap, 
+    switch_analyzer : &SwitchAnalyzer
     ) -> AnalysisResult<SwitchLattice>{
 
-    run_worklist(cfg, irmap, &SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs})    
+    run_worklist(cfg, irmap, switch_analyzer)    
 }
 
 pub struct SwitchAnalyzer{
-    metadata: LucetMetadata,
-    reaching_defs : AnalysisResult<ReachLattice>
+    pub metadata: LucetMetadata,
+    pub reaching_defs : AnalysisResult<ReachLattice>
 }
 
 impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
@@ -28,7 +28,37 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
     }
 
     fn aexec_binop(&self, in_state : &mut SwitchLattice, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value) -> (){
+        if let Binopcode::Cmp = opcode{
+            println!("CMP: {:?} = {:?} {:?}", dst, src1, src2);
+            // match (in_state.,in_state.regs.get(regnum2).v){
+            match (src1,src2){
+                (Value::Reg(regnum,_),Value::Imm(_,_,imm)) | (Value::Imm(_,_,imm),Value::Reg(regnum,_)) =>
+                    in_state.regs.zf = SwitchValueLattice::new(SwitchValue::ZF(*imm as u32, *regnum)),
+                _ => ()
+            }
+        }
+            //self.aeval_binop(in_state, opcode, src1, src2);
+            // in_state.set(Value::Reg(), self.aeval_binop(in_state, opcode, src1, src2))
         in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2))
+    }
+
+    fn process_branch(&self, irmap : &IRMap, in_state : &SwitchLattice, succ_addrs : &Vec<u64>) -> Vec<(u64,SwitchLattice)>{
+        if succ_addrs.len() == 2{
+            let mut not_branch_state = in_state.clone();
+            let mut branch_state = in_state.clone();
+            if let Some(SwitchValue::ZF(bound, regnum)) = not_branch_state.regs.zf.v{
+                println!("Creating UpperBound");
+                not_branch_state.regs.set(&regnum, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))});
+                // branch_state.regs.set(&regnum, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))});
+            }
+            branch_state.regs.zf = Default::default();
+            not_branch_state.regs.zf = Default::default();
+            println!("succ_addrs = {:x} {:x}", succ_addrs[0].clone(), succ_addrs[1].clone());
+
+            vec![(succ_addrs[0].clone(),not_branch_state), (succ_addrs[1].clone(),branch_state)]
+            //succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
+        }
+        else {succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()}
     }
 }
 
@@ -38,7 +68,8 @@ impl SwitchAnalyzer{
             return in_state.stack.get(offset, memsize.to_u32())
         }
         if let MemArgs::MemScale(MemArg::Reg(regnum1,_), MemArg::Reg(regnum2,_), MemArg::Imm(_,_,immval) ) = memargs{
-            if let (Some(SwitchValue::SwitchBase(base)),Some(SwitchValue::UpperBound(bound)),4) =   (in_state.regs.get(regnum1).v,in_state.regs.get(regnum2).v,immval){
+            if let (Some(SwitchValue::SwitchBase(base)),Some(SwitchValue::UpperBound(bound)),4) = (in_state.regs.get(regnum1).v,in_state.regs.get(regnum2).v,immval){
+                println!("Creating JmpOffset");
                 return SwitchValueLattice::new(SwitchValue::JmpOffset(base,bound))
             }
         }
@@ -59,26 +90,20 @@ impl SwitchAnalyzer{
 
     // 1. x = switch_base + offset
     pub fn aeval_binop(&self, in_state : &SwitchLattice, opcode : &Binopcode, src1 : &Value, src2: &Value) -> SwitchValueLattice{
+        
         if let Binopcode::Add = opcode{
             if let (Value::Reg(regnum1, _), Value::Reg(regnum2, _)) = (src1,src2){
                 match (in_state.regs.get(regnum1).v,in_state.regs.get(regnum2).v){
-                    (Some(SwitchValue::SwitchBase(base)),Some(SwitchValue::JmpOffset(_,offset))) =>
-                        return SwitchValueLattice::new(SwitchValue::JmpTarget(base,offset)),
-                    (Some(SwitchValue::JmpOffset(_, offset)),Some(SwitchValue::SwitchBase(base))) =>
-                        return SwitchValueLattice::new(SwitchValue::JmpTarget(base,offset)),
+                    (Some(SwitchValue::SwitchBase(base)),Some(SwitchValue::JmpOffset(_,offset))) 
+                    | (Some(SwitchValue::JmpOffset(_, offset)),Some(SwitchValue::SwitchBase(base))) =>
+                    {
+                        println!("Creating JmpTarget");
+                        return SwitchValueLattice::new(SwitchValue::JmpTarget(base,offset))
+                    },
                     _ => return Default::default()
                 };
             }
         }   
         Default::default()
-    }
-
-    //TODO: need to add final instruction to process_branch args
-    //TODO: figure out how to extract zflag
-    fn process_branch(&self, in_state : &SwitchLattice, succ_addrs : &Vec<u64>) -> Vec<(u64,SwitchLattice)>{
-        if succ_addrs.len() == 2{
-        succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
-        }
-        else {succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()}
     }
 }

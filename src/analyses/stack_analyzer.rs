@@ -32,8 +32,8 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
                     let offset = get_imm_offset(src2);
                     if let Some((x,probestack)) = in_state.v{
                         match opcode{
-                            Binopcode::Add => {println!("{:?} += {:?}",x, offset); *in_state = StackGrowthLattice {v : Some ((x + offset, probestack))}},
-                            Binopcode::Sub => {println!("{:?} -= {:?}",x, offset); *in_state = StackGrowthLattice {v : Some ((x - offset, probestack))}},
+                            Binopcode::Add => {/*println!("{:?} += {:?}",x, offset);*/ *in_state = StackGrowthLattice {v : Some ((x + offset, probestack))}},
+                            Binopcode::Sub => {/*println!("{:?} -= {:?}",x, offset);*/ *in_state = StackGrowthLattice {v : Some ((x - offset, probestack))}},
                             _ => panic!("Illegal RSP write")
                         }
                     }

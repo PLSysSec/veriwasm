@@ -143,7 +143,7 @@ impl HeapChecker<'_> {
     }
 
     fn check_mem_access(&self, state : &HeapLattice, access: &Value) -> bool{
-        println!("Memory Access: {:?} {:?}", access, state.regs);
+        //println!("Memory Access: {:?} {:?}", access, state.regs);
         // Case 1: its a stack access
         if is_stack_access(access) { return true}
         // Case 2: its a heap access

@@ -13,8 +13,9 @@ pub mod reachingdefslattice;
 use crate::lattices::regslattice::X86RegsLattice;
 use crate::lattices::stacklattice::StackLattice;
 use crate::lifter::{Value, MemArgs, MemArg, ImmType};
+use std::fmt::Debug;
 
-pub trait Lattice: PartialOrd + Eq + Default {
+pub trait Lattice: PartialOrd + Eq + Default + Debug{
     fn meet(&self, other : &Self) -> Self;
 }
 
@@ -59,11 +60,11 @@ impl Default for BooleanLattice {
 pub type Constu32Lattice = ConstLattice::<u32>;
 
 #[derive(Eq, Clone, Copy, Debug)]
-pub struct ConstLattice<T:Eq + Copy>{
+pub struct ConstLattice<T:Eq + Copy + Debug>{
     pub v: Option<T>
 }
 
-impl<T:Eq + Copy> PartialOrd for ConstLattice<T> {
+impl<T:Eq + Copy + Debug> PartialOrd for ConstLattice<T> {
     fn partial_cmp(&self, other: &ConstLattice<T>) -> Option<Ordering> {
         match (self.v, other.v){
             (None,None) => Some(Ordering::Equal),
@@ -76,26 +77,26 @@ impl<T:Eq + Copy> PartialOrd for ConstLattice<T> {
     }
 }
 
-impl<T:Eq + Copy> PartialEq for ConstLattice<T> {
+impl<T:Eq + Copy + Debug> PartialEq for ConstLattice<T> {
     fn eq(&self, other: &ConstLattice<T>) -> bool {
         self.v == other.v
     }
 }
 
-impl<T:Eq + Copy> Lattice for ConstLattice<T> {
+impl<T:Eq + Copy + Debug> Lattice for ConstLattice<T> {
     fn meet(&self, other : &Self) -> Self {
         if self.v == other.v {ConstLattice {v : self.v}}
         else {ConstLattice { v : None}}
     }
 } 
 
-impl<T:Eq + Copy> Default for ConstLattice<T> {
+impl<T:Eq + Copy + Debug> Default for ConstLattice<T> {
     fn default() -> Self {
         ConstLattice {v : None}
     }
 }
 
-impl<T:Eq + Copy> ConstLattice<T>{
+impl<T:Eq + Copy + Debug> ConstLattice<T>{
     pub fn new(v : T) -> Self{
         ConstLattice{ v : Some(v)}
     }
@@ -103,7 +104,7 @@ impl<T:Eq + Copy> ConstLattice<T>{
 
 
 
-#[derive(PartialEq, Eq, PartialOrd, Default, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Default, Clone, Debug)]
 pub struct VariableState<T:Lattice + Clone>{
     pub regs: X86RegsLattice<T>,
     pub stack: StackLattice<T>,

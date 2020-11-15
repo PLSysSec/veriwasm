@@ -80,7 +80,7 @@ pub enum Stmt {
     Ret,
     Branch(yaxpeax_x86::long_mode::Opcode, Value),
     Call(Value),
-    ProbeStack(u64)
+    ProbeStack(u64),
 }
 
 impl Stmt{
@@ -185,6 +185,23 @@ fn binop(opcode: Binopcode, instr : &yaxpeax_x86::long_mode::Instruction) -> Stm
     else{Stmt::Binop(opcode, convert_operand(instr.operand(0)), convert_operand(instr.operand(1)), convert_operand(instr.operand(2)))}
 }
 
+
+// fn cmp(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
+//     // if two operands than dst is src1
+//     if instr.operand_count() == 2 { 
+//         Stmt::Binop(Binopcode::Cmp, 
+//             convert_operand(instr.operand(0)), 
+//             convert_operand(instr.operand(0)), 
+//             convert_operand(instr.operand(1))
+//     }
+//     else{
+//         Stmt::Binop(Binopcode::Cmp, 
+//             convert_operand(instr.operand(0)), 
+//             convert_operand(instr.operand(1)), 
+//             convert_operand(instr.operand(2)))
+//     }
+// }
+
 fn branch(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
     Stmt::Branch(instr.opcode, convert_operand(instr.operand(0)))
 }
@@ -243,6 +260,7 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata 
 
         Opcode::TEST => instrs.push(binop(Binopcode::Test,instr)), 
         Opcode::CMP => instrs.push(binop(Binopcode::Cmp,instr)),
+        // Opcode::CMP => instrs.push(cmp(instr)),
         Opcode::AND => instrs.push(binop(Binopcode::And,instr)), 
         Opcode::ADD => instrs.push(binop(Binopcode::Add,instr)), 
         Opcode::SUB => instrs.push(binop(Binopcode::Sub,instr)),
@@ -458,7 +476,7 @@ pub fn lift_cfg(program : &ModuleData, cfg : &ControlFlowGraph<u64>, metadata : 
             if is_probestack(instr, &addr, &metadata){
                 //TODO: append probestack
                 //let x = extract_probestack_arg(&last_instr);
-                println!("x = {:?}", x);
+                //println!("x = {:?}", x);
                 match x {
                     Some(v) => {
                         let ir = (addr,vec![Stmt::ProbeStack(v)]);

@@ -37,12 +37,26 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 
     //TODO: need to add final instruction to process_branch args
     //TODO: figure out how to extract zflag
-    fn process_branch(&self, in_state : &CallCheckLattice, succ_addrs : &Vec<u64>) -> Vec<(u64,CallCheckLattice)>{
+    fn process_branch(&self, irmap : &IRMap, in_state : &CallCheckLattice, succ_addrs : &Vec<u64>) -> Vec<(u64,CallCheckLattice)>{
         if succ_addrs.len() == 2{
-        succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
+            let mut not_branch_state = in_state.clone();
+            let mut branch_state = in_state.clone();
+            //if zf = CheckFlag(regnum) and and state.get(regnum) == PtrOffset
+            //=> state.set(regnum, PtrOffset(Checked)) 
+            //TODO: set zf to checkflag
+            // if let Some(SwitchValue::ZF(bound, regnum)) = not_branch_state.regs.zf.v{
+            //     not_branch_state.regs.set(&regnum, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))})
+            // }
+            vec![(succ_addrs[0].clone(),not_branch_state), (succ_addrs[1].clone(),branch_state)]
+            //succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
         }
         else {succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()}
     }
+        // if succ_addrs.len() == 2{
+        // succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
+        // }
+        // else {succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()}
+    // }
 }
 
 pub fn is_table_size(in_state : &CallCheckLattice, memargs : &MemArgs) -> bool{

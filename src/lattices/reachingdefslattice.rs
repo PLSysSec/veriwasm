@@ -8,7 +8,7 @@ pub struct LocIdx{
     pub idx : u32
 }
 
-#[derive(Eq, Clone)]
+#[derive(Eq, Clone, Debug)]
 pub struct ReachingDefnLattice{
     defs: BTreeSet<LocIdx>
 }

@@ -1,3 +1,6 @@
+use yaxpeax_core::analyses::control_flow::get_cfg;
+use petgraph::graphmap::GraphMap;
+use std::collections::BTreeMap;
 use std::path::Path;
 use yaxpeax_arch::Arch;
 use yaxpeax_arch::AddressDisplay;
@@ -113,6 +116,17 @@ pub fn get_cfgs(binpath : &str) -> Vec<(String, ControlFlowGraph<u64>)>{
         if is_valid_func_name(&symbol.1) { 
             println!("Generating CFG for: {:?}", symbol.1);
             cfgs.push((symbol.1.clone(), function_cfg_for_addr(&program, &mut x86_64_data, addr)));
+            
+            let new_cfg = get_cfg(&program, &mut x86_64_data.contexts, addr);
+            println!("-------------------------- new cfg: entry = 0x{:x}", new_cfg.entrypoint);
+            for block in new_cfg.blocks.values(){
+                println!("{}", block.as_str());
+            }
+            for block in new_cfg.graph.nodes(){
+                let out_addrs: Vec<std::string::String> = new_cfg.destinations(block).into_iter().map(|x| format!("{:x}", x)).rev().collect();
+                println!("{:x} -> {:?}", block, out_addrs);
+            }
+            // new_cfg.pprint();
             }
         }
     }
@@ -212,3 +226,6 @@ pub fn is_valid_func_name(name : &String) -> bool{
     false
     
 }
+
+
+

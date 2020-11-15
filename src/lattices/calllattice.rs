@@ -14,7 +14,7 @@ pub enum CallCheckValue {
     CheckFlag(u32)
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct CallCheckValueLattice{
     pub v: Option<CallCheckValue>
 }

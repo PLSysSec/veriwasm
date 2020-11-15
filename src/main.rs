@@ -5,6 +5,9 @@ pub mod metadata;
 pub mod lifter;
 pub mod ir_utils;
 pub mod checkers;
+pub mod cfg;
+use crate::analyses::jump_analyzer::SwitchAnalyzer;
+use crate::checkers::jump_resolver::resolve_jumps;
 use crate::checkers::call_checker::check_calls;
 use crate::analyses::call_analyzer::CallAnalyzer;
 use crate::analyses::heap_analyzer::HeapAnalyzer;
@@ -21,7 +24,7 @@ use crate::analyses::reaching_defs::analyze_reaching_defs;
 use utils::{load_program, get_cfgs, load_metadata, is_valid_func_name};
 // use analyses::stack_analyzer::analyze_stack;
 use clap::{Arg, App};
-use lifter::lift_cfg;
+use lifter::{lift_cfg, Stmt, Value};
 use crate::checkers::stack_checker::check_stack;
 use crate::checkers::heap_checker::check_heap;
 // use crate::checkers::call_checker::check_calls;
@@ -35,18 +38,63 @@ pub struct Config{
     quiet : bool
 }
 
+fn has_indirect_calls(irmap: &IRMap) -> bool{
+    for (block_addr, ir_block) in irmap {
+        for (addr,ir_stmts) in ir_block{
+            for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
+                match ir_stmt{
+                    Stmt::Call(Value::Reg(_,_)) | Stmt::Call(Value::Mem(_,_)) => return true,
+                    _ => ()
+                }
+            }
+        }
+    }
+    false
+}
+
+
+fn has_indirect_jumps(irmap: &IRMap) -> bool{
+    for (block_addr, ir_block) in irmap {
+        for (addr,ir_stmts) in ir_block{
+            for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
+                match ir_stmt{
+                    Stmt::Branch(_,Value::Reg(_,_)) | Stmt::Branch(_,Value::Mem(_,_)) => return true,
+                    _ => ()
+                }
+            }
+        }
+    }
+    false
+}
+
 fn fully_resolved_cfg(program : &ModuleData, 
     cfg : &ControlFlowGraph<u64>, 
     metadata : utils::LucetMetadata) -> IRMap{
     let irmap = lift_cfg(&program, cfg, &metadata);
+    if !has_indirect_jumps(&irmap){
+        return irmap
+    }
     println!("Recovering Reaching Defs");
     let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
     // println!("Checking 1 Round of Jump Safety");
-    let jump_results = analyze_jumps(cfg, &irmap, metadata.clone(), reaching_defs.clone());
+    let switch_analyzer = SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs};
+    let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
+    // println!("----------------------Printing Switch Analysis state---------------");
+    // for (addr, state) in switch_results.clone(){
+    //     println!("0x{:x}", addr);
+    //     state.regs.show();
+    // }
+    let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
+    // println!("======> switch Targets");
+    // for (addr,targets) in switch_targets{
+    //     println!("switch addr = {:x}", addr);
+    //     for target in targets{
+    //         println!("{:x}", target);
+    //     }
+    // }
     irmap
 }
 
-//TODO: add tests to make sure none of the analyses fail out
 fn run(config : Config){
     let program = load_program(&config.module_path);
     // let cfgs = get_cfgs(binpath);
@@ -79,10 +127,13 @@ fn run(config : Config){
         let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
         // assert!(heap_safe);
         println!("Checking Call Safety");
-        let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone()};
-        let call_result = run_worklist(cfg, &irmap, &call_analyzer);    
-        // let call_safe = check_calls(call_result, &irmap, &call_analyzer);
-        // assert!(call_safe);
+        if has_indirect_calls(&irmap){
+            let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone()};
+            let call_result = run_worklist(cfg, &irmap, &call_analyzer);    
+            // let call_safe = check_calls(call_result, &irmap, &call_analyzer);
+            // assert!(call_safe);
+        }
+        // let new_cfg = get_cfg(data, &mut data.contexts, entrypoint)
     }
     println!("Done!");
 }
@@ -142,8 +193,11 @@ fn lift_test_helper(path: &str){
         println!("{}",func_name);
         let irmap = lift_cfg(&program, cfg, &metadata);
         let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
-        let jump_results = analyze_jumps(cfg, &irmap, metadata.clone(), reaching_defs.clone());
         
+        let switch_analyzer = SwitchAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone()};
+        let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
+        let switch_targets = resolve_jumps(&program, switch_results, &irmap, &switch_analyzer);
+                
         let stack_analyzer = StackAnalyzer{};
         let stack_result = run_worklist(cfg, &irmap, &stack_analyzer); 
         let stack_safe = check_stack(stack_result, &irmap, &StackAnalyzer{});
