@@ -3,6 +3,7 @@ pub mod heap_analyzer;
 pub mod call_analyzer;
 pub mod jump_analyzer;
 pub mod reaching_defs;
+use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::lifter::Binopcode;
 use crate::lifter::Value;
 use crate::lattices::VarState;
@@ -66,18 +67,12 @@ fn align_succ_addrs(addr : u64, succ_addrs : Vec<u64>) -> Vec<u64>{
 
 }
 
-pub fn run_worklist<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone> (cfg : &ControlFlowGraph<u64>, irmap : &IRMap, analyzer : &T) -> AnalysisResult<State>{
+pub fn run_worklist<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone> (cfg : &VW_CFG, irmap : &IRMap, analyzer : &T) -> AnalysisResult<State>{
     let mut statemap : HashMap<u64, State> = HashMap::new();
     let mut worklist: VecDeque<u64> = VecDeque::new();
     worklist.push_back(cfg.entrypoint);
     statemap.insert(cfg.entrypoint, analyzer.init_state());
-    println!("============ irmap ==========");
-    for (a, b) in irmap.iter(){
-        // let bl = cfg.get_block(*a);
-        let dsts = cfg.destinations(*a);
-        //let v : Vec<u64> = b.into_iter().map(|x| x.0).rev().collect();
-        println!("{:x} -> {:?}", a, dsts);
-    }
+    
     while !worklist.is_empty(){
         let addr = worklist.pop_front().unwrap();
         let irblock = irmap.get(&addr).unwrap();
@@ -85,16 +80,18 @@ pub fn run_worklist<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone>
         let new_state = analyze_block(analyzer, state, irblock);
         let succ_addrs_unaligned : Vec<u64> = cfg.graph.neighbors(addr).collect();
         let succ_addrs : Vec<u64> = align_succ_addrs(addr, succ_addrs_unaligned);
-        println!("Processing Block: 0x{:x} -> {:?}", addr, succ_addrs);
+        //println!("Processing Block: 0x{:x} -> {:?}", addr, succ_addrs);
         for (succ_addr,branch_state) in analyzer.process_branch(irmap, &new_state, &succ_addrs){
             let mut has_change = false;
             if statemap.contains_key(&succ_addr){
                 let old_state = statemap.get(&succ_addr).unwrap();
                 let merged_state = old_state.meet(&branch_state);   
                 if merged_state > *old_state {
+                    println!("{:?} {:?}", merged_state, old_state);
                     panic!("Meet monoticity error");
                 }
-                has_change = *old_state != branch_state;
+                //has_change = *old_state != branch_state;
+                has_change = *old_state != merged_state;
                 statemap.insert(succ_addr, merged_state);
             }
             else{

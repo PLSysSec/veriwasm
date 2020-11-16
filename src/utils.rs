@@ -1,3 +1,4 @@
+use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_core::analyses::control_flow::get_cfg;
 use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;
@@ -61,33 +62,80 @@ fn get_function_starts(entrypoint : &u64,
     x86_64_data
 }
 
-fn function_cfg_for_addr(program: &ModuleData, 
-    data: &mut x86_64Data, 
-    addr: <AMD64 as Arch>::Address) -> ControlFlowGraph<<AMD64 as Arch>::Address> {
-    if !data.contexts.functions.borrow().contains_key(&addr) {
-        data.contexts.put(
-            addr, BaseUpdate::DefineFunction(
-                Function::of(
-                    format!("function:{}", addr.show()),
-                    vec![],
-                    vec![],
-                )
-            )
-        );
+// fn function_cfg_for_addr(program: &ModuleData, 
+//     data: &mut x86_64Data, 
+//     addr: <AMD64 as Arch>::Address) -> ControlFlowGraph<<AMD64 as Arch>::Address> {
+//     if !data.contexts.functions.borrow().contains_key(&addr) {
+//         data.contexts.put(
+//             addr, BaseUpdate::DefineFunction(
+//                 Function::of(
+//                     format!("function:{}", addr.show()),
+//                     vec![],
+//                     vec![],
+//                 )
+//             )
+//         );
 
-        control_flow::explore_all(
-            program,
-            &mut data.contexts,
-            &mut data.cfg,
-            vec![addr],
-            &yaxpeax_core::arch::x86_64::analyses::compute_next_state,
-        );
-    }
-    data.cfg.get_function(addr, &*data.contexts.functions.borrow())
-}
+//         control_flow::explore_all(
+//             program,
+//             &mut data.contexts,
+//             &mut data.cfg,
+//             vec![addr],
+//             &yaxpeax_core::arch::x86_64::analyses::compute_next_state,
+//         );
+//     }
+//     data.cfg.get_function(addr, &*data.contexts.functions.borrow())
+// }
 
 
-pub fn get_cfgs(binpath : &str) -> Vec<(String, ControlFlowGraph<u64>)>{
+// pub fn get_cfgs(binpath : &str) -> Vec<(String, ControlFlowGraph<u64>)>{
+//     let program = load_program(binpath);
+
+//     // grab some details from the binary and panic if it's not what we expected
+//     let (_, entrypoint, imports, exports, symbols) = match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
+//         Some(ModuleInfo::ELF(isa, _, _, _sections, entry, _, imports, exports, symbols)) => {
+//             (isa, entry, imports, exports, symbols)
+//         }
+//         Some(other) => {
+//             panic!("{:?} isn't an elf, but is a {:?}?", binpath,other);
+//         }
+//         None => {
+//             panic!("{:?} doesn't appear to be a binary yaxpeax understands.", binpath);
+//         }
+//     };
+
+//     let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
+
+//     let mut cfgs : Vec<(String, ControlFlowGraph<u64>)> = Vec::new(); 
+//     while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
+//         // let function_cfg = function_cfg_for_addr(&program, &mut x86_64_data,
+//         // addr);
+//         // let func_name =
+//         // x86_64_data.contexts.function_at(addr).unwrap().name();
+//         if let Some(symbol) = x86_64_data.symbol_for(addr)
+//         {
+//         if is_valid_func_name(&symbol.1) { 
+//             println!("Generating CFG for: {:?}", symbol.1);
+//             cfgs.push((symbol.1.clone(), function_cfg_for_addr(&program, &mut x86_64_data, addr)));
+            
+//             let new_cfg = get_cfg(&program, &mut x86_64_data.contexts, addr);
+//             println!("-------------------------- new cfg: entry = 0x{:x}", new_cfg.entrypoint);
+//             for block in new_cfg.blocks.values(){
+//                 println!("{}", block.as_str());
+//             }
+//             for block in new_cfg.graph.nodes(){
+//                 let out_addrs: Vec<std::string::String> = new_cfg.destinations(block).into_iter().map(|x| format!("{:x}", x)).rev().collect();
+//                 println!("{:x} -> {:?}", block, out_addrs);
+//             }
+//             // new_cfg.pprint();
+//             }
+//         }
+//     }
+//     cfgs
+
+// }
+
+pub fn get_cfgs(binpath : &str) -> Vec<(String, VW_CFG)>{
     let program = load_program(binpath);
 
     // grab some details from the binary and panic if it's not what we expected
@@ -105,28 +153,25 @@ pub fn get_cfgs(binpath : &str) -> Vec<(String, ControlFlowGraph<u64>)>{
 
     let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
 
-    let mut cfgs : Vec<(String, ControlFlowGraph<u64>)> = Vec::new(); 
+    let mut cfgs : Vec<(String, VW_CFG)> = Vec::new(); 
     while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
-        // let function_cfg = function_cfg_for_addr(&program, &mut x86_64_data,
-        // addr);
-        // let func_name =
-        // x86_64_data.contexts.function_at(addr).unwrap().name();
+
         if let Some(symbol) = x86_64_data.symbol_for(addr)
         {
         if is_valid_func_name(&symbol.1) { 
             println!("Generating CFG for: {:?}", symbol.1);
-            cfgs.push((symbol.1.clone(), function_cfg_for_addr(&program, &mut x86_64_data, addr)));
+            //cfgs.push((symbol.1.clone(), function_cfg_for_addr(&program, &mut x86_64_data, addr)));
             
-            let new_cfg = get_cfg(&program, &mut x86_64_data.contexts, addr);
-            println!("-------------------------- new cfg: entry = 0x{:x}", new_cfg.entrypoint);
-            for block in new_cfg.blocks.values(){
-                println!("{}", block.as_str());
-            }
-            for block in new_cfg.graph.nodes(){
-                let out_addrs: Vec<std::string::String> = new_cfg.destinations(block).into_iter().map(|x| format!("{:x}", x)).rev().collect();
-                println!("{:x} -> {:?}", block, out_addrs);
-            }
-            // new_cfg.pprint();
+            let new_cfg = get_cfg(&program, &x86_64_data.contexts, addr);
+            cfgs.push((symbol.1.clone(), new_cfg));
+            // println!("-------------------------- new cfg: entry = 0x{:x}", new_cfg.entrypoint);
+            // for block in new_cfg.blocks.values(){
+            //     println!("{}", block.as_str());
+            // }
+            // for block in new_cfg.graph.nodes(){
+            //     let out_addrs: Vec<std::string::String> = new_cfg.destinations(block).into_iter().map(|x| format!("{:x}", x)).rev().collect();
+            //     println!("{:x} -> {:?}", block, out_addrs);
+            // }
             }
         }
     }
@@ -174,18 +219,6 @@ pub fn load_metadata(binpath : &str) -> LucetMetadata{
     let lucet_probestack = get_symbol_addr(symbols, "lucet_probestack").unwrap();
     println!("guest_table_0 = {:x} lucet_tables = {:x} probestack = {:x}", guest_table_0, lucet_tables, lucet_probestack);
     LucetMetadata {guest_table_0 : guest_table_0, lucet_tables : lucet_tables, lucet_probestack : lucet_probestack}
-    // for symbol in symbols.iter(){
-    //     if symbol.name == "guest_table_0"{
-    //         println!("{:?} @ {:x} in section {:?}", symbol.name, symbol.addr, symbol.section_index);
-    //     }
-    //     if symbol.name == "lucet_tables"{
-    //         println!("{:?} @ {:x} in section {:?}", symbol.name, symbol.addr, symbol.section_index);
-    //     }
-
-    //     // println!("{:?}",  sections[symbol.section_index].start);
-        
-    // }
-    // println!("{:?}", symbols)
 }
 
 
@@ -212,10 +245,6 @@ pub fn get_rsp_offset(memargs : &MemArgs) -> Option<i64>{
 
 
 pub fn is_valid_func_name(name : &String) -> bool{
-    // if name == "guest_func_switch_body"{
-    //     return true
-    // }
-    // else { return false}
     if name.starts_with("guest_func_"){
         return true
     };

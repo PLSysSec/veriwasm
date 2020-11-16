@@ -54,8 +54,8 @@ pub fn resolve_jumps(
     for (block_addr, mut state) in result {
         for (addr,ir_stmts) in irmap.get(&block_addr).unwrap(){
             for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
-                if(*addr >= 0x384fd && *addr <= 0x38518){
-                println!("------------\n{:x} {:?} rcx = {:?} rdx = {:?} r15 = {:?} zf = {:?}", addr, ir_stmt,state.regs.rcx, state.regs.rdx, state.regs.r15, state.regs.zf );
+                if(*addr >= 0x2343b && *addr <= 0x23445){
+                println!("------------\n{:x} {:?} r9 = {:?} rbx = {:?} r8 = {:?} rdx = {:?} zf = {:?}", addr, ir_stmt,state.regs.r9, state.regs.rbx, state.regs.r8, state.regs.rdx, state.regs.zf );
                 }
                 match ir_stmt {
                     Stmt::Branch(_, Value::Reg(regnum,regsize)) => {

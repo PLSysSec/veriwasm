@@ -1,7 +1,8 @@
+use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::utils::LucetMetadata;
 use yaxpeax_x86::long_mode::Opcode::*;
 use std::collections::HashMap;
-use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
+// use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_x86::long_mode::{Arch as AMD64, Operand, RegSpec, RegisterBank, Opcode};
 use yaxpeax_arch::Arch;
@@ -451,7 +452,7 @@ fn check_probestack_suffix(instr : &yaxpeax_x86::long_mode::Instruction) -> bool
     panic!("Broken Probestack?")
 }
 
-pub fn lift_cfg(program : &ModuleData, cfg : &ControlFlowGraph<u64>, metadata : &LucetMetadata) -> IRMap{
+pub fn lift_cfg(program : &ModuleData, cfg : &VW_CFG, metadata : &LucetMetadata) -> IRMap{
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
     for block_addr in g.nodes(){

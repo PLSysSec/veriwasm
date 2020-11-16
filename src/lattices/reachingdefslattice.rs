@@ -18,7 +18,7 @@ pub type ReachLattice =  VariableState<ReachingDefnLattice>;
 impl PartialOrd for ReachingDefnLattice {
     fn partial_cmp(&self, other: &ReachingDefnLattice) -> Option<Ordering> {
         if &self.defs == &other.defs {
-            return Some(Ordering::Greater)
+            return Some(Ordering::Equal)
         }
         else if self.defs.is_subset(&other.defs){
             return Some(Ordering::Less)

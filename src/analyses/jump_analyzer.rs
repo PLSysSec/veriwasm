@@ -1,3 +1,4 @@
+use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::lifter::{MemArgs, MemArg, ValSize, Binopcode, IRMap, Stmt, Value};
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::switchlattice::{SwitchLattice, SwitchValueLattice, SwitchValue};
@@ -9,7 +10,7 @@ use crate::lattices::VarState;
 
 //Top level function
 pub fn analyze_jumps(
-    cfg : &ControlFlowGraph<u64>, 
+    cfg : &VW_CFG, 
     irmap : &IRMap, 
     switch_analyzer : &SwitchAnalyzer
     ) -> AnalysisResult<SwitchLattice>{
@@ -19,7 +20,8 @@ pub fn analyze_jumps(
 
 pub struct SwitchAnalyzer{
     pub metadata: LucetMetadata,
-    pub reaching_defs : AnalysisResult<ReachLattice>
+    pub reaching_defs : AnalysisResult<ReachLattice>,
+    //pub reaching_analyzer : ReachingDefnAnalyzer,
 }
 
 impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
@@ -49,7 +51,10 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
             if let Some(SwitchValue::ZF(bound, regnum)) = not_branch_state.regs.zf.v{
                 println!("Creating UpperBound");
                 not_branch_state.regs.set(&regnum, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))});
-                // branch_state.regs.set(&regnum, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))});
+                // branch_state.regs.set(&regnum, SwitchValueLattice{v:
+                // Some(SwitchValue::UpperBound(bound))});
+                // let checked_defs = self.reaching_defs.
+                //TODO: get access to reaching defs
             }
             branch_state.regs.zf = Default::default();
             not_branch_state.regs.zf = Default::default();

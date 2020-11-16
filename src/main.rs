@@ -6,6 +6,7 @@ pub mod lifter;
 pub mod ir_utils;
 pub mod checkers;
 pub mod cfg;
+use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::analyses::jump_analyzer::SwitchAnalyzer;
 use crate::checkers::jump_resolver::resolve_jumps;
 use crate::checkers::call_checker::check_calls;
@@ -68,9 +69,10 @@ fn has_indirect_jumps(irmap: &IRMap) -> bool{
 }
 
 fn fully_resolved_cfg(program : &ModuleData, 
-    cfg : &ControlFlowGraph<u64>, 
+    cfg : &VW_CFG, 
     metadata : utils::LucetMetadata) -> IRMap{
     let irmap = lift_cfg(&program, cfg, &metadata);
+    println!("ircfg lifted");
     if !has_indirect_jumps(&irmap){
         return irmap
     }
@@ -109,13 +111,22 @@ fn run(config : Config){
         println!("Analyzing: {:?}", func_name);
         println!("Checking Instruction Legality");
         let irmap = fully_resolved_cfg(&program, cfg, metadata.clone());
+        // println!("Getting reaching defs");
+        // println!("============ irmap {:?} ==========", func_name);
+        // for (a, b) in irmap.iter(){
+        //     let dsts = cfg.destinations(*a);
+        //     let out_addrs: Vec<std::string::String> = dsts.clone().into_iter().map(|x| format!("{:x}", x)).rev().collect();
+        //     println!("{:x} -> {:?}", a, out_addrs);
+        // }
         let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
         // let irmap = lift_cfg(&program, cfg);
         // println!("Recovering Reaching Defs");
         // let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
         // println!("Checking 1 Round of Jump Safety");
-        // let jump_results = analyze_jumps(cfg, &irmap, metadata.clone(), reaching_defs.clone());
-        // println!("===========================================Checking Stack Safety================================================");
+        // let jump_results = analyze_jumps(cfg, &irmap, metadata.clone(),
+        // reaching_defs.clone());
+        
+        //println!("===========================================Checking Stack Safety================================================");
         //let stack_result = analyze_stack(cfg, &irmap);
         let stack_analyzer = StackAnalyzer{};
         let stack_result = run_worklist(cfg, &irmap, &stack_analyzer); 
