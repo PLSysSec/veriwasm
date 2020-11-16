@@ -6,6 +6,7 @@ pub mod lifter;
 pub mod ir_utils;
 pub mod checkers;
 pub mod cfg;
+use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::analyses::jump_analyzer::SwitchAnalyzer;
 use crate::checkers::jump_resolver::resolve_jumps;
@@ -79,7 +80,7 @@ fn fully_resolved_cfg(program : &ModuleData,
     println!("Recovering Reaching Defs");
     let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
     // println!("Checking 1 Round of Jump Safety");
-    let switch_analyzer = SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs};
+    let switch_analyzer = SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
     let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
     // println!("----------------------Printing Switch Analysis state---------------");
     // for (addr, state) in switch_results.clone(){
@@ -205,7 +206,7 @@ fn lift_test_helper(path: &str){
         let irmap = lift_cfg(&program, cfg, &metadata);
         let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
         
-        let switch_analyzer = SwitchAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone()};
+        let switch_analyzer = SwitchAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
         let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
         let switch_targets = resolve_jumps(&program, switch_results, &irmap, &switch_analyzer);
                 

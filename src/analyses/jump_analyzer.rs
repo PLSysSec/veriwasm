@@ -1,3 +1,4 @@
+use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::lifter::{MemArgs, MemArg, ValSize, Binopcode, IRMap, Stmt, Value};
 use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
@@ -21,7 +22,7 @@ pub fn analyze_jumps(
 pub struct SwitchAnalyzer{
     pub metadata: LucetMetadata,
     pub reaching_defs : AnalysisResult<ReachLattice>,
-    //pub reaching_analyzer : ReachingDefnAnalyzer,
+    pub reaching_analyzer : ReachingDefnAnalyzer,
 }
 
 impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
