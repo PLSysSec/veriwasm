@@ -65,6 +65,7 @@ fn check_indirect_call(state: &CallCheckLattice, target: &Value) -> bool {
 }
 
 fn check_calltable_lookup(state: &CallCheckLattice, memargs: &MemArgs) -> bool {
+    println!("Call Table Lookup: {:?}", memargs);
     match memargs{
         MemArgs::Mem3Args(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,8)) =>
         match (state.regs.get(regnum1).v,state.regs.get(regnum2).v){

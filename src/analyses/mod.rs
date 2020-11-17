@@ -22,7 +22,7 @@ pub type AnalysisResult<T>  = HashMap<u64, T>;
 
 pub trait AbstractAnalyzer<State:Lattice + VarState + Clone> {
     fn init_state(&self) -> State{Default::default()}
-    fn process_branch(&self, irmap : &IRMap, in_state : &State, succ_addrs : &Vec<u64>) -> Vec<(u64,State)>{
+    fn process_branch(&self, irmap : &IRMap, in_state : &State, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,State)>{
         succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
     }
     fn aexec_unop(&self, in_state : &mut State, dst : &Value, src : &Value) -> (){
@@ -81,7 +81,7 @@ pub fn run_worklist<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone>
         let succ_addrs_unaligned : Vec<u64> = cfg.graph.neighbors(addr).collect();
         let succ_addrs : Vec<u64> = align_succ_addrs(addr, succ_addrs_unaligned);
         //println!("Processing Block: 0x{:x} -> {:?}", addr, succ_addrs);
-        for (succ_addr,branch_state) in analyzer.process_branch(irmap, &new_state, &succ_addrs){
+        for (succ_addr,branch_state) in analyzer.process_branch(irmap, &new_state, &succ_addrs, &addr){
             let mut has_change = false;
             if statemap.contains_key(&succ_addr){
                 let old_state = statemap.get(&succ_addr).unwrap();

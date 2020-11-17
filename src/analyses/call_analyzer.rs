@@ -1,3 +1,4 @@
+use crate::lifter::IRBlock;
 use crate::ir_utils::extract_stack_offset;
 use crate::ir_utils::is_stack_access;
 use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
@@ -37,7 +38,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 
     //TODO: need to add final instruction to process_branch args
     //TODO: figure out how to extract zflag
-    fn process_branch(&self, irmap : &IRMap, in_state : &CallCheckLattice, succ_addrs : &Vec<u64>) -> Vec<(u64,CallCheckLattice)>{
+    fn process_branch(&self, irmap : &IRMap, in_state : &CallCheckLattice, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,CallCheckLattice)>{
         if succ_addrs.len() == 2{
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();

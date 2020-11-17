@@ -6,8 +6,8 @@ use std::default::Default;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct StackSlot<T:Lattice + Clone> {
-    size: u32,
-    value: T,
+    pub size: u32,
+    pub value: T,
 }
 
 impl<T:Lattice + Clone> PartialOrd for StackSlot<T> {
@@ -23,8 +23,8 @@ impl<T:Lattice + Clone> PartialOrd for StackSlot<T> {
 //Currently implemented with hashmap, could also use a vector for a dense map
 #[derive(Eq, Clone, Debug)]
 pub struct StackLattice<T:Lattice + Clone>{
-    offset: i64,
-    map : HashMap<i64, StackSlot<T>>
+    pub offset: i64,
+    pub map : HashMap<i64, StackSlot<T>>
 }
 
 impl<T:Lattice + Clone> StackLattice<T>{

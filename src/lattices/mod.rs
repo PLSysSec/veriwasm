@@ -21,6 +21,7 @@ pub trait Lattice: PartialOrd + Eq + Default + Debug{
 
 pub trait VarState{
     type Var;
+    fn get(&mut self, index : &Value) -> Option<Self::Var>;
     fn set(&mut self, index : &Value, v : Self::Var) -> ();
     fn set_to_bot(&mut self, index : &Value) -> ();
     fn on_call(&mut self) -> ();
@@ -143,6 +144,32 @@ impl<T:Lattice + Clone> VarState for VariableState<T> {
             },
             Value::Reg(regnum,_) => self.regs.set(regnum, value),
             Value::Imm(_,_,_) => panic!("Trying to write to an immediate value"),
+        }
+    } 
+
+    fn get(&mut self, index : &Value) -> Option<T>{
+        match index{
+            Value::Mem(_, memargs) => match memargs{
+                MemArgs::Mem1Arg(arg) => {
+                    if let MemArg::Reg(regnum, size) = arg{
+                        if *regnum == 4{
+                            return Some(self.stack.get(0, size.to_u32() / 8));
+                        }
+                    } 
+                    None},
+                MemArgs::Mem2Args(arg1, arg2) => {
+                    if let MemArg::Reg(regnum, size) = arg1{
+                        if *regnum == 4{
+                            if let MemArg::Imm(imm_sign,_,offset) = arg2{
+                                return Some(self.stack.get(*offset, size.to_u32() / 8));
+                            }
+                        }
+                    }
+                    None} ,
+                _ => None
+            },
+            Value::Reg(regnum,_) => Some(self.regs.get(regnum)),
+            Value::Imm(_,_,_) => None,
         }
     } 
 

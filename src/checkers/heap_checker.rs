@@ -28,14 +28,16 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
     }
 
     fn check_statement(&self, state : &HeapLattice, ir_stmt : &Stmt) -> bool {
-        // println!("rdi = {:?} r15 = {:?} stack = {:?}", state.regs.rdi, state.regs.r15, state.stack);
+        // println!("rdi = {:?} r15 = {:?} stack = {:?}", state.regs.rdi,
+        // state.regs.r15, state.stack);
+        println!("Checking statement for heap {:?}", ir_stmt);
         match ir_stmt{
             //1. Check that at each call rdi = HeapBase
             Stmt::Call(_) => {
             //  println!("=============== call rdi = {:?}", state.regs.rdi.v);
              match state.regs.rdi.v{
                  Some(HeapValue::HeapBase) => (),
-                 _ => return false
+                 _ => {println!("Call failure"); return false}
              }},
              //2. Check that all load and store are safe
              Stmt::Unop(_, dst, src) => 
@@ -129,7 +131,8 @@ impl HeapChecker<'_> {
                         return true
                     }
                 },
-                MemArgs::Mem3Args(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,8)) => {
+                MemArgs::Mem3Args(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,8)) 
+                | MemArgs::MemScale(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,4)) => {
                     match (state.regs.get(regnum1).v,state.regs.get(regnum2).v){
                         (Some(HeapValue::GuestTable0),_) => return true,
                         (_,Some(HeapValue::GuestTable0)) => return true,
@@ -149,11 +152,12 @@ impl HeapChecker<'_> {
         // Case 2: its a heap access
         if self.check_heap_access(state, access){ return true };
         // Case 3: its a metadata access
-        if self.check_heap_access(state, access){ return true };
+        if self.check_metadata_access(state, access){ return true };
         // Case 4: its a globals access
         if self.check_global_access(state, access){ return true };
         // Case 5: its unknown
-        false
+        println!("None of the memory accesses!");
+        false 
     }
    
 }

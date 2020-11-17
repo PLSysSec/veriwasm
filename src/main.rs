@@ -79,22 +79,9 @@ fn fully_resolved_cfg(program : &ModuleData,
     }
     println!("Recovering Reaching Defs");
     let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
-    // println!("Checking 1 Round of Jump Safety");
     let switch_analyzer = SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
     let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
-    // println!("----------------------Printing Switch Analysis state---------------");
-    // for (addr, state) in switch_results.clone(){
-    //     println!("0x{:x}", addr);
-    //     state.regs.show();
-    // }
     let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
-    // println!("======> switch Targets");
-    // for (addr,targets) in switch_targets{
-    //     println!("switch addr = {:x}", addr);
-    //     for target in targets{
-    //         println!("{:x}", target);
-    //     }
-    // }
     irmap
 }
 
@@ -142,7 +129,7 @@ fn run(config : Config){
         if has_indirect_calls(&irmap){
             let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone()};
             let call_result = run_worklist(cfg, &irmap, &call_analyzer);    
-            // let call_safe = check_calls(call_result, &irmap, &call_analyzer);
+            let call_safe = check_calls(call_result, &irmap, &call_analyzer);
             // assert!(call_safe);
         }
         // let new_cfg = get_cfg(data, &mut data.contexts, entrypoint)

@@ -1,3 +1,6 @@
+use crate::lattices::stacklattice::StackSlot;
+use crate::analyses::analyze_block;
+use crate::lifter::IRBlock;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::lifter::{MemArgs, MemArg, ValSize, Binopcode, IRMap, Stmt, Value};
@@ -45,17 +48,44 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2))
     }
 
-    fn process_branch(&self, irmap : &IRMap, in_state : &SwitchLattice, succ_addrs : &Vec<u64>) -> Vec<(u64,SwitchLattice)>{
+    fn process_branch(&self, irmap : &IRMap, in_state : &SwitchLattice, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,SwitchLattice)>{
         if succ_addrs.len() == 2{
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
             if let Some(SwitchValue::ZF(bound, regnum)) = not_branch_state.regs.zf.v{
-                println!("Creating UpperBound");
+                println!("Creating UpperBound @ {:x}", addr);
                 not_branch_state.regs.set(&regnum, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))});
                 // branch_state.regs.set(&regnum, SwitchValueLattice{v:
                 // Some(SwitchValue::UpperBound(bound))});
-                // let checked_defs = self.reaching_defs.
+                let defs_state = self.reaching_defs.get(addr).unwrap();
+                let ir_block = irmap.get(addr).unwrap();
+                let defs_state = analyze_block(&self.reaching_analyzer, defs_state, ir_block);
+                //run aexec analyze_block(analyzer, state, ir_block)
+                let checked_defs = defs_state.regs.get(&regnum);
+                for idx in 0..15{
+                    if idx != regnum{
+                        let reg_def = defs_state.regs.get(&idx);
+                        println!("{:?} {:?} {:?} {:?}", idx, checked_defs, reg_def, checked_defs == reg_def);
+                        if reg_def == checked_defs{
+                            println!("propagating process_branch: {:?}", idx);
+                            not_branch_state.regs.set(&idx, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))}); 
+                        }
+                    }
+                }
+
+                // for (stack_offset, stack_slot) in defs_state.stack.map.iter(){
+                //     if stack_slot.value == checked_defs{
+                //         let v = SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))};
+                //         let vv = StackSlot{size: stack_slot.size, value : v};
+                //         not_branch_state.stack.map.insert(*stack_offset, vv);
+                //     }
+                // }
+                
+            //  for stack_offset, slot_val in cur_reaching_defs.stacks._map.items():
+            //     if slot_val.value.value() == checked_defs:
+            //         not_branch_state.stacks.update(stack_offset, slot_val.size, make_upper_bound_lattice(c) )
                 //TODO: get access to reaching defs
+
             }
             branch_state.regs.zf = Default::default();
             not_branch_state.regs.zf = Default::default();
