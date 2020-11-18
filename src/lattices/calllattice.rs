@@ -3,7 +3,7 @@ use crate::lattices::Lattice;
 use crate::lattices::davlattice::{DAV};
 use std::cmp::Ordering;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
 pub enum CallCheckValue {
     GuestTableBase,
     LucetTablesBase,
@@ -14,7 +14,7 @@ pub enum CallCheckValue {
     CheckFlag(u32)
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct CallCheckValueLattice{
     pub v: Option<CallCheckValue>
 }
@@ -30,9 +30,9 @@ impl Default for CallCheckValueLattice {
 
 impl Lattice for CallCheckValueLattice {
     fn meet(&self, other : &Self) -> Self {
-        if self.v == other.v {CallCheckValueLattice {v : self.v}}
+        if self.v.clone() == other.v {CallCheckValueLattice {v : self.v.clone()}}
         else {
-            match (self.v, other.v){
+            match (self.v.clone(), other.v.clone()){
                 (Some(CallCheckValue::PtrOffset(x)),Some(CallCheckValue::PtrOffset(y))) => 
                     CallCheckValueLattice { v : Some(CallCheckValue::PtrOffset(x.meet(&y)))},
                 (_,_) => CallCheckValueLattice { v : None}
@@ -43,12 +43,12 @@ impl Lattice for CallCheckValueLattice {
 
 impl PartialOrd for CallCheckValueLattice {
     fn partial_cmp(&self, other: &CallCheckValueLattice) -> Option<Ordering> {
-        match (self.v, other.v){
+        match (self.v.clone(), other.v.clone()){
             (None,None) => Some(Ordering::Equal),
             (None,_) => Some(Ordering::Less),
             (_,None) => Some(Ordering::Greater),
             (Some(x), Some(y)) =>{ 
-                match (x, y){
+                match (x.clone(), y.clone()){
                     (CallCheckValue::PtrOffset(x), CallCheckValue::PtrOffset(y) ) => x.partial_cmp(&y),
                     (_,_) =>  {
                         if x == y {Some(Ordering::Equal) }

@@ -10,7 +10,7 @@ pub struct LocIdx{
 
 #[derive(Eq, Clone, Debug)]
 pub struct ReachingDefnLattice{
-    defs: BTreeSet<LocIdx>
+    pub defs: BTreeSet<LocIdx>
 }
 
 pub type ReachLattice =  VariableState<ReachingDefnLattice>;

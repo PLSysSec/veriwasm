@@ -1,3 +1,5 @@
+use crate::lattices::reachingdefslattice::ReachingDefnLattice;
+use crate::lattices::reachingdefslattice::LocIdx;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::analyses::analyze_block;
 use crate::lifter::IRBlock;
@@ -13,6 +15,8 @@ use crate::lattices::reachingdefslattice::{ReachLattice};
 use crate::utils::{LucetMetadata};
 use std::default::Default;
 use crate::lattices::VarState;
+use std::collections::BTreeSet;
+
 
 //Top level function
 // pub fn analyze_calls(
@@ -61,19 +65,19 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
             for idx in 0..15{
                 let reg_def = defs_state.regs.get(&idx, &ValSize::Size64);
                 if (!reg_def.is_empty()) && (reg_def == checked_defs){
-                    branch_state.regs.set(&idx, &ValSize::Size64, new_val); 
+                    branch_state.regs.set(&idx, &ValSize::Size64, new_val.clone()); 
                 }
             }
             //2. resolve ptr thunks in registers -- TODO
-            // let checked_ptr = CallCheckValueLattice{ v : Some(CallCheckValue::PtrOffset(DAV::Checked))};
-            // for idx in 0..15{
-            //     let reg_val = branch_state.regs.get(&idx, &ValSize::Size64);
-            //     if let Some(CallCheckValue::PtrOffset(DAV::Unchecked(reg_def))) = reg_val.v{
-            //         if reg_def == checked_defs{
-            //             branch_state.regs.set(&idx, &ValSize::Size64, checked_ptr);
-            //         }
-            //     }
-            // }
+            let checked_ptr = CallCheckValueLattice{ v : Some(CallCheckValue::PtrOffset(DAV::Checked))};
+            for idx in 0..15{
+                let reg_val = branch_state.regs.get(&idx, &ValSize::Size64);
+                if let Some(CallCheckValue::PtrOffset(DAV::Unchecked(reg_def))) = reg_val.v{
+                    if reg_def == checked_defs{
+                        branch_state.regs.set(&idx, &ValSize::Size64, checked_ptr.clone());
+                    }
+                }
+            }
             
             //3. resolve ptr thunks in stack slots -- TODO
 
@@ -145,7 +149,8 @@ impl CallAnalyzer{
                     } 
                     else {
                         //TODO: use proper reaching def here / locidx here
-                        return CallCheckValueLattice{ v : Some(CallCheckValue::PtrOffset(DAV::Unchecked(1)))}
+                        let v  = ReachingDefnLattice {defs : BTreeSet::new()};
+                        return CallCheckValueLattice{ v : Some(CallCheckValue::PtrOffset(DAV::Unchecked(v)))}
                     }
                 }
             }   
