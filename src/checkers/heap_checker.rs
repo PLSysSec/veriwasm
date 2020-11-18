@@ -59,11 +59,11 @@ impl HeapChecker<'_> {
         if let Value::Mem(size, memargs) = access {
             match memargs{
                 MemArgs::Mem1Arg(MemArg::Reg(regnum,ValSize::Size64)) => 
-                    if let  Some(HeapValue::GlobalsBase) = state.regs.get(regnum).v { 
+                    if let  Some(HeapValue::GlobalsBase) = state.regs.get(regnum,&ValSize::Size64).v { 
                         return true
                     }
                 MemArgs::Mem2Args(MemArg::Reg(regnum,ValSize::Size64), MemArg::Imm(_,_,globals_offset)) => {
-                    if let Some(HeapValue::GlobalsBase) = state.regs.get(regnum).v{    
+                    if let Some(HeapValue::GlobalsBase) = state.regs.get(regnum,&ValSize::Size64).v{    
                         return *globals_offset <= 4096
                     }
                 },
@@ -79,15 +79,15 @@ impl HeapChecker<'_> {
             match memargs{
                 // if only arg is heapbase
                 MemArgs::Mem1Arg(MemArg::Reg(regnum,ValSize::Size64)) => 
-                    if let Some(HeapValue::HeapBase) = state.regs.get(regnum).v {
+                    if let Some(HeapValue::HeapBase) = state.regs.get(regnum,&ValSize::Size64).v {
                         return true
                 },
                 // if arg1 is heapbase and arg2 is bounded
                 MemArgs::Mem2Args(MemArg::Reg(regnum,ValSize::Size64),memarg2) => 
-                if let Some(HeapValue::HeapBase) = state.regs.get(regnum).v {
+                if let Some(HeapValue::HeapBase) = state.regs.get(regnum,&ValSize::Size64).v {
                     match memarg2{
-                        MemArg::Reg(regnum2, _) => 
-                        if let Some(HeapValue::Bounded4GB) = state.regs.get(regnum2).v {
+                        MemArg::Reg(regnum2, size2) => 
+                        if let Some(HeapValue::Bounded4GB) = state.regs.get(regnum2,size2).v {
                             return true
                         },
                         MemArg::Imm(_,_,v) => return *v <= 0xffffffff 
@@ -97,14 +97,14 @@ impl HeapChecker<'_> {
                 // if arg1 is bounded and arg1 and arg3 are bounded
                 //TODO: allow second arg to be heapbase?
                 MemArgs::Mem3Args(MemArg::Reg(regnum,ValSize::Size64),memarg2,memarg3) => 
-                if let Some(HeapValue::HeapBase) = state.regs.get(regnum).v {
+                if let Some(HeapValue::HeapBase) = state.regs.get(regnum,&ValSize::Size64).v {
                     match (memarg2,memarg3){
-                        (MemArg::Reg(regnum2, _),MemArg::Imm(_,_,v)) | (MemArg::Imm(_,_,v),MemArg::Reg(regnum2, _))=> 
-                        if let Some(HeapValue::Bounded4GB) = state.regs.get(regnum2).v {
+                        (MemArg::Reg(regnum2, size2),MemArg::Imm(_,_,v)) | (MemArg::Imm(_,_,v),MemArg::Reg(regnum2, size2))=> 
+                        if let Some(HeapValue::Bounded4GB) = state.regs.get(regnum2, size2).v {
                             return *v <= 0xffffffff
                         },
-                        (MemArg::Reg(regnum2, _),MemArg::Reg(regnum3, _)) => 
-                            if let (Some(HeapValue::Bounded4GB),Some(HeapValue::Bounded4GB)) = (state.regs.get(regnum2).v,state.regs.get(regnum3).v){
+                        (MemArg::Reg(regnum2, size2),MemArg::Reg(regnum3, size3)) => 
+                            if let (Some(HeapValue::Bounded4GB),Some(HeapValue::Bounded4GB)) = (state.regs.get(regnum2,size2).v,state.regs.get(regnum3,size3).v){
                                 return true
                             }
                         _ => () 
@@ -122,18 +122,18 @@ impl HeapChecker<'_> {
             match memargs{
                 //Case 1: mem[globals_base]
                 MemArgs::Mem1Arg(MemArg::Reg(regnum,ValSize::Size64)) => 
-                    if let  Some(HeapValue::GlobalsBase) = state.regs.get(regnum).v { 
+                    if let  Some(HeapValue::GlobalsBase) = state.regs.get(regnum,&ValSize::Size64).v { 
                         return true
                     }
                 //Case 2: mem[lucet_tables + 8]
                 MemArgs::Mem2Args(MemArg::Reg(regnum,ValSize::Size64), MemArg::Imm(_,_,8)) => {
-                    if let Some(HeapValue::LucetTables) = state.regs.get(regnum).v{    
+                    if let Some(HeapValue::LucetTables) = state.regs.get(regnum,&ValSize::Size64).v{    
                         return true
                     }
                 },
                 MemArgs::Mem3Args(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,8)) 
                 | MemArgs::MemScale(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,4)) => {
-                    match (state.regs.get(regnum1).v,state.regs.get(regnum2).v){
+                    match (state.regs.get(regnum1,&ValSize::Size64).v,state.regs.get(regnum2,&ValSize::Size64).v){
                         (Some(HeapValue::GuestTable0),_) => return true,
                         (_,Some(HeapValue::GuestTable0)) => return true,
                         _ => ()
@@ -157,7 +157,8 @@ impl HeapChecker<'_> {
         if self.check_global_access(state, access){ return true };
         // Case 5: its unknown
         println!("None of the memory accesses!");
-        false 
+        //TODO: change back to false --- currently misses jump tables
+        false
     }
    
 }

@@ -15,6 +15,12 @@ pub struct ReachingDefnLattice{
 
 pub type ReachLattice =  VariableState<ReachingDefnLattice>;
 
+impl ReachingDefnLattice{
+    pub fn is_empty(&self) -> bool{
+        self.defs.is_empty()
+    }
+}
+
 impl PartialOrd for ReachingDefnLattice {
     fn partial_cmp(&self, other: &ReachingDefnLattice) -> Option<Ordering> {
         if &self.defs == &other.defs {
@@ -76,10 +82,19 @@ fn heap_reaching_defs_test() {
     bset2.insert(d4);
     let x2  = ReachingDefnLattice {defs : bset2};
 
+    let mut bset3 = BTreeSet::new();
+    bset3.insert(LocIdx{addr: 1, idx : 1});
+    let x3  = ReachingDefnLattice {defs : bset3};
+
     assert_eq!(x1 == x2, false);
+    assert_eq!(x1 == x3, false);
     assert_eq!(x1 > x2, false);
     assert_eq!(x1 < x2, false);
+    assert_eq!(x1 > x3, true);
     assert_eq!(x1 >= x2, false);
     assert_eq!(x1 <= x2, false);
     assert_eq!(x1.meet(&x2) == Default::default(), true);
+    assert_eq!(x1.meet(&x1) == x1, true);
+    assert_eq!(x1.meet(&x3) == x3, true);
+
 }

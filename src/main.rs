@@ -127,7 +127,7 @@ fn run(config : Config){
         // assert!(heap_safe);
         println!("Checking Call Safety");
         if has_indirect_calls(&irmap){
-            let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone()};
+            let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
             let call_result = run_worklist(cfg, &irmap, &call_analyzer);    
             let call_safe = check_calls(call_result, &irmap, &call_analyzer);
             // assert!(call_safe);
@@ -207,7 +207,7 @@ fn lift_test_helper(path: &str){
         let heap_safe = check_heap(heap_result, &irmap, &HeapAnalyzer{metadata : metadata.clone()});
         // assert!(heap_safe);
 
-        let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone()};
+        let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(),reaching_analyzer : ReachingDefnAnalyzer{}};
         let call_result = run_worklist(cfg, &irmap, &call_analyzer);    
         let call_safe = check_calls(call_result, &irmap, &call_analyzer);
         // assert!(call_safe);

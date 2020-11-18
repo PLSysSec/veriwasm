@@ -1,3 +1,4 @@
+use crate::lifter::ValSize;
 use crate::lifter::Binopcode;
 use crate::ir_utils::is_rsp;
 use crate::ir_utils::get_imm_offset;
@@ -142,7 +143,7 @@ impl<T:Lattice + Clone> VarState for VariableState<T> {
                     },
                 _ => ()
             },
-            Value::Reg(regnum,_) => self.regs.set(regnum, value),
+            Value::Reg(regnum,s2) => self.regs.set(regnum, s2, value),
             Value::Imm(_,_,_) => panic!("Trying to write to an immediate value"),
         }
     } 
@@ -168,7 +169,7 @@ impl<T:Lattice + Clone> VarState for VariableState<T> {
                     None} ,
                 _ => None
             },
-            Value::Reg(regnum,_) => Some(self.regs.get(regnum)),
+            Value::Reg(regnum,s2) => Some(self.regs.get(regnum, s2)),
             Value::Imm(_,_,_) => None,
         }
     } 

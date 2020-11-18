@@ -35,7 +35,7 @@ pub fn is_globalbase_access(in_state : &HeapLattice, memargs : &MemArgs) -> bool
     if let MemArgs::Mem2Args(arg1, arg2) = memargs{ 
         if let MemArg::Reg(regnum,size) = arg1{
             assert_eq!(size.to_u32(), 64);
-            let base = in_state.regs.get(regnum);
+            let base = in_state.regs.get(regnum, size);
             if let Some(v) = base.v {
                 if let HeapValue::HeapBase = v {return true}
             }
@@ -66,7 +66,7 @@ impl HeapAnalyzer{
                     return HeapValueLattice::new(HeapValue::Bounded4GB)
                 } 
                 else {
-                    return in_state.regs.get(regnum)
+                    return in_state.regs.get(regnum, &ValSize::Size64)
                 }},
                 
             Value::Imm(_,_,immval) => 

@@ -51,15 +51,26 @@ pub fn resolve_jumps(
     irmap : &IRMap, 
     analyzer : &SwitchAnalyzer) -> HashMap<u64, Vec<i64>>    {
     let mut switch_targets: HashMap<u64, Vec<i64>> = HashMap::new();
-    for (block_addr, mut state) in result {
+
+    for (block_addr, mut state) in result.clone() {
         for (addr,ir_stmts) in irmap.get(&block_addr).unwrap(){
             for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
-                if(*addr >= 0x2343b && *addr <= 0x23445){
-                println!("------------\n{:x} {:?} r9 = {:?} rbx = {:?} r8 = {:?} rdx = {:?} zf = {:?}", addr, ir_stmt,state.regs.r9, state.regs.rbx, state.regs.r8, state.regs.rdx, state.regs.zf );
-                }
+                println!("{:x}: rcx = {:?}", addr, state.regs.rcx);
+                analyzer.aexec(&mut state, ir_stmt, &LocIdx {addr : *addr, idx : idx as u32});
+            }
+        }
+    }
+
+    for (block_addr, mut state) in result {
+        // println!("{:x}: rcx = {:?}", block_addr, state.regs.rcx);
+        for (addr,ir_stmts) in irmap.get(&block_addr).unwrap(){
+            for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
+                // if(*addr >= 0x4cbe7 && *addr <= 0x4cbf3){
+                //     println!("------------\n{:x} {:?} rax = {:?} rbx = {:?} rcx = {:?}", addr, ir_stmt,state.regs.rax, state.regs.rbx, state.regs.rcx);
+                // }
                 match ir_stmt {
                     Stmt::Branch(_, Value::Reg(regnum,regsize)) => {
-                        let aval = state.regs.get(regnum);
+                        let aval = state.regs.get(regnum, regsize);
                         println!("extracting jmp target @ {:x}", addr);
                         let targets = extract_jmp_targets(program, &aval);
                         switch_targets.insert(*addr, targets);

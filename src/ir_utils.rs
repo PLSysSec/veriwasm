@@ -7,6 +7,13 @@ pub fn is_rsp(v : &Value) -> bool{
     false
 }
 
+pub fn is_irrelevant_reg(v : &Value) -> bool{
+    if let Value::Reg(_, ValSize::SizeOther) = v {
+        return true
+    }
+    false
+}
+
 pub fn memarg_is_stack(memarg: &MemArg) -> bool {
     if let MemArg::Reg(4, regsize) = memarg{
         if let ValSize::Size64 = regsize { 

@@ -111,7 +111,9 @@ fn convert_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> Value{
         RegisterBank::W => ValSize::Size16,
         RegisterBank::B => ValSize::Size8,
         RegisterBank::rB => ValSize::Size8,
-        _ => ValSize::SizeOther
+        RegisterBank::RIP => panic!("Write to RIP: {:?}", reg.bank),
+        RegisterBank::EIP => panic!("Write to EIP: {:?}", reg.bank),
+        _ => ValSize::SizeOther //xmm and ymm
     };
     Value::Reg(reg.num, size)
 }

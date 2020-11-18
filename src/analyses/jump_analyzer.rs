@@ -30,6 +30,7 @@ pub struct SwitchAnalyzer{
 
 impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
     fn aexec_unop(&self, in_state : &mut SwitchLattice, dst : &Value, src : &Value) -> (){
+        println!("exec unop: dst = {:?} rcx = {:?}", dst, in_state.regs.rcx);
         in_state.set(dst, self.aeval_unop(in_state, src))
     }
 
@@ -49,26 +50,27 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
     }
 
     fn process_branch(&self, irmap : &IRMap, in_state : &SwitchLattice, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,SwitchLattice)>{
+        println!("{:x}: Analysis: rcx = {:?}", addr, in_state.regs.rcx);
         if succ_addrs.len() == 2{
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
             if let Some(SwitchValue::ZF(bound, regnum)) = not_branch_state.regs.zf.v{
                 println!("Creating UpperBound @ {:x}", addr);
-                not_branch_state.regs.set(&regnum, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))});
+                not_branch_state.regs.set(&regnum, &ValSize::Size64, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))});
                 // branch_state.regs.set(&regnum, SwitchValueLattice{v:
                 // Some(SwitchValue::UpperBound(bound))});
                 let defs_state = self.reaching_defs.get(addr).unwrap();
                 let ir_block = irmap.get(addr).unwrap();
                 let defs_state = analyze_block(&self.reaching_analyzer, defs_state, ir_block);
                 //run aexec analyze_block(analyzer, state, ir_block)
-                let checked_defs = defs_state.regs.get(&regnum);
+                let checked_defs = defs_state.regs.get(&regnum, &ValSize::Size64);
                 for idx in 0..15{
                     if idx != regnum{
-                        let reg_def = defs_state.regs.get(&idx);
+                        let reg_def = defs_state.regs.get(&idx, &ValSize::Size64);
                         println!("{:?} {:?} {:?} {:?}", idx, checked_defs, reg_def, checked_defs == reg_def);
-                        if reg_def == checked_defs{
+                        if (!reg_def.is_empty()) && (reg_def == checked_defs){
                             println!("propagating process_branch: {:?}", idx);
-                            not_branch_state.regs.set(&idx, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))}); 
+                            not_branch_state.regs.set(&idx, &ValSize::Size64, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))}); 
                         }
                     }
                 }
@@ -103,8 +105,8 @@ impl SwitchAnalyzer{
         if let Some(offset) = get_rsp_offset(memargs){
             return in_state.stack.get(offset, memsize.to_u32())
         }
-        if let MemArgs::MemScale(MemArg::Reg(regnum1,_), MemArg::Reg(regnum2,_), MemArg::Imm(_,_,immval) ) = memargs{
-            if let (Some(SwitchValue::SwitchBase(base)),Some(SwitchValue::UpperBound(bound)),4) = (in_state.regs.get(regnum1).v,in_state.regs.get(regnum2).v,immval){
+        if let MemArgs::MemScale(MemArg::Reg(regnum1,size1), MemArg::Reg(regnum2,size2), MemArg::Imm(_,_,immval) ) = memargs{
+            if let (Some(SwitchValue::SwitchBase(base)),Some(SwitchValue::UpperBound(bound)),4) = (in_state.regs.get(regnum1,size1).v,in_state.regs.get(regnum2,size2).v,immval){
                 println!("Creating JmpOffset");
                 return SwitchValueLattice::new(SwitchValue::JmpOffset(base,bound))
             }
@@ -119,7 +121,7 @@ impl SwitchAnalyzer{
     pub fn aeval_unop(&self, in_state : &SwitchLattice, src : &Value) -> SwitchValueLattice{
         match src{
             Value::Mem(memsize, memargs) => self.aeval_unop_mem(in_state, memargs, memsize),
-            Value::Reg(regnum, size) => in_state.regs.get(regnum),
+            Value::Reg(regnum, size) => in_state.regs.get(regnum, size),
             Value::Imm(_,_,immval) => SwitchValueLattice::new(SwitchValue::SwitchBase(*immval as u32))
             }   
         }
@@ -128,8 +130,8 @@ impl SwitchAnalyzer{
     pub fn aeval_binop(&self, in_state : &SwitchLattice, opcode : &Binopcode, src1 : &Value, src2: &Value) -> SwitchValueLattice{
         
         if let Binopcode::Add = opcode{
-            if let (Value::Reg(regnum1, _), Value::Reg(regnum2, _)) = (src1,src2){
-                match (in_state.regs.get(regnum1).v,in_state.regs.get(regnum2).v){
+            if let (Value::Reg(regnum1, size1), Value::Reg(regnum2, size2)) = (src1,src2){
+                match (in_state.regs.get(regnum1,size1).v,in_state.regs.get(regnum2,size2).v){
                     (Some(SwitchValue::SwitchBase(base)),Some(SwitchValue::JmpOffset(_,offset))) 
                     | (Some(SwitchValue::JmpOffset(_, offset)),Some(SwitchValue::SwitchBase(base))) =>
                     {

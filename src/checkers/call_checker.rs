@@ -55,7 +55,7 @@ impl Checker<CallCheckLattice> for CallChecker<'_> {
 fn check_indirect_call(state: &CallCheckLattice, target: &Value) -> bool {
     match target{
         Value::Reg(regnum, size) => 
-            if let Some(CallCheckValue::FnPtr) = state.regs.get(regnum).v{    
+            if let Some(CallCheckValue::FnPtr) = state.regs.get(regnum, size).v{    
                 return true
         },
         Value::Mem(_,_) => return false,
@@ -68,7 +68,7 @@ fn check_calltable_lookup(state: &CallCheckLattice, memargs: &MemArgs) -> bool {
     println!("Call Table Lookup: {:?}", memargs);
     match memargs{
         MemArgs::Mem3Args(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,8)) =>
-        match (state.regs.get(regnum1).v,state.regs.get(regnum2).v){
+        match (state.regs.get(regnum1,&ValSize::Size64).v,state.regs.get(regnum2,&ValSize::Size64).v){
             (Some(CallCheckValue::GuestTableBase),Some(CallCheckValue::PtrOffset(DAV::Checked))) => return true,
             (Some(CallCheckValue::PtrOffset(DAV::Checked)),Some(CallCheckValue::GuestTableBase)) => return true,
             (x,Some(CallCheckValue::GuestTableBase)) | (Some(CallCheckValue::GuestTableBase),x) => { return false},

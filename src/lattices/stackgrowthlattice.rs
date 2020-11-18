@@ -1,3 +1,4 @@
+use crate::lifter::ValSize;
 use crate::lifter::Binopcode;
 use crate::lifter::Value;
 use std::cmp::Ordering;

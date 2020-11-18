@@ -1,3 +1,4 @@
+use crate::lifter::ValSize;
 use crate::lattices::{Lattice, BooleanLattice};
 
 #[derive(Default, PartialEq, Eq, Clone, PartialOrd, Debug)]
@@ -22,7 +23,10 @@ pub struct X86RegsLattice<T:Lattice + Clone>{
 }
 
 impl<T:Lattice + Clone> X86RegsLattice<T>{
-    pub fn get(&self, index : &u8) -> T{
+    pub fn get(&self, index : &u8, size: &ValSize) -> T{
+        if let ValSize::SizeOther = size{
+            return Default::default();
+        }
         match index {
             0 => self.rax.clone(),
             1 => self.rcx.clone(),
@@ -44,7 +48,10 @@ impl<T:Lattice + Clone> X86RegsLattice<T>{
         }
     }
 
-    pub fn set(&mut self, index : &u8, value : T) -> (){
+    pub fn set(&mut self, index : &u8, size: &ValSize, value : T) -> (){
+        if let ValSize::SizeOther = size{
+            return;
+        }
         match index {
             0 => self.rax = value,
             1 => self.rcx = value,
