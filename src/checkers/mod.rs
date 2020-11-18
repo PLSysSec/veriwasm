@@ -20,7 +20,7 @@ pub trait Checker<State:Lattice + Clone> {
         for (block_addr,mut state) in result {
             for (addr,ir_stmts) in self.irmap().get(&block_addr).unwrap(){
                 for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
-                    println!("------------\n{:x} {:?}", addr, ir_stmt);
+                    println!("------------{:x} {:?}", addr, ir_stmt);
                     if !self.check_statement(&state, ir_stmt){
                         return false
                     }

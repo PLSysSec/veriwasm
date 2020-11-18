@@ -30,7 +30,7 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
     fn check_statement(&self, state : &HeapLattice, ir_stmt : &Stmt) -> bool {
         // println!("rdi = {:?} r15 = {:?} stack = {:?}", state.regs.rdi,
         // state.regs.r15, state.stack);
-        println!("Checking statement for heap {:?}", ir_stmt);
+        println!("Checking statement for heap {:?} r13 = {:?} stack[0x58] = {:?}", ir_stmt, state.regs.r13, state.stack.get(0x10,ValSize::Size64.to_u32() / 8));
         match ir_stmt{
             //1. Check that at each call rdi = HeapBase
             Stmt::Call(_) => {
@@ -95,7 +95,6 @@ impl HeapChecker<'_> {
                 }
                 // if arg1 is heapbase and arg2 and arg3 are bounded || 
                 // if arg1 is bounded and arg1 and arg3 are bounded
-                //TODO: allow second arg to be heapbase?
                 MemArgs::Mem3Args(MemArg::Reg(regnum,ValSize::Size64),memarg2,memarg3) |  
                 MemArgs::Mem3Args(memarg2,MemArg::Reg(regnum,ValSize::Size64),memarg3) => 
                 if let Some(HeapValue::HeapBase) = state.regs.get(regnum,&ValSize::Size64).v {
@@ -179,9 +178,28 @@ impl HeapChecker<'_> {
         if self.check_jump_table_access(state, access){ return true };
         // Case 6: its unknown
         println!("None of the memory accesses!");
+        print_mem_access(state, access);
         //TODO: change back to false --- currently misses jump tables
         false
     }
    
+}
+
+pub fn memarg_repr(state: &HeapLattice, memarg: &MemArg) -> String{
+    match memarg{
+        MemArg::Reg(regnum,size) => format!("r{:?}: {:?}",regnum, state.regs.get(regnum, size).v),
+        MemArg::Imm(_,_,x) => format!("{:?}", x),
+    }
+}
+
+pub fn print_mem_access(state: &HeapLattice, access: &Value){
+    if let Value::Mem(size, memargs) = access {
+        match memargs{
+            MemArgs::Mem1Arg(x) => println!("mem[{:?}]", memarg_repr(state, x)),
+            MemArgs::Mem2Args(x,y) => println!("mem[{:?} + {:?}]", memarg_repr(state, x), memarg_repr(state, y)),
+            MemArgs::Mem3Args(x,y,z) => println!("mem[{:?} + {:?} + {:?}]", memarg_repr(state, x), memarg_repr(state, y), memarg_repr(state, z)),
+            MemArgs::MemScale(x,y,z) => println!("mem[{:?} + {:?} * {:?}]", memarg_repr(state, x), memarg_repr(state, y), memarg_repr(state, z)),
+        }
+    }
 }
 
