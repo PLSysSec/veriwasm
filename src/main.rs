@@ -124,7 +124,7 @@ fn run(config : Config){
         let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
         let heap_result = run_worklist(cfg, &irmap, &heap_analyzer); 
         let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
-        // assert!(heap_safe);
+        assert!(heap_safe);
         println!("Checking Call Safety");
         if has_indirect_calls(&irmap){
             let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};

@@ -96,7 +96,8 @@ impl HeapChecker<'_> {
                 // if arg1 is heapbase and arg2 and arg3 are bounded || 
                 // if arg1 is bounded and arg1 and arg3 are bounded
                 //TODO: allow second arg to be heapbase?
-                MemArgs::Mem3Args(MemArg::Reg(regnum,ValSize::Size64),memarg2,memarg3) => 
+                MemArgs::Mem3Args(MemArg::Reg(regnum,ValSize::Size64),memarg2,memarg3) |  
+                MemArgs::Mem3Args(memarg2,MemArg::Reg(regnum,ValSize::Size64),memarg3) => 
                 if let Some(HeapValue::HeapBase) = state.regs.get(regnum,&ValSize::Size64).v {
                     match (memarg2,memarg3){
                         (MemArg::Reg(regnum2, size2),MemArg::Imm(_,_,v)) | (MemArg::Imm(_,_,v),MemArg::Reg(regnum2, size2))=> 
@@ -131,8 +132,16 @@ impl HeapChecker<'_> {
                         return true
                     }
                 },
+                MemArgs::Mem2Args(MemArg::Reg(regnum1,ValSize::Size64), MemArg::Reg(regnum2,ValSize::Size64)) => {
+                    if let Some(HeapValue::GuestTable0) = state.regs.get(regnum1,&ValSize::Size64).v{    
+                        return true
+                    }
+                    if let Some(HeapValue::GuestTable0) = state.regs.get(regnum2,&ValSize::Size64).v{    
+                        return true
+                    }
+                },
                 MemArgs::Mem3Args(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,8)) 
-                | MemArgs::MemScale(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,4)) => {
+                /*| MemArgs::MemScale(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,4))*/ => {
                     match (state.regs.get(regnum1,&ValSize::Size64).v,state.regs.get(regnum2,&ValSize::Size64).v){
                         (Some(HeapValue::GuestTable0),_) => return true,
                         (_,Some(HeapValue::GuestTable0)) => return true,
@@ -141,6 +150,17 @@ impl HeapChecker<'_> {
                 }
                 _ => return false
             }       
+        }
+        false
+    }
+
+    //TODO: properly check jump table memory reads --- wire in jump analysis data
+    fn check_jump_table_access(&self, state : &HeapLattice, access: &Value) -> bool{
+        if let Value::Mem(size, memargs) = access {
+            match memargs{
+                MemArgs::MemScale(_,_,MemArg::Imm(_,_,4)) => return true,
+                _ => return false
+            }            
         }
         false
     }
@@ -155,7 +175,9 @@ impl HeapChecker<'_> {
         if self.check_metadata_access(state, access){ return true };
         // Case 4: its a globals access
         if self.check_global_access(state, access){ return true };
-        // Case 5: its unknown
+        // Case 5: Jump table access
+        if self.check_jump_table_access(state, access){ return true };
+        // Case 6: its unknown
         println!("None of the memory accesses!");
         //TODO: change back to false --- currently misses jump tables
         false
