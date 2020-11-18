@@ -1,3 +1,4 @@
+use crate::lattices::stacklattice::StackSlot;
 use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
@@ -68,7 +69,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     branch_state.regs.set(&idx, &ValSize::Size64, new_val.clone()); 
                 }
             }
-            //2. resolve ptr thunks in registers -- TODO
+            //2. resolve ptr thunks in registers
             let checked_ptr = CallCheckValueLattice{ v : Some(CallCheckValue::PtrOffset(DAV::Checked))};
             for idx in 0..15{
                 let reg_val = branch_state.regs.get(&idx, &ValSize::Size64);
@@ -80,6 +81,12 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
             }
             
             //3. resolve ptr thunks in stack slots -- TODO
+            for (stack_offset, stack_slot) in defs_state.stack.map.iter(){
+                if !checked_defs.is_empty() && (stack_slot.value == checked_defs){
+                    let v = StackSlot{size: stack_slot.size, value : checked_ptr.clone()};
+                    branch_state.stack.map.insert(*stack_offset, v);
+                }
+            }
 
             vec![(succ_addrs[0].clone(),not_branch_state), (succ_addrs[1].clone(),branch_state)]
             //succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
