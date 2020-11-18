@@ -75,13 +75,13 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                     }
                 }
 
-                // for (stack_offset, stack_slot) in defs_state.stack.map.iter(){
-                //     if stack_slot.value == checked_defs{
-                //         let v = SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))};
-                //         let vv = StackSlot{size: stack_slot.size, value : v};
-                //         not_branch_state.stack.map.insert(*stack_offset, vv);
-                //     }
-                // }
+                for (stack_offset, stack_slot) in defs_state.stack.map.iter(){
+                    if !checked_defs.is_empty() && (stack_slot.value == checked_defs){
+                        let v = SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))};
+                        let vv = StackSlot{size: stack_slot.size, value : v};
+                        not_branch_state.stack.map.insert(*stack_offset, vv);
+                    }
+                }
                 
             //  for stack_offset, slot_val in cur_reaching_defs.stacks._map.items():
             //     if slot_val.value.value() == checked_defs:
