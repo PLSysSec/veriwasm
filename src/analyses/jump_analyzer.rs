@@ -30,13 +30,13 @@ pub struct SwitchAnalyzer{
 
 impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
     fn aexec_unop(&self, in_state : &mut SwitchLattice, dst : &Value, src : &Value) -> (){
-        println!("exec unop: dst = {:?} rcx = {:?}", dst, in_state.regs.rcx);
+        // println!("exec unop: dst = {:?} rcx = {:?}", dst, in_state.regs.rcx);
         in_state.set(dst, self.aeval_unop(in_state, src))
     }
 
     fn aexec_binop(&self, in_state : &mut SwitchLattice, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value) -> (){
         if let Binopcode::Cmp = opcode{
-            println!("CMP: {:?} = {:?} {:?}", dst, src1, src2);
+            // println!("CMP: {:?} = {:?} {:?}", dst, src1, src2);
             // match (in_state.,in_state.regs.get(regnum2).v){
             match (src1,src2){
                 (Value::Reg(regnum,_),Value::Imm(_,_,imm)) | (Value::Imm(_,_,imm),Value::Reg(regnum,_)) =>
@@ -50,26 +50,21 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
     }
 
     fn process_branch(&self, irmap : &IRMap, in_state : &SwitchLattice, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,SwitchLattice)>{
-        println!("{:x}: Analysis: rcx = {:?}", addr, in_state.regs.rcx);
+        // println!("{:x}: Analysis: rcx = {:?}", addr, in_state.regs.rcx);
         if succ_addrs.len() == 2{
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
             if let Some(SwitchValue::ZF(bound, regnum)) = not_branch_state.regs.zf.v{
-                println!("Creating UpperBound @ {:x}", addr);
                 not_branch_state.regs.set(&regnum, &ValSize::Size64, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))});
-                // branch_state.regs.set(&regnum, SwitchValueLattice{v:
-                // Some(SwitchValue::UpperBound(bound))});
                 let defs_state = self.reaching_defs.get(addr).unwrap();
                 let ir_block = irmap.get(addr).unwrap();
                 let defs_state = analyze_block(&self.reaching_analyzer, defs_state, ir_block);
-                //run aexec analyze_block(analyzer, state, ir_block)
+                
                 let checked_defs = defs_state.regs.get(&regnum, &ValSize::Size64);
                 for idx in 0..15{
                     if idx != regnum{
                         let reg_def = defs_state.regs.get(&idx, &ValSize::Size64);
-                        println!("{:?} {:?} {:?} {:?}", idx, checked_defs, reg_def, checked_defs == reg_def);
                         if (!reg_def.is_empty()) && (reg_def == checked_defs){
-                            println!("propagating process_branch: {:?}", idx);
                             not_branch_state.regs.set(&idx, &ValSize::Size64, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))}); 
                         }
                     }
@@ -82,19 +77,10 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                         not_branch_state.stack.map.insert(*stack_offset, vv);
                     }
                 }
-                
-            //  for stack_offset, slot_val in cur_reaching_defs.stacks._map.items():
-            //     if slot_val.value.value() == checked_defs:
-            //         not_branch_state.stacks.update(stack_offset, slot_val.size, make_upper_bound_lattice(c) )
-                //TODO: get access to reaching defs
-
             }
             branch_state.regs.zf = Default::default();
             not_branch_state.regs.zf = Default::default();
-            println!("succ_addrs = {:x} {:x}", succ_addrs[0].clone(), succ_addrs[1].clone());
-
             vec![(succ_addrs[0].clone(),not_branch_state), (succ_addrs[1].clone(),branch_state)]
-            //succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
         }
         else {succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()}
     }
@@ -107,7 +93,6 @@ impl SwitchAnalyzer{
         }
         if let MemArgs::MemScale(MemArg::Reg(regnum1,size1), MemArg::Reg(regnum2,size2), MemArg::Imm(_,_,immval) ) = memargs{
             if let (Some(SwitchValue::SwitchBase(base)),Some(SwitchValue::UpperBound(bound)),4) = (in_state.regs.get(regnum1,size1).v,in_state.regs.get(regnum2,size2).v,immval){
-                println!("Creating JmpOffset");
                 return SwitchValueLattice::new(SwitchValue::JmpOffset(base,bound))
             }
         }
@@ -135,7 +120,6 @@ impl SwitchAnalyzer{
                     (Some(SwitchValue::SwitchBase(base)),Some(SwitchValue::JmpOffset(_,offset))) 
                     | (Some(SwitchValue::JmpOffset(_, offset)),Some(SwitchValue::SwitchBase(base))) =>
                     {
-                        println!("Creating JmpTarget");
                         return SwitchValueLattice::new(SwitchValue::JmpTarget(base,offset))
                     },
                     _ => return Default::default()
