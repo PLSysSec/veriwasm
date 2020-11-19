@@ -28,8 +28,8 @@ fn load_target(program : &ModuleData, addr: u64) -> i64{
 }
 
 fn extract_jmp_targets(program : &ModuleData, aval : &SwitchValueLattice) -> Vec<i64>{
-    println!("========================Extracting Jump Targets!=====================");
-    println!("aval = {:?}", aval);
+    // println!("========================Extracting Jump Targets!=====================");
+    // println!("aval = {:?}", aval);
     let mut targets: Vec<i64> = Vec::new();
     match aval.v{
         Some(SwitchValue::JmpTarget(base, upper_bound)) => {
@@ -55,7 +55,7 @@ pub fn resolve_jumps(
     for (block_addr, mut state) in result.clone() {
         for (addr,ir_stmts) in irmap.get(&block_addr).unwrap(){
             for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
-                println!("{:x}: rcx = {:?}", addr, state.regs.rcx);
+                // println!("{:x}: rcx = {:?}", addr, state.regs.rcx);
                 analyzer.aexec(&mut state, ir_stmt, &LocIdx {addr : *addr, idx : idx as u32});
             }
         }
@@ -71,7 +71,7 @@ pub fn resolve_jumps(
                 match ir_stmt {
                     Stmt::Branch(_, Value::Reg(regnum,regsize)) => {
                         let aval = state.regs.get(regnum, regsize);
-                        println!("extracting jmp target @ {:x}", addr);
+                        // println!("extracting jmp target @ {:x}", addr);
                         let targets = extract_jmp_targets(program, &aval);
                         switch_targets.insert(*addr, targets);
                     },

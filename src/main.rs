@@ -69,6 +69,59 @@ fn has_indirect_jumps(irmap: &IRMap) -> bool{
     false
 }
 
+// fn try_resolve_jumps(program : &ModuleData, cfg : &VW_CFG, metadata : utils::LucetMetadata) -> (VW_CFG,IRMap,i32,i32){
+//     let irmap = lift_cfg(&program, cfg, &metadata);
+//     let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
+//     let switch_analyzer = SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
+//     let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
+//     let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
+    
+//     // #for switch_loc, target in targets.items():
+//     // #    print(switch_loc, hex(ircfg.loc_db.get_location_offset(switch_loc)), target)
+//     // #    if not target.is_fully_resolved():
+//     // #        print("TARGET NOT FULLY RESOLVED: ")
+
+//     //TODO: regenerate cfg and irmap
+//     let new_cfg = get_cfg(&program, &x86_64_data.contexts, addr);
+//     ircfg,_,_ = get_simplified_ircfg(filename, func_name, jump_targets=switch_targets)
+//     still_unresolved = len(targets) - len(resolved_targets) 
+//     return ircfg, still_unresolved, len(targets)
+// }
+
+// fn resolve_cfg(program : &ModuleData, cfg : &VW_CFG, metadata : utils::LucetMetadata) -> (VW_CFG,IRMap){
+//     let mut still_unresolved = -1;
+//     let mut total_switch = -1;
+//     while still_unresolved != 0{
+//         let last_still_unresolved = still_unresolved;
+//         let last_total_switch = total_switch;
+
+//         let (cfg, irmap, still_unresolved, total_switch) = try_resolve_jumps(program, cfg, metadata);
+//         if (still_unresolved == last_still_unresolved) && (total_switch == last_total_switch){
+//             panic!("Hit fixed point with {:?} remaining unresolved jumps {:?}", still_unresolved, total_switch);
+//         }
+//     }
+    
+//     (cfg,irmap)
+// }
+
+// fn fully_resolved_cfg(program : &ModuleData, 
+//     cfg : &VW_CFG, 
+//     metadata : utils::LucetMetadata) -> (VW_CFG,IRMap){
+    
+//     let irmap = lift_cfg(&program, cfg, &metadata);
+//     if !has_indirect_jumps(&irmap){
+//         return irmap
+//     }
+//     //return resolve_cfg(program, cfg, metadata)
+
+//     println!("Recovering Reaching Defs");
+//     let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
+//     let switch_analyzer = SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
+//     let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
+//     let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
+//     (cfg,irmap)
+// }
+
 fn fully_resolved_cfg(program : &ModuleData, 
     cfg : &VW_CFG, 
     metadata : utils::LucetMetadata) -> IRMap{
@@ -98,6 +151,8 @@ fn run(config : Config){
 
         println!("Analyzing: {:?}", func_name);
         println!("Checking Instruction Legality");
+        // let (cfg,irmap) = fully_resolved_cfg(&program, cfg,
+        // metadata.clone());
         let irmap = fully_resolved_cfg(&program, cfg, metadata.clone());
         // println!("Getting reaching defs");
         // println!("============ irmap {:?} ==========", func_name);
@@ -124,7 +179,7 @@ fn run(config : Config){
         let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
         let heap_result = run_worklist(cfg, &irmap, &heap_analyzer); 
         let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
-        assert!(heap_safe);
+        // assert!(heap_safe);
         println!("Checking Call Safety");
         if has_indirect_calls(&irmap){
             let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};

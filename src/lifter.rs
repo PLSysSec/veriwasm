@@ -129,7 +129,7 @@ fn convert_memarg_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> MemArg{
     MemArg::Reg(reg.num, size)
 }
 
-
+//TODO: make valsize multiplied by 8 (or just generally get a proper size)
 fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{
     match op{
         Operand::ImmediateI8(imm) => Value::Imm(ImmType::Signed, ValSize::Size8, imm as i64),
@@ -158,10 +158,16 @@ fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{
             } else {
             Value::Mem(valsize(reg1.width() as u32), 
                 MemArgs::MemScale(convert_memarg_reg(reg1), 
-                convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, 
-                ValSize::Size32, scale as i64)) )
+                convert_memarg_reg(reg2), 
+                MemArg::Imm(ImmType::Signed, ValSize::Size32, scale as i64)) )
             },
-            Operand::RegIndexBaseScaleDisp(reg1,reg2,scale,imm) => {assert_eq!(scale,1); Value::Mem(valsize(reg1.width() as u32), MemArgs::Mem3Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) )},//mem[reg1 + reg2*c1 + c2]
+            Operand::RegIndexBaseScaleDisp(reg1,reg2,scale,imm) => {
+                assert_eq!(scale,1); 
+                Value::Mem(valsize(reg1.width() as u32), 
+                MemArgs::Mem3Args(convert_memarg_reg(reg1), 
+                convert_memarg_reg(reg2), 
+                MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) )
+            },//mem[reg1 + reg2*c1 + c2]
         Operand::Nothing => panic!("Nothing Operand?"),
     }
 }
@@ -248,6 +254,9 @@ fn lea(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Stmt{
 pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata : &LucetMetadata) -> Vec<Stmt>{
     let mut instrs = Vec::new();
     //println!("{:?} {:?} instr", addr, instr);
+    if (*addr) == 0x022f38 {
+        println!("Instr at addr: {:x} {:?}", addr, instr);
+    }
     match instr.opcode{
         Opcode::MOV => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::MOVSX => instrs.push(unop(Unopcode::Mov, instr)),

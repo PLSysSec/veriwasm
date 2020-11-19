@@ -30,7 +30,7 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
     fn check_statement(&self, state : &HeapLattice, ir_stmt : &Stmt) -> bool {
         // println!("rdi = {:?} r15 = {:?} stack = {:?}", state.regs.rdi,
         // state.regs.r15, state.stack);
-        println!("Checking statement for heap {:?} r13 = {:?} stack[0x58] = {:?}", ir_stmt, state.regs.r13, state.stack.get(0x10,ValSize::Size64.to_u32() / 8));
+        // println!("Checking statement for heap {:?} r13 = {:?} stack[0x58] = {:?}", ir_stmt, state.regs.r13, state.stack.get(0x10,ValSize::Size64.to_u32() / 8));
         match ir_stmt{
             //1. Check that at each call rdi = HeapBase
             Stmt::Call(_) => {
