@@ -104,32 +104,10 @@ fn run(config : Config){
     for (func_name,cfg) in get_cfgs(&config.module_path).iter(){
     // for (func_name,cfg) in get_resolved_cfgs(&config.module_path).iter(){
 
-        // if !is_valid_func_name(func_name) { 
-        //     continue 
-        // }
-
         println!("Analyzing: {:?}", func_name);
-        // println!("Checking Instruction Legality");
-        // let (cfg,irmap) = fully_resolved_cfg(&program, cfg, metadata.clone());
-        // let irmap = fully_resolved_cfg(&program, cfg, metadata.clone());
-        // println!("Getting reaching defs");
-        // println!("============ irmap {:?} ==========", func_name);
-        // for (a, b) in irmap.iter(){
-        //     let dsts = cfg.destinations(*a);
-        //     let out_addrs: Vec<std::string::String> = dsts.clone().into_iter().map(|x| format!("{:x}", x)).rev().collect();
-        //     println!("{:x} -> {:?}", a, out_addrs);
-        // }
         let irmap = lift_cfg(&program, &cfg, &metadata);
         let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
-        // let irmap = lift_cfg(&program, cfg);
-        // println!("Recovering Reaching Defs");
-        // let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
-        // println!("Checking 1 Round of Jump Safety");
-        // let jump_results = analyze_jumps(cfg, &irmap, metadata.clone(),
-        // reaching_defs.clone());
-        
-        //println!("===========================================Checking Stack Safety================================================");
-        //let stack_result = analyze_stack(cfg, &irmap);
+       
         let stack_analyzer = StackAnalyzer{};
         let stack_result = run_worklist(cfg, &irmap, &stack_analyzer); 
         let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
@@ -138,15 +116,14 @@ fn run(config : Config){
         let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
         let heap_result = run_worklist(cfg, &irmap, &heap_analyzer); 
         let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
-        // assert!(heap_safe);
+        assert!(heap_safe);
         println!("Checking Call Safety");
         if has_indirect_calls(&irmap){
             let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
             let call_result = run_worklist(cfg, &irmap, &call_analyzer);    
             let call_safe = check_calls(call_result, &irmap, &call_analyzer);
-            // assert!(call_safe);
+            assert!(call_safe);
         }
-        // let new_cfg = get_cfg(data, &mut data.contexts, entrypoint)
     }
     println!("Done!");
 }
