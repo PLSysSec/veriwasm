@@ -36,7 +36,9 @@ fn extract_jmp_targets(program : &ModuleData, aval : &SwitchValueLattice) -> Vec
             for idx in 0..upper_bound {
                 let addr = base + idx * 4; 
                 let target = load_target(program, addr.into());
-                targets.push(target);
+                let resolved_target = ((base as i32) + (target as i32)) as i64;
+                // println!("Resolved Target to {:x} + {:x} = {:x}", base, target, ((base as i32) + (target as i32)) as u64);
+                targets.push(resolved_target);
             }
         },
         _ => panic!("Jump Targets Broken")

@@ -97,7 +97,7 @@ pub fn get_cfgs(binpath : &str) -> Vec<(String, VW_CFG)>{
         {
         if is_valid_func_name(&symbol.1) { 
             println!("Generating CFG for: {:?}", symbol.1);
-            let new_cfg = get_cfg(&program, &x86_64_data.contexts, addr, None);
+            let (new_cfg,_) = get_cfg(&program, &x86_64_data.contexts, addr, None);
             cfgs.push((symbol.1.clone(), new_cfg));
             }
         }
@@ -105,34 +105,46 @@ pub fn get_cfgs(binpath : &str) -> Vec<(String, VW_CFG)>{
     cfgs
 }
 
-fn try_resolve_jumps(program : &ModuleData,  contexts: &MergedContextTable, cfg : &VW_CFG, metadata : LucetMetadata, addr: u64) -> (VW_CFG,IRMap,i32){
+fn try_resolve_jumps(program : &ModuleData,  contexts: &MergedContextTable, cfg : &VW_CFG, metadata : LucetMetadata, addr: u64) -> (VW_CFG,IRMap,i32,u32){
     let irmap = lift_cfg(&program, cfg, &metadata);
     let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
     let switch_analyzer = SwitchAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
     let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
     let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
     
-    let new_cfg = get_cfg(program, contexts, cfg.entrypoint, Some(&switch_targets) );
+    let (new_cfg,still_unresolved) = get_cfg(program, contexts, cfg.entrypoint, Some(&switch_targets) );
     let irmap = lift_cfg(&program, &new_cfg, &metadata);
     let num_targets = switch_targets.len();
-    return (new_cfg, irmap, num_targets as i32);
+    return (new_cfg, irmap, num_targets as i32, still_unresolved);
 }
 
 fn resolve_cfg(program : &ModuleData, contexts: &MergedContextTable, cfg : &VW_CFG, metadata : LucetMetadata, addr: u64) -> (VW_CFG,IRMap){
     let mut last_switches = -1;
-    let (mut cfg, mut irmap, mut resolved_switches) = try_resolve_jumps(program, contexts, cfg, metadata.clone(), addr);
-    while resolved_switches != last_switches{
+    let (mut cfg, mut irmap, mut resolved_switches, mut still_unresolved) = try_resolve_jumps(program, contexts, cfg, metadata.clone(), addr);
+    while resolved_switches != last_switches && (still_unresolved != 0) {
         last_switches = resolved_switches;
-        let (new_cfg, new_irmap, new_resolved_switches) = try_resolve_jumps(program, contexts, &cfg, metadata.clone(), addr);
+        let (new_cfg, new_irmap, new_resolved_switches, new_still_unresolved) = try_resolve_jumps(program, contexts, &cfg, metadata.clone(), addr);
         cfg = new_cfg;
         irmap = new_irmap;
+        if (new_resolved_switches == resolved_switches) && (new_still_unresolved != 0){
+            panic!("Fixed Point Error");
+        }
         resolved_switches = new_resolved_switches;
+        still_unresolved = new_still_unresolved;
     } 
+    println!("======> Resolved CFG");
+    for block_addr in cfg.graph.nodes(){
+        let dests: Vec<u64> = cfg.graph.neighbors(block_addr).collect();
+        let out_addrs: Vec<std::string::String> = dests.clone().into_iter().map(|x| format!("{:x}", x)).rev().collect(); 
+        println!("{:x} {:?}", block_addr, out_addrs);
+    }
+    assert_eq!(cfg.graph.node_count(), irmap.keys().len());
+    assert_eq!(still_unresolved, 0);
     (cfg,irmap)
 }
 
 pub fn fully_resolved_cfg(program : &ModuleData, contexts: &MergedContextTable, metadata : LucetMetadata, addr: u64) -> (VW_CFG,IRMap){
-    let cfg = get_cfg(program, contexts, addr, None);
+    let (cfg,_) = get_cfg(program, contexts, addr, None);
     let irmap = lift_cfg(&program, &cfg, &metadata);
     if !has_indirect_jumps(&irmap){
         return (cfg,irmap);
@@ -140,7 +152,7 @@ pub fn fully_resolved_cfg(program : &ModuleData, contexts: &MergedContextTable, 
     return resolve_cfg(program, contexts, &cfg, metadata, addr)
 }
 
-pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, VW_CFG)>{
+pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, (VW_CFG,IRMap) )>{
     let program = load_program(binpath);
     let metadata = load_metadata(binpath);
 
@@ -159,13 +171,13 @@ pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, VW_CFG)>{
 
     let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
 
-    let mut cfgs : Vec<(String, VW_CFG)> = Vec::new(); 
+    let mut cfgs : Vec<(String, (VW_CFG,IRMap) )> = Vec::new(); 
     while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
         if let Some(symbol) = x86_64_data.symbol_for(addr){
         if is_valid_func_name(&symbol.1) { 
             println!("Generating CFG for: {:?}", symbol.1);
             let (new_cfg,irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, metadata.clone(), addr);
-            cfgs.push((symbol.1.clone(), new_cfg));
+            cfgs.push((symbol.1.clone(), (new_cfg,irmap) ));
             }
         }
     }

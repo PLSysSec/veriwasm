@@ -6,6 +6,8 @@ pub mod lifter;
 pub mod ir_utils;
 pub mod checkers;
 pub mod cfg;
+use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
+use crate::utils::get_resolved_cfgs;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::analyses::jump_analyzer::SwitchAnalyzer;
 use crate::checkers::jump_resolver::resolve_jumps;
@@ -64,11 +66,12 @@ fn run(config : Config){
     // let cfgs = get_cfgs(binpath);
     println!("Loading Metadata");
     let metadata = load_metadata(&config.module_path);
-    for (func_name,cfg) in get_cfgs(&config.module_path).iter(){
-    // for (func_name,cfg) in get_resolved_cfgs(&config.module_path).iter(){
-
+    // for (func_name,cfg) in get_cfgs(&config.module_path).iter(){
+    for (func_name,(cfg,irmap)) in get_resolved_cfgs(&config.module_path).iter(){
         println!("Analyzing: {:?}", func_name);
-        let irmap = lift_cfg(&program, &cfg, &metadata);
+        //let irmap = lift_cfg(&program, &cfg, &metadata);
+        check_cfg_integrity(&cfg.blocks,&cfg.graph);
+        // assert_eq!(cfg.blocks.keys(), ir);
        
         let stack_analyzer = StackAnalyzer{};
         let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer); 
