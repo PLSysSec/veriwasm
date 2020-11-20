@@ -69,21 +69,21 @@ fn run(config : Config){
 
         println!("Analyzing: {:?}", func_name);
         let irmap = lift_cfg(&program, &cfg, &metadata);
-        let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
        
         let stack_analyzer = StackAnalyzer{};
-        let stack_result = run_worklist(cfg, &irmap, &stack_analyzer); 
+        let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer); 
         let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
         assert!(stack_safe);
         println!("Checking Heap Safety");
         let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
-        let heap_result = run_worklist(cfg, &irmap, &heap_analyzer); 
+        let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer); 
         let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
         assert!(heap_safe);
         println!("Checking Call Safety");
         if has_indirect_calls(&irmap){
+            let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
             let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
-            let call_result = run_worklist(cfg, &irmap, &call_analyzer);    
+            let call_result = run_worklist(&cfg, &irmap, &call_analyzer);    
             let call_safe = check_calls(call_result, &irmap, &call_analyzer);
             assert!(call_safe);
         }

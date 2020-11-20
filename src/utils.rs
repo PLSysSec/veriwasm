@@ -97,7 +97,7 @@ pub fn get_cfgs(binpath : &str) -> Vec<(String, VW_CFG)>{
         {
         if is_valid_func_name(&symbol.1) { 
             println!("Generating CFG for: {:?}", symbol.1);
-            let new_cfg = get_cfg(&program, &x86_64_data.contexts, addr, &HashMap::new());
+            let new_cfg = get_cfg(&program, &x86_64_data.contexts, addr, None);
             cfgs.push((symbol.1.clone(), new_cfg));
             }
         }
@@ -112,7 +112,7 @@ fn try_resolve_jumps(program : &ModuleData,  contexts: &MergedContextTable, cfg 
     let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
     let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
     
-    let new_cfg = get_cfg(program, contexts, cfg.entrypoint, &switch_targets);
+    let new_cfg = get_cfg(program, contexts, cfg.entrypoint, Some(&switch_targets) );
     let irmap = lift_cfg(&program, &new_cfg, &metadata);
     let num_targets = switch_targets.len();
     return (new_cfg, irmap, num_targets as i32);
@@ -132,7 +132,7 @@ fn resolve_cfg(program : &ModuleData, contexts: &MergedContextTable, cfg : &VW_C
 }
 
 pub fn fully_resolved_cfg(program : &ModuleData, contexts: &MergedContextTable, metadata : LucetMetadata, addr: u64) -> (VW_CFG,IRMap){
-    let cfg = get_cfg(program, contexts, addr, &HashMap::new());
+    let cfg = get_cfg(program, contexts, addr, None);
     let irmap = lift_cfg(&program, &cfg, &metadata);
     if !has_indirect_jumps(&irmap){
         return (cfg,irmap);
