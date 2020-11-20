@@ -6,11 +6,7 @@ pub mod lifter;
 pub mod ir_utils;
 pub mod checkers;
 pub mod cfg;
-use crate::utils::fully_resolved_cfg;
-use crate::utils::get_resolved_cfgs;
-use yaxpeax_core::analyses::control_flow::get_cfg;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
-use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::analyses::jump_analyzer::SwitchAnalyzer;
 use crate::checkers::jump_resolver::resolve_jumps;
 use crate::checkers::call_checker::check_calls;
@@ -19,21 +15,13 @@ use crate::analyses::heap_analyzer::HeapAnalyzer;
 use crate::analyses::run_worklist;
 use crate::analyses::stack_analyzer::StackAnalyzer;
 use crate::lifter::IRMap;
-// use std::collections::hash_map::HashMap;
-use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
-use yaxpeax_core::memory::repr::process::ModuleData;
-// use crate::analyses::call_analyzer::analyze_calls;
 use crate::analyses::jump_analyzer::analyze_jumps;
 use crate::analyses::reaching_defs::analyze_reaching_defs;
-// use crate::analyses::heap_analyzer::analyze_heap;
-use utils::{load_program, get_cfgs, load_metadata, is_valid_func_name};
-// use analyses::stack_analyzer::analyze_stack;
+use utils::{load_program, get_cfgs, load_metadata};
 use clap::{Arg, App};
 use lifter::{lift_cfg, Stmt, Value};
 use crate::checkers::stack_checker::check_stack;
 use crate::checkers::heap_checker::check_heap;
-// use crate::checkers::call_checker::check_calls;
-use std::rc::Rc;
 
 pub struct Config{
     module_path: String,
@@ -57,7 +45,6 @@ fn has_indirect_calls(irmap: &IRMap) -> bool{
     false
 }
 
-
 fn has_indirect_jumps(irmap: &IRMap) -> bool{
     for (block_addr, ir_block) in irmap {
         for (addr,ir_stmts) in ir_block{
@@ -71,30 +58,6 @@ fn has_indirect_jumps(irmap: &IRMap) -> bool{
     }
     false
 }
-
-    // println!("Recovering Reaching Defs");
-    // let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
-    // let switch_analyzer = SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
-    // let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
-    // let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
-    // (cfg,irmap)
-// }
-
-// fn fully_resolved_cfg(program : &ModuleData, 
-//     cfg : &VW_CFG, 
-//     metadata : utils::LucetMetadata) -> IRMap{
-//     let irmap = lift_cfg(&program, cfg, &metadata);
-//     println!("ircfg lifted");
-//     if !has_indirect_jumps(&irmap){
-//         return irmap
-//     }
-//     println!("Recovering Reaching Defs");
-//     let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
-//     let switch_analyzer = SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
-//     let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
-//     let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
-//     irmap
-// }
 
 fn run(config : Config){
     let program = load_program(&config.module_path);

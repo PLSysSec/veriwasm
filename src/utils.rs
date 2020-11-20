@@ -140,7 +140,6 @@ pub fn fully_resolved_cfg(program : &ModuleData, contexts: &MergedContextTable, 
     return resolve_cfg(program, contexts, &cfg, metadata, addr)
 }
 
-
 pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, VW_CFG)>{
     let program = load_program(binpath);
     let metadata = load_metadata(binpath);
