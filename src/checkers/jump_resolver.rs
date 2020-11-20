@@ -89,21 +89,3 @@ pub fn resolve_jumps(
     switch_targets 
 }
 
-
-
-// impl Checker<SwitchLattice> for CallChecker<'_> {
-//     fn check(&self, result : AnalysisResult<SwitchLattice>) -> bool{
-//         //self.check_state_at_statements(result)
-//         unimplemented!("Check not implemented for jump resolver")
-//     }
-
-//     fn irmap(&self) -> &IRMap {self.irmap}
-//     fn aexec(&self, state: &mut SwitchLattice, ir_stmt: &Stmt, loc: &LocIdx){
-//         self.analyzer.aexec(state, ir_stmt, loc)
-//     }
-
-//     // TODO check lookups
-//     fn check_statement(&self, state : &SwitchLattice, ir_stmt : &Stmt) -> bool {
-//         unimplemented!("Check statement is not implemented for jump")
-//     }
-// }

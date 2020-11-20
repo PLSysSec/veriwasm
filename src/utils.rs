@@ -1,3 +1,12 @@
+use crate::has_indirect_jumps;
+use yaxpeax_core::arch::x86_64::MergedContextTable;
+use crate::lifter::IRMap;
+use crate::analyses::jump_analyzer::SwitchAnalyzer;
+use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
+use crate::checkers::jump_resolver::resolve_jumps;
+use crate::analyses::jump_analyzer::analyze_jumps;
+use crate::analyses::reaching_defs::analyze_reaching_defs;
+use crate::lifter::lift_cfg;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_core::analyses::control_flow::get_cfg;
 use petgraph::graphmap::GraphMap;
@@ -160,24 +169,101 @@ pub fn get_cfgs(binpath : &str) -> Vec<(String, VW_CFG)>{
         {
         if is_valid_func_name(&symbol.1) { 
             println!("Generating CFG for: {:?}", symbol.1);
-            //cfgs.push((symbol.1.clone(), function_cfg_for_addr(&program, &mut x86_64_data, addr)));
-            
             let new_cfg = get_cfg(&program, &x86_64_data.contexts, addr);
             cfgs.push((symbol.1.clone(), new_cfg));
-            // println!("-------------------------- new cfg: entry = 0x{:x}", new_cfg.entrypoint);
-            // for block in new_cfg.blocks.values(){
-            //     println!("{}", block.as_str());
-            // }
-            // for block in new_cfg.graph.nodes(){
-            //     let out_addrs: Vec<std::string::String> = new_cfg.destinations(block).into_iter().map(|x| format!("{:x}", x)).rev().collect();
-            //     println!("{:x} -> {:?}", block, out_addrs);
-            // }
             }
         }
     }
     cfgs
-
 }
+
+
+fn try_resolve_jumps(program : &ModuleData,  contexts: &MergedContextTable, cfg : &VW_CFG, metadata : LucetMetadata, addr: u64) -> (VW_CFG,IRMap,i32){
+    let irmap = lift_cfg(&program, cfg, &metadata);
+    let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
+    let switch_analyzer = SwitchAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
+    let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
+    let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
+    
+    // #for switch_loc, target in targets.items():
+    // #    print(switch_loc, hex(ircfg.loc_db.get_location_offset(switch_loc)), target)
+    // #    if not target.is_fully_resolved():
+    // #        print("TARGET NOT FULLY RESOLVED: ")
+
+    //TODO: regenerate cfg and irmap
+    let new_cfg = get_cfg(program, contexts, cfg.entrypoint);
+    let irmap = lift_cfg(&program, &new_cfg, &metadata);
+    let num_targets = switch_targets.len();
+    return (new_cfg, irmap, num_targets as i32);
+}
+
+fn resolve_cfg(program : &ModuleData, contexts: &MergedContextTable, cfg : &VW_CFG, metadata : LucetMetadata, addr: u64) -> (VW_CFG,IRMap){
+    let mut resolved_switches = -1;
+    let mut last_switches = -1;
+    // while still_unresolved != 0{
+    let (cfg, irmap, resolved_switches) = try_resolve_jumps(program, contexts, cfg, metadata.clone(), addr);
+    while resolved_switches == last_switches{
+        let last_switches = resolved_switches;
+        let (cfg, irmap, resolved_switches) = try_resolve_jumps(program, contexts, &cfg, metadata.clone(), addr);
+        //if (still_unresolved == last_still_unresolved) && (total_switch ==
+        //last_total_switch){
+        if (last_switches == resolved_switches){
+            panic!("resolved {:?} jumps, resolved {:?} last time", last_switches, resolved_switches);
+        }
+    } 
+    (cfg,irmap)
+}
+
+pub fn fully_resolved_cfg(program : &ModuleData, 
+    contexts: &MergedContextTable,
+    metadata : LucetMetadata,
+    addr: u64) -> (VW_CFG,IRMap){
+
+    let cfg = get_cfg(program, contexts, addr);
+    let irmap = lift_cfg(&program, &cfg, &metadata);
+    if !has_indirect_jumps(&irmap){
+        return (cfg,irmap);
+    }
+    return resolve_cfg(program, contexts, &cfg, metadata, addr)
+}
+
+
+pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, VW_CFG)>{
+    let program = load_program(binpath);
+    let metadata = load_metadata(binpath);
+
+    // grab some details from the binary and panic if it's not what we expected
+    let (_, entrypoint, imports, exports, symbols) = match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
+        Some(ModuleInfo::ELF(isa, _, _, _sections, entry, _, imports, exports, symbols)) => {
+            (isa, entry, imports, exports, symbols)
+        }
+        Some(other) => {
+            panic!("{:?} isn't an elf, but is a {:?}?", binpath,other);
+        }
+        None => {
+            panic!("{:?} doesn't appear to be a binary yaxpeax understands.", binpath);
+        }
+    };
+
+    let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
+
+    let mut cfgs : Vec<(String, VW_CFG)> = Vec::new(); 
+    while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
+        if let Some(symbol) = x86_64_data.symbol_for(addr)
+        {
+        if is_valid_func_name(&symbol.1) { 
+            println!("Generating CFG for: {:?}", symbol.1);
+            let (new_cfg,irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, metadata.clone(), addr);
+            cfgs.push((symbol.1.clone(), new_cfg));
+            }
+        }
+    }
+    cfgs
+}
+
+
+
+
 
 fn get_symbol_addr(symbols : &Vec<ELFSymbol>, name : &str)-> std::option::Option<u64> {
     let mut x = None;

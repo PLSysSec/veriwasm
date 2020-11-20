@@ -6,6 +6,9 @@ pub mod lifter;
 pub mod ir_utils;
 pub mod checkers;
 pub mod cfg;
+use crate::utils::fully_resolved_cfg;
+use crate::utils::get_resolved_cfgs;
+use yaxpeax_core::analyses::control_flow::get_cfg;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::analyses::jump_analyzer::SwitchAnalyzer;
@@ -69,74 +72,29 @@ fn has_indirect_jumps(irmap: &IRMap) -> bool{
     false
 }
 
-// fn try_resolve_jumps(program : &ModuleData, cfg : &VW_CFG, metadata : utils::LucetMetadata) -> (VW_CFG,IRMap,i32,i32){
-//     let irmap = lift_cfg(&program, cfg, &metadata);
-//     let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
-//     let switch_analyzer = SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
-//     let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
-//     let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
-    
-//     // #for switch_loc, target in targets.items():
-//     // #    print(switch_loc, hex(ircfg.loc_db.get_location_offset(switch_loc)), target)
-//     // #    if not target.is_fully_resolved():
-//     // #        print("TARGET NOT FULLY RESOLVED: ")
-
-//     //TODO: regenerate cfg and irmap
-//     let new_cfg = get_cfg(&program, &x86_64_data.contexts, addr);
-//     ircfg,_,_ = get_simplified_ircfg(filename, func_name, jump_targets=switch_targets)
-//     still_unresolved = len(targets) - len(resolved_targets) 
-//     return ircfg, still_unresolved, len(targets)
-// }
-
-// fn resolve_cfg(program : &ModuleData, cfg : &VW_CFG, metadata : utils::LucetMetadata) -> (VW_CFG,IRMap){
-//     let mut still_unresolved = -1;
-//     let mut total_switch = -1;
-//     while still_unresolved != 0{
-//         let last_still_unresolved = still_unresolved;
-//         let last_total_switch = total_switch;
-
-//         let (cfg, irmap, still_unresolved, total_switch) = try_resolve_jumps(program, cfg, metadata);
-//         if (still_unresolved == last_still_unresolved) && (total_switch == last_total_switch){
-//             panic!("Hit fixed point with {:?} remaining unresolved jumps {:?}", still_unresolved, total_switch);
-//         }
-//     }
-    
-//     (cfg,irmap)
+    // println!("Recovering Reaching Defs");
+    // let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
+    // let switch_analyzer = SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
+    // let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
+    // let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
+    // (cfg,irmap)
 // }
 
 // fn fully_resolved_cfg(program : &ModuleData, 
 //     cfg : &VW_CFG, 
-//     metadata : utils::LucetMetadata) -> (VW_CFG,IRMap){
-    
+//     metadata : utils::LucetMetadata) -> IRMap{
 //     let irmap = lift_cfg(&program, cfg, &metadata);
+//     println!("ircfg lifted");
 //     if !has_indirect_jumps(&irmap){
 //         return irmap
 //     }
-//     //return resolve_cfg(program, cfg, metadata)
-
 //     println!("Recovering Reaching Defs");
 //     let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
 //     let switch_analyzer = SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
 //     let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
 //     let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
-//     (cfg,irmap)
+//     irmap
 // }
-
-fn fully_resolved_cfg(program : &ModuleData, 
-    cfg : &VW_CFG, 
-    metadata : utils::LucetMetadata) -> IRMap{
-    let irmap = lift_cfg(&program, cfg, &metadata);
-    println!("ircfg lifted");
-    if !has_indirect_jumps(&irmap){
-        return irmap
-    }
-    println!("Recovering Reaching Defs");
-    let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
-    let switch_analyzer = SwitchAnalyzer{metadata : metadata, reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
-    let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
-    let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
-    irmap
-}
 
 fn run(config : Config){
     let program = load_program(&config.module_path);
@@ -144,16 +102,16 @@ fn run(config : Config){
     println!("Loading Metadata");
     let metadata = load_metadata(&config.module_path);
     for (func_name,cfg) in get_cfgs(&config.module_path).iter(){
+    // for (func_name,cfg) in get_resolved_cfgs(&config.module_path).iter(){
 
         // if !is_valid_func_name(func_name) { 
         //     continue 
         // }
 
         println!("Analyzing: {:?}", func_name);
-        println!("Checking Instruction Legality");
-        // let (cfg,irmap) = fully_resolved_cfg(&program, cfg,
-        // metadata.clone());
-        let irmap = fully_resolved_cfg(&program, cfg, metadata.clone());
+        // println!("Checking Instruction Legality");
+        // let (cfg,irmap) = fully_resolved_cfg(&program, cfg, metadata.clone());
+        // let irmap = fully_resolved_cfg(&program, cfg, metadata.clone());
         // println!("Getting reaching defs");
         // println!("============ irmap {:?} ==========", func_name);
         // for (a, b) in irmap.iter(){
@@ -161,6 +119,7 @@ fn run(config : Config){
         //     let out_addrs: Vec<std::string::String> = dsts.clone().into_iter().map(|x| format!("{:x}", x)).rev().collect();
         //     println!("{:x} -> {:?}", a, out_addrs);
         // }
+        let irmap = lift_cfg(&program, &cfg, &metadata);
         let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
         // let irmap = lift_cfg(&program, cfg);
         // println!("Recovering Reaching Defs");
