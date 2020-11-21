@@ -313,6 +313,11 @@ fn full_test_csmith_regression_5() {
 }
 
 #[test]
+fn full_test_rust_lucet() {
+    full_test_helper("./veriwasm_data/regression/rust_lucet_recent.so")
+}
+
+#[test]
 #[should_panic]
 fn negative_test_1() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_1_testfail");
