@@ -9,19 +9,16 @@ pub mod cfg;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
 use crate::utils::get_resolved_cfgs;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
-use crate::analyses::jump_analyzer::SwitchAnalyzer;
-use crate::checkers::jump_resolver::resolve_jumps;
 use crate::checkers::call_checker::check_calls;
 use crate::analyses::call_analyzer::CallAnalyzer;
 use crate::analyses::heap_analyzer::HeapAnalyzer;
 use crate::analyses::run_worklist;
 use crate::analyses::stack_analyzer::StackAnalyzer;
 use crate::lifter::IRMap;
-use crate::analyses::jump_analyzer::analyze_jumps;
 use crate::analyses::reaching_defs::analyze_reaching_defs;
 use utils::{load_program, get_cfgs, load_metadata};
 use clap::{Arg, App};
-use lifter::{lift_cfg, Stmt, Value};
+use lifter::{Stmt, Value};
 use crate::checkers::stack_checker::check_stack;
 use crate::checkers::heap_checker::check_heap;
 
@@ -63,7 +60,6 @@ fn has_indirect_jumps(irmap: &IRMap) -> bool{
 
 fn run(config : Config){
     let program = load_program(&config.module_path);
-    // let cfgs = get_cfgs(binpath);
     println!("Loading Metadata");
     let metadata = load_metadata(&config.module_path);
     // for (func_name,cfg) in get_cfgs(&config.module_path).iter(){
@@ -142,123 +138,385 @@ fn main() {
 
 //TODO: get all tests to pass
 
-fn lift_test_helper(path: &str){
-    let program = load_program(path);
-    let metadata = load_metadata(path);
-    for (func_name,cfg) in get_cfgs(&path).iter(){
-        println!("{}",func_name);
-        let irmap = lift_cfg(&program, cfg, &metadata);
-        let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
-        
-        let switch_analyzer = SwitchAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
-        let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
-        let switch_targets = resolve_jumps(&program, switch_results, &irmap, &switch_analyzer);
-                
+fn full_test_helper(path: &str){
+    let program = load_program(&path);
+    println!("Loading Metadata");
+    let metadata = load_metadata(&path);
+    for (func_name,(cfg,irmap)) in get_resolved_cfgs(&path).iter(){
+        println!("Analyzing: {:?}", func_name);
+        check_cfg_integrity(&cfg.blocks,&cfg.graph);       
         let stack_analyzer = StackAnalyzer{};
-        let stack_result = run_worklist(cfg, &irmap, &stack_analyzer); 
-        let stack_safe = check_stack(stack_result, &irmap, &StackAnalyzer{});
+        let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer); 
+        let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
         assert!(stack_safe);
-
+        println!("Checking Heap Safety");
         let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
-        let heap_result = run_worklist(cfg, &irmap, &heap_analyzer); 
-        let heap_safe = check_heap(heap_result, &irmap, &HeapAnalyzer{metadata : metadata.clone()});
-        // assert!(heap_safe);
-
-        let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(),reaching_analyzer : ReachingDefnAnalyzer{}};
-        let call_result = run_worklist(cfg, &irmap, &call_analyzer);    
-        let call_safe = check_calls(call_result, &irmap, &call_analyzer);
-        // assert!(call_safe);
-
-        //&CallAnalyzer{metadata : metadata.clone(), reaching_defs :
-        //reaching_defs});    
+        let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer); 
+        let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
+        assert!(heap_safe);
+        println!("Checking Call Safety");
+        if has_indirect_calls(&irmap){
+            let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
+            let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
+            let call_result = run_worklist(&cfg, &irmap, &call_analyzer);    
+            let call_safe = check_calls(call_result, &irmap, &call_analyzer);
+            assert!(call_safe);
+        }
     }
+    println!("Done!");
 }
+
+
+fn negative_test_helper(path: &str, func: &str){
+    let program = load_program(&path);
+    println!("Loading Metadata");
+    let metadata = load_metadata(&path);
+    for (func_name,(cfg,irmap)) in get_resolved_cfgs(&path).iter(){
+        if func_name != func{
+            continue;
+        }
+        println!("Analyzing: {:?}", func_name);
+        check_cfg_integrity(&cfg.blocks,&cfg.graph);       
+        let stack_analyzer = StackAnalyzer{};
+        let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer); 
+        let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
+        assert!(stack_safe);
+        println!("Checking Heap Safety");
+        let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
+        let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer); 
+        let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
+        assert!(heap_safe);
+        println!("Checking Call Safety");
+        if has_indirect_calls(&irmap){
+            let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
+            let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
+            let call_result = run_worklist(&cfg, &irmap, &call_analyzer);    
+            let call_safe = check_calls(call_result, &irmap, &call_analyzer);
+            assert!(call_safe);
+        }
+    }
+    println!("Done!");
+}
+
 
 #[test]
 fn full_test_unit_tests() {
-    lift_test_helper("./veriwasm_data/stack_check_unit_tests.so")
+    full_test_helper("./veriwasm_data/stack_check_unit_tests.so")
 }
 
 #[test]
 fn full_test_libgraphite() {
-    lift_test_helper("./veriwasm_data/firefox_libs/libgraphitewasm.so")
+    full_test_helper("./veriwasm_data/firefox_libs/libgraphitewasm.so")
 }
 
 #[test]
 fn full_test_libogg() {
-    lift_test_helper("./veriwasm_data/firefox_libs/liboggwasm.so")
+    full_test_helper("./veriwasm_data/firefox_libs/liboggwasm.so")
 }
 
 #[test]
 fn full_test_shootout() {
-    lift_test_helper("./veriwasm_data/shootout/shootout.so")
+    full_test_helper("./veriwasm_data/shootout/shootout.so")
 }
 
 
 #[test]
 fn full_test_astar() {
-    lift_test_helper("./veriwasm_data/spec/astar_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/astar_base.wasm_lucet")
 }
 
 #[test]
 fn full_test_gobmk() {
-    lift_test_helper("./veriwasm_data/spec/gobmk_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/gobmk_base.wasm_lucet")
 }
 
 #[test]
 fn full_test_lbm() {
-    lift_test_helper("./veriwasm_data/spec/lbm_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/lbm_base.wasm_lucet")
 }
 
 
 #[test]
 fn full_test_mcf() {
-    lift_test_helper("./veriwasm_data/spec/mcf_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/mcf_base.wasm_lucet")
 }
 
 #[test]
 fn full_test_namd() {
-    lift_test_helper("./veriwasm_data/spec/namd_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/namd_base.wasm_lucet")
 }
 
 #[test]
 fn full_test_sjeng() {
-    lift_test_helper("./veriwasm_data/spec/sjeng_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/sjeng_base.wasm_lucet")
 }
 
 
 #[test]
 fn full_test_sphinx_livepretend() {
-    lift_test_helper("./veriwasm_data/spec/sphinx_livepretend_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/sphinx_livepretend_base.wasm_lucet")
 }
 
 #[test]
 fn full_test_bzip2() {
-    lift_test_helper("./veriwasm_data/spec/bzip2_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/bzip2_base.wasm_lucet")
 }
 
 #[test]
 fn full_test_h264ref() {
-    lift_test_helper("./veriwasm_data/spec/h264ref_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/h264ref_base.wasm_lucet")
 }
 
 #[test]
 fn full_test_libquantum() {
-    lift_test_helper("./veriwasm_data/spec/libquantum_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/libquantum_base.wasm_lucet")
 }
 
 #[test]
 fn full_test_milc() {
-    lift_test_helper("./veriwasm_data/spec/milc_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/milc_base.wasm_lucet")
 }
 
 #[test]
 fn full_test_povray() {
-    lift_test_helper("./veriwasm_data/spec/povray_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/povray_base.wasm_lucet")
 }
 
 #[test]
 fn full_test_soplex() {
-    lift_test_helper("./veriwasm_data/spec/soplex_base.wasm_lucet")
+    full_test_helper("./veriwasm_data/spec/soplex_base.wasm_lucet")
 }
 
+
+// #[test]
+// fn negative_test_1() {
+//     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_1_testfail");
+// }
+
+
+// def test_1(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b'guest_func_1_testfail'
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except UncertainRSPError:
+//         return
+//     assert(False)
+
+// def test_2(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_2_testfail"
+//     try: 
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_3(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_3_testfail"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except StackCheckFailError:
+//         return
+//     assert(False)
+
+// def test_4(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_4_testfail"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except UnresolvedJumpError:
+//         return
+//     assert(False)
+
+// def test_5(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_5_testfail"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except CallCheckFailError:
+//         return
+//     assert(False)
+
+// def test_6(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_6_testfail"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except UnresolvedJumpError:
+//         return
+//     assert(False)
+
+// def test_7(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_7_testfail"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_8(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_8_testfail"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_9(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_9_testfail"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except UncheckedMemAccessError:
+//         return
+//     assert(False)
+
+// def test_10(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_10_testfail"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except UncheckedMemAccessError:
+//         return
+//     assert(False)
+
+// def test_11(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_11_testfail"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except HeapBaseError:
+//         return
+//     assert(False)
+
+// def test_12(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_12_testfail"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except UnexpectedPatternError:
+//         return
+//     assert(False)
+
+// def test_13(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_13_testfail"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except UnexpectedPatternError:
+//         return
+//     assert(False)
+
+// def test_14(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_14_testfail"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except UncheckedMemAccessError:
+//         return
+//     assert(False)
+
+
+// # NaCl issue #23
+// def test_nacl_23(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_nacl_23"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_nacl_323_1(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_nacl_323_1"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_nacl_323_2(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_nacl_323_2"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_nacl_323_3(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_nacl_323_3"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_nacl_323_4(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_nacl_323_4"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_nacl_390(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_nacl_390"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_nacl_1585(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_nacl_1585"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_nacl_2532(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_nacl_2532"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_bakersfield_1(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_bakersfield_1"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_misfit_1(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_misfit_1"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
+
+// def test_cranelift_805(shared_datadir):
+//     filename = "negative_tests.so"
+//     func_name = b"guest_func_cranelift_805"
+//     try:
+//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
+//     except:
+//         return
+//     assert(False)
