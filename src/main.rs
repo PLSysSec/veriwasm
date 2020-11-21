@@ -196,7 +196,7 @@ fn negative_test_helper(path: &str, func_name: &str){
 
 #[test]
 fn full_test_unit_tests() {
-    full_test_helper("./veriwasm_data/stack_check_unit_tests.so")
+    full_test_helper("./veriwasm_data/regression/stack_check_unit_tests.so")
 }
 
 #[test]
