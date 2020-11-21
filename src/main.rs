@@ -134,11 +134,7 @@ fn main() {
         quiet:quiet};
 
     run(config);
-    // println!("wow metadata_path = {:?}", metadata_path);
-    // load_metadata(metadata_path.to_string());
 }
-
-//TODO: get all tests to pass
 
 fn full_test_helper(path: &str){
     let program = load_program(&path);
@@ -286,6 +282,35 @@ fn full_test_soplex() {
     full_test_helper("./veriwasm_data/spec/soplex_base.wasm_lucet")
 }
 
+#[test]
+fn full_test_rust_regression_1() {
+    full_test_helper("./veriwasm_data/regression/rust_regression_1")
+}
+
+#[test]
+fn full_test_csmith_regression_1() {
+    full_test_helper("./veriwasm_data/regression/csmith_regression_1")
+}
+
+#[test]
+fn full_test_csmith_regression_2() {
+    full_test_helper("./veriwasm_data/regression/csmith_regression_2")
+}
+
+#[test]
+fn full_test_csmith_regression_3() {
+    full_test_helper("./veriwasm_data/regression/csmith_regression_3")
+}
+
+#[test]
+fn full_test_csmith_regression_4() {
+    full_test_helper("./veriwasm_data/regression/csmith_regression_4")
+}
+
+#[test]
+fn full_test_csmith_regression_5() {
+    full_test_helper("./veriwasm_data/regression/csmith_regression_5")
+}
 
 #[test]
 #[should_panic]
