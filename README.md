@@ -9,7 +9,7 @@ To Run:
 `cargo run -- -i <input path>  `
 
 To Test:  
-`git clone git@github.com:PLSysSec/veriwasm\_data.git`  
-`sh veriwasm\_data/build.sh`  
+`git clone git@github.com:PLSysSec/veriwasm_data.git`  
+`sh veriwasm_data/build.sh`  
 `cargo test`  
 
