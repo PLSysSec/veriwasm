@@ -9,23 +9,17 @@ use crate::analyses::reaching_defs::analyze_reaching_defs;
 use crate::lifter::lift_cfg;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_core::analyses::control_flow::get_cfg;
-use petgraph::graphmap::GraphMap;
-use std::collections::BTreeMap;
 use std::path::Path;
 use yaxpeax_arch::Arch;
-use yaxpeax_arch::AddressDisplay;
 use yaxpeax_x86::long_mode::{Arch as AMD64};
-use yaxpeax_core::arch::{Function, Library, Symbol, BaseUpdate};
+use yaxpeax_core::arch::{Library, Symbol, BaseUpdate};
 use yaxpeax_core::memory::repr::FileRepr;
 use yaxpeax_core::memory::repr::process::{ModuleData, ModuleInfo, ELFExport, ELFImport, ELFSymbol};
 use yaxpeax_core::memory::{MemoryRepr};
 use yaxpeax_core::ContextWrite;
 use yaxpeax_core::arch::x86_64::x86_64Data;
-use yaxpeax_core::analyses::control_flow;
-use yaxpeax_core::analyses::control_flow::ControlFlowGraph; 
 use yaxpeax_core::arch::SymbolQuery;
 use crate::lifter::{MemArg, MemArgs};
-use std::collections::HashMap;
 
 pub fn load_program(binpath : &str) -> ModuleData{
     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
@@ -72,38 +66,38 @@ fn get_function_starts(entrypoint : &u64,
     x86_64_data
 }
 
-pub fn get_cfgs(binpath : &str) -> Vec<(String, VW_CFG)>{
-    let program = load_program(binpath);
+// pub fn get_cfgs(binpath : &str) -> Vec<(String, VW_CFG)>{
+//     let program = load_program(binpath);
 
-    // grab some details from the binary and panic if it's not what we expected
-    let (_, entrypoint, imports, exports, symbols) = match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
-        Some(ModuleInfo::ELF(isa, _, _, _sections, entry, _, imports, exports, symbols)) => {
-            (isa, entry, imports, exports, symbols)
-        }
-        Some(other) => {
-            panic!("{:?} isn't an elf, but is a {:?}?", binpath,other);
-        }
-        None => {
-            panic!("{:?} doesn't appear to be a binary yaxpeax understands.", binpath);
-        }
-    };
+//     // grab some details from the binary and panic if it's not what we expected
+//     let (_, entrypoint, imports, exports, symbols) = match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
+//         Some(ModuleInfo::ELF(isa, _, _, _sections, entry, _, imports, exports, symbols)) => {
+//             (isa, entry, imports, exports, symbols)
+//         }
+//         Some(other) => {
+//             panic!("{:?} isn't an elf, but is a {:?}?", binpath,other);
+//         }
+//         None => {
+//             panic!("{:?} doesn't appear to be a binary yaxpeax understands.", binpath);
+//         }
+//     };
 
-    let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
+//     let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
 
-    let mut cfgs : Vec<(String, VW_CFG)> = Vec::new(); 
-    while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
+//     let mut cfgs : Vec<(String, VW_CFG)> = Vec::new(); 
+//     while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
 
-        if let Some(symbol) = x86_64_data.symbol_for(addr)
-        {
-        if is_valid_func_name(&symbol.1) { 
-            println!("Generating CFG for: {:?}", symbol.1);
-            let (new_cfg,_) = get_cfg(&program, &x86_64_data.contexts, addr, None);
-            cfgs.push((symbol.1.clone(), new_cfg));
-            }
-        }
-    }
-    cfgs
-}
+//         if let Some(symbol) = x86_64_data.symbol_for(addr)
+//         {
+//         if is_valid_func_name(&symbol.1) { 
+//             println!("Generating CFG for: {:?}", symbol.1);
+//             let (new_cfg,_) = get_cfg(&program, &x86_64_data.contexts, addr, None);
+//             cfgs.push((symbol.1.clone(), new_cfg));
+//             }
+//         }
+//     }
+//     cfgs
+// }
 
 fn try_resolve_jumps(program : &ModuleData,  contexts: &MergedContextTable, cfg : &VW_CFG, metadata : LucetMetadata, addr: u64) -> (VW_CFG,IRMap,i32,u32){
     let irmap = lift_cfg(&program, cfg, &metadata);
@@ -169,11 +163,17 @@ pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, (VW_CFG,IRMap) )>{
         }
     };
 
+    // println!("Symbols = {:?}", symbols);
+    // for symbol in symbols{
+    //     println!("symbol = {:?}", symbol.name);
+    // }
+
     let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
 
     let mut cfgs : Vec<(String, (VW_CFG,IRMap) )> = Vec::new(); 
     while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
         if let Some(symbol) = x86_64_data.symbol_for(addr){
+        println!("Found maybe function: {:?} valid = {:?}", &symbol.1, is_valid_func_name(&symbol.1));
         if is_valid_func_name(&symbol.1) { 
             println!("Generating CFG for: {:?}", symbol.1);
             let (new_cfg,irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, metadata.clone(), addr);
@@ -184,6 +184,33 @@ pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, (VW_CFG,IRMap) )>{
     cfgs
 }
 
+
+pub fn get_one_resolved_cfg(binpath : &str, func : &str) -> (VW_CFG,IRMap){
+    let program = load_program(binpath);
+    let metadata = load_metadata(binpath);
+
+    // grab some details from the binary and panic if it's not what we expected
+    let (_, entrypoint, imports, exports, symbols) = match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
+        Some(ModuleInfo::ELF(isa, _, _, _sections, entry, _, imports, exports, symbols)) => {
+            (isa, entry, imports, exports, symbols)
+        }
+        Some(other) => {
+            panic!("{:?} isn't an elf, but is a {:?}?", binpath,other);
+        }
+        None => {
+            panic!("{:?} doesn't appear to be a binary yaxpeax understands.", binpath);
+        }
+    };
+
+    
+    let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
+    // let symbol = x86_64_data.symbol_for(addr).unwrap();
+    let addr = get_symbol_addr(symbols, func).unwrap();
+    println!("Found maybe function: {:?} valid = {:?}", func, is_valid_func_name(&String::from(func)));
+    assert!(is_valid_func_name(&String::from(func)));  
+    println!("Generating CFG for: {:?}", func);
+    return fully_resolved_cfg(&program, &x86_64_data.contexts, metadata.clone(), addr);
+}
 
 
 
@@ -252,7 +279,9 @@ pub fn get_rsp_offset(memargs : &MemArgs) -> Option<i64>{
     }
 }
 
-
+// func name is valid if:
+// 1. starts with guest_func_
+// 2. ends in _# (where # is some number)
 pub fn is_valid_func_name(name : &String) -> bool{
     if name.starts_with("guest_func_"){
         return true

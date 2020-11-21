@@ -6,6 +6,7 @@ pub mod lifter;
 pub mod ir_utils;
 pub mod checkers;
 pub mod cfg;
+use crate::utils::get_one_resolved_cfg;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
 use crate::utils::get_resolved_cfgs;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
@@ -16,11 +17,12 @@ use crate::analyses::run_worklist;
 use crate::analyses::stack_analyzer::StackAnalyzer;
 use crate::lifter::IRMap;
 use crate::analyses::reaching_defs::analyze_reaching_defs;
-use utils::{load_program, get_cfgs, load_metadata};
+use utils::{load_program, load_metadata};
 use clap::{Arg, App};
 use lifter::{Stmt, Value};
 use crate::checkers::stack_checker::check_stack;
 use crate::checkers::heap_checker::check_heap;
+use std::panic;
 
 pub struct Config{
     module_path: String,
@@ -167,33 +169,30 @@ fn full_test_helper(path: &str){
 }
 
 
-fn negative_test_helper(path: &str, func: &str){
+fn negative_test_helper(path: &str, func_name: &str){
     let program = load_program(&path);
     println!("Loading Metadata");
     let metadata = load_metadata(&path);
-    for (func_name,(cfg,irmap)) in get_resolved_cfgs(&path).iter(){
-        if func_name != func{
-            continue;
-        }
-        println!("Analyzing: {:?}", func_name);
-        check_cfg_integrity(&cfg.blocks,&cfg.graph);       
-        let stack_analyzer = StackAnalyzer{};
-        let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer); 
-        let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
-        assert!(stack_safe);
-        println!("Checking Heap Safety");
-        let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
-        let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer); 
-        let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
-        assert!(heap_safe);
-        println!("Checking Call Safety");
-        if has_indirect_calls(&irmap){
-            let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
-            let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
-            let call_result = run_worklist(&cfg, &irmap, &call_analyzer);    
-            let call_safe = check_calls(call_result, &irmap, &call_analyzer);
-            assert!(call_safe);
-        }
+    let (cfg,irmap) = get_one_resolved_cfg(path,func_name);
+    println!("Analyzing: {:?}", func_name);
+    check_cfg_integrity(&cfg.blocks,&cfg.graph);       
+    let stack_analyzer = StackAnalyzer{};
+    let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer); 
+    let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
+    assert!(stack_safe);
+    println!("Checking Heap Safety");
+    let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
+    let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer); 
+    let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
+    assert!(heap_safe);
+    println!("Checking Call Safety");
+    if has_indirect_calls(&irmap){
+        let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
+        let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
+        let call_result = run_worklist(&cfg, &irmap, &call_analyzer);    
+        let call_safe = check_calls(call_result, &irmap, &call_analyzer);
+        assert!(call_safe);
+        
     }
     println!("Done!");
 }
@@ -288,235 +287,153 @@ fn full_test_soplex() {
 }
 
 
-// #[test]
-// fn negative_test_1() {
-//     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_1_testfail");
-// }
+#[test]
+#[should_panic]
+fn negative_test_1() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_1_testfail");
+}
 
+#[test]
+#[should_panic]
+fn negative_test_2() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_2_testfail");
+}
 
-// def test_1(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b'guest_func_1_testfail'
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except UncertainRSPError:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_3() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_3_testfail");
+}
 
-// def test_2(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_2_testfail"
-//     try: 
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_4() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_4_testfail");
+}
 
-// def test_3(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_3_testfail"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except StackCheckFailError:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_5() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_5_testfail");
+}
 
-// def test_4(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_4_testfail"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except UnresolvedJumpError:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_6() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_6_testfail");
+}
 
-// def test_5(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_5_testfail"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except CallCheckFailError:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_7() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_7_testfail");
+}
 
-// def test_6(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_6_testfail"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except UnresolvedJumpError:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_8() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_8_testfail");
+}
 
-// def test_7(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_7_testfail"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_9() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_9_testfail");
+}
 
-// def test_8(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_8_testfail"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_10() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_10_testfail");
+}
 
-// def test_9(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_9_testfail"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except UncheckedMemAccessError:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_11() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_11_testfail");
+}
 
-// def test_10(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_10_testfail"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except UncheckedMemAccessError:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_12() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_12_testfail");
+}
 
-// def test_11(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_11_testfail"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except HeapBaseError:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_13() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_13_testfail");
+}
 
-// def test_12(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_12_testfail"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except UnexpectedPatternError:
-//         return
-//     assert(False)
-
-// def test_13(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_13_testfail"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except UnexpectedPatternError:
-//         return
-//     assert(False)
-
-// def test_14(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_14_testfail"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except UncheckedMemAccessError:
-//         return
-//     assert(False)
-
+#[test]
+#[should_panic]
+fn negative_test_14() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_14_testfail");
+}
 
 // # NaCl issue #23
-// def test_nacl_23(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_nacl_23"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_nacl_23() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_23");
+}
 
-// def test_nacl_323_1(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_nacl_323_1"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_nacl_323_1() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_323_1");
+}
 
-// def test_nacl_323_2(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_nacl_323_2"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_nacl_323_2() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_323_2");
+}
 
-// def test_nacl_323_3(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_nacl_323_3"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_nacl_323_3() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_323_3");
+}
 
-// def test_nacl_323_4(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_nacl_323_4"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_nacl_323_4() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_323_4");
+}
 
-// def test_nacl_390(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_nacl_390"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_nacl_390() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_390");
+}
 
-// def test_nacl_1585(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_nacl_1585"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_nacl_1585() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_1585");
+}
 
-// def test_nacl_2532(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_nacl_2532"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_nacl_2532() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_2532");
+}
 
-// def test_bakersfield_1(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_bakersfield_1"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_bakersfield_1() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_bakersfield_1");
+}
 
-// def test_misfit_1(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_misfit_1"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_misfit_1() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_misfit_1");
+}
 
-// def test_cranelift_805(shared_datadir):
-//     filename = "negative_tests.so"
-//     func_name = b"guest_func_cranelift_805"
-//     try:
-//         run_full_test(shared_datadir + "/" + filename, func_name, quiet=True)
-//     except:
-//         return
-//     assert(False)
+#[test]
+#[should_panic]
+fn negative_test_cranelift_805() {
+    negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_cranelift_805");
+}
