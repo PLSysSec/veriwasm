@@ -10,7 +10,6 @@ To Run:
 
 To Test:  
 `git clone git@github.com:PLSysSec/veriwasm_data.git`  
-`sh veriwasm_data/setup.sh`  
-`sh veriwasm_data/build.sh`  
+`cd veriwasm_data && sh setup.sh && sh build_negative_tests.sh && cd ..`  
 `cargo test`  
 
