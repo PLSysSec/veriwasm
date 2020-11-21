@@ -1,6 +1,5 @@
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lifter::Stmt;
-use crate::analyses::AbstractAnalyzer;
 use crate::lifter::IRMap;
 use crate::analyses::AnalysisResult;
 use crate::lattices::Lattice;

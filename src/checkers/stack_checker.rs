@@ -1,6 +1,6 @@
 use crate::ir_utils::{is_stack_access, get_imm_mem_offset};
 use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lifter::{Stmt,Value, MemArgs, MemArg};
+use crate::lifter::{Stmt,Value, MemArgs};
 use crate::lifter::IRMap;
 use crate::analyses::stack_analyzer::StackAnalyzer;
 use crate::checkers::Checker;

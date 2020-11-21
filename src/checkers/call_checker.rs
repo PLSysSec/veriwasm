@@ -71,8 +71,8 @@ fn check_calltable_lookup(state: &CallCheckLattice, memargs: &MemArgs) -> bool {
         match (state.regs.get(regnum1,&ValSize::Size64).v,state.regs.get(regnum2,&ValSize::Size64).v){
             (Some(CallCheckValue::GuestTableBase),Some(CallCheckValue::PtrOffset(DAV::Checked))) => return true,
             (Some(CallCheckValue::PtrOffset(DAV::Checked)),Some(CallCheckValue::GuestTableBase)) => return true,
-            (x,Some(CallCheckValue::GuestTableBase)) | (Some(CallCheckValue::GuestTableBase),x) => { return false},
-            (x,y) => return true // not a calltable lookup
+            (_x,Some(CallCheckValue::GuestTableBase)) | (Some(CallCheckValue::GuestTableBase),_x) => { return false},
+            (_x,_y) => return true // not a calltable lookup
         }
         _ => return true //not a calltable lookup?
     }
