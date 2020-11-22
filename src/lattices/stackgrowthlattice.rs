@@ -1,6 +1,4 @@
-use crate::lifter::ValSize;
-use crate::lifter::Binopcode;
-use crate::lifter::Value;
+use crate::lifter::{Binopcode,Value};
 use std::cmp::Ordering;
 use crate::lattices::{Lattice, ConstLattice, VarState};
 

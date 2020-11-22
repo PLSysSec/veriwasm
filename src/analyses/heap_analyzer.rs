@@ -1,17 +1,10 @@
-use crate::analyses::AnalysisResult;
-use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::heaplattice::{HeapValueLattice, HeapLattice, HeapValue};
-use crate::analyses::{AbstractAnalyzer, run_worklist};
-use crate::lifter::{IRMap, Value, MemArgs, MemArg, ValSize};
+use crate::analyses::{AbstractAnalyzer};
+use crate::lifter::{Value, MemArgs, MemArg, ValSize};
 use crate::utils::{LucetMetadata};
 use crate::ir_utils::{is_stack_access, extract_stack_offset};
 use std::default::Default;
 use crate::lattices::VarState;
-
-//Top level function
-// pub fn analyze_heap(cfg : &ControlFlowGraph<u64>, irmap : &IRMap, metadata : LucetMetadata) -> AnalysisResult<HeapLattice>{
-//     run_worklist(cfg, irmap, HeapAnalyzer{metadata : metadata})    
-// }
 
 pub struct HeapAnalyzer{
     pub metadata: LucetMetadata

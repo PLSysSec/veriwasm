@@ -1,8 +1,3 @@
-use crate::lifter::ValSize;
-use crate::lifter::Binopcode;
-use crate::ir_utils::is_rsp;
-use crate::ir_utils::get_imm_offset;
-use std::cmp::Ordering;
 pub mod regslattice;
 pub mod heaplattice;
 pub mod switchlattice;
@@ -11,10 +6,12 @@ pub mod calllattice;
 pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod reachingdefslattice;
+use crate::ir_utils::{get_imm_offset,is_rsp};
 use crate::lattices::regslattice::X86RegsLattice;
 use crate::lattices::stacklattice::StackLattice;
-use crate::lifter::{Value, MemArgs, MemArg, ImmType};
+use crate::lifter::{Value, MemArgs, MemArg, Binopcode};
 use std::fmt::Debug;
+use std::cmp::Ordering;
 
 pub trait Lattice: PartialOrd + Eq + Default + Debug{
     fn meet(&self, other : &Self) -> Self;

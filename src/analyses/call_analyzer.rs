@@ -1,18 +1,13 @@
 use crate::lattices::stacklattice::StackSlot;
-use crate::lattices::reachingdefslattice::ReachingDefnLattice;
-use crate::lattices::reachingdefslattice::LocIdx;
+use crate::lattices::reachingdefslattice::{ReachingDefnLattice, LocIdx,ReachLattice};
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::analyses::analyze_block;
-use crate::lifter::IRBlock;
-use crate::ir_utils::extract_stack_offset;
-use crate::ir_utils::is_stack_access;
+use crate::ir_utils::{extract_stack_offset, is_stack_access};
 use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
 use crate::lattices::davlattice::DAV;
 use crate::lifter::{MemArgs, MemArg, Binopcode, IRMap, Value, ValSize};
 use crate::analyses::AnalysisResult;
-use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
-use crate::analyses::{AbstractAnalyzer, run_worklist};
-use crate::lattices::reachingdefslattice::{ReachLattice};
+use crate::analyses::{AbstractAnalyzer};
 use crate::utils::{LucetMetadata};
 use std::default::Default;
 use crate::lattices::VarState;
@@ -84,7 +79,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
     }
 }
 
-// mem[LucetTableBase]
+// mem[LucetTableBase + 8]
 pub fn is_table_size(in_state : &CallCheckLattice, memargs : &MemArgs) -> bool{
     if let MemArgs::Mem2Args(MemArg::Reg(regnum1,size), MemArg::Imm(_,_,8)) = memargs{ 
         if let Some(CallCheckValue::LucetTablesBase) = in_state.regs.get(regnum1, size).v{

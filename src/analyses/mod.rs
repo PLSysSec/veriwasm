@@ -4,18 +4,10 @@ pub mod call_analyzer;
 pub mod jump_analyzer;
 pub mod reaching_defs;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
-use crate::lifter::Binopcode;
-use crate::lifter::Value;
-use crate::lattices::VarState;
-use crate::lattices::reachingdefslattice::ReachLattice;
-use crate::utils::LucetMetadata;
-use crate::lattices::VariableState;
 use crate::lattices::reachingdefslattice::LocIdx;
-use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
-use crate::lattices::{Lattice};
-use std::collections::VecDeque;
-use std::collections::HashMap;
-use crate::lifter::{IRMap, IRBlock, Stmt};
+use crate::lattices::{Lattice, VarState};
+use std::collections::{HashMap, VecDeque};
+use crate::lifter::{IRMap, IRBlock, Stmt, Binopcode,Value};
 
 
 pub type AnalysisResult<T>  = HashMap<u64, T>;

@@ -1,10 +1,9 @@
 use crate::lattices::stacklattice::StackSlot;
-use crate::analyses::analyze_block;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
-use crate::lifter::{MemArgs, MemArg, ValSize, Binopcode, IRMap, Stmt, Value};
+use crate::lifter::{MemArgs, MemArg, ValSize, Binopcode, IRMap, Value};
 use crate::lattices::switchlattice::{SwitchLattice, SwitchValueLattice, SwitchValue};
-use crate::analyses::{AbstractAnalyzer, run_worklist, AnalysisResult};
+use crate::analyses::{AbstractAnalyzer, run_worklist, AnalysisResult, analyze_block};
 use crate::lattices::reachingdefslattice::{ReachLattice, LocIdx};
 use crate::utils::{LucetMetadata, get_rsp_offset};
 use std::default::Default;

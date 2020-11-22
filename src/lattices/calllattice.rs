@@ -1,5 +1,4 @@
-use crate::lattices::VariableState;
-use crate::lattices::Lattice;
+use crate::lattices::{VariableState,Lattice};
 use crate::lattices::davlattice::{DAV};
 use std::cmp::Ordering;
 

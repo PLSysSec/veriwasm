@@ -1,5 +1,4 @@
 use crate::lattices::reachingdefslattice::ReachingDefnLattice;
-use crate::lattices::reachingdefslattice::LocIdx;
 use std::cmp::Ordering;
 use crate::lattices::{Lattice};
 

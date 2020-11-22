@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::cmp::Ordering;
 use crate::lattices::{Lattice, BooleanLattice};
 use std::collections::HashMap;

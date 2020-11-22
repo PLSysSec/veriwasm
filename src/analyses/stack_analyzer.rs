@@ -1,18 +1,8 @@
 use crate::lattices::reachingdefslattice::LocIdx;
-use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use crate::lattices::stackgrowthlattice::StackGrowthLattice;
-use crate::analyses::{AbstractAnalyzer, run_worklist};
-use crate::lifter::{IRMap, Stmt};
+use crate::analyses::{AbstractAnalyzer};
+use crate::lifter::{Stmt, Binopcode};
 use crate::ir_utils::{is_rsp, get_imm_offset};
-use crate::analyses::AnalysisResult;
-use crate::lifter::Binopcode;
-
-
-// pub fn analyze_stack(cfg : &ControlFlowGraph<u64>, irmap : &IRMap) -> AnalysisResult<StackGrowthLattice>{
-//     run_worklist(cfg, &irmap, StackAnalyzer{})    
-// }
-
-//(offset, probestack)
 
 pub struct StackAnalyzer{}
 
@@ -38,7 +28,6 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
                         }
                     }
                     else {*in_state = Default::default() }
-                    // *in_state = StackGrowthLattice {v : (x + offset, probestack) } 
                 }
                 else{ panic!("Illegal RSP write") }
             },
