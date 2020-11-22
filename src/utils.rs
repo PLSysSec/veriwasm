@@ -35,6 +35,7 @@ fn get_function_starts(entrypoint : &u64,
     symbols : &std::vec::Vec<ELFSymbol>,
     imports : &std::vec::Vec<ELFImport>,
     exports : &std::vec::Vec<ELFExport>,
+    text_section_idx : usize,
 ) -> x86_64Data{
     let mut x86_64_data = x86_64Data::default();
 
@@ -50,6 +51,16 @@ fn get_function_starts(entrypoint : &u64,
         ));
     }
 
+    //All symbols in text section should be function starts 
+    for sym in symbols {
+        // if sym.section_index == text_section_idx{
+            println!("sym = {:?}", sym);
+            x86_64_data.contexts.put(sym.addr as u64, BaseUpdate::Specialized(
+                yaxpeax_core::arch::x86_64::x86Update::FunctionHint
+            ));
+        // }
+    }
+
     // and copy in names for imports
     for import in imports {
         x86_64_data.contexts.put(import.value as u64, BaseUpdate::DefineSymbol(
@@ -57,7 +68,7 @@ fn get_function_starts(entrypoint : &u64,
         ));
     }
 
-    // exports are probably functions? hopve for the best
+    // exports are probably functions? hope for the best
     for export in exports {
         x86_64_data.contexts.put(export.addr as u64, BaseUpdate::Specialized(
             yaxpeax_core::arch::x86_64::x86Update::FunctionHint
@@ -151,9 +162,9 @@ pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, (VW_CFG,IRMap) )>{
     let metadata = load_metadata(binpath);
 
     // grab some details from the binary and panic if it's not what we expected
-    let (_, entrypoint, imports, exports, symbols) = match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
-        Some(ModuleInfo::ELF(isa, _, _, _sections, entry, _, imports, exports, symbols)) => {
-            (isa, entry, imports, exports, symbols)
+    let (_, sections, entrypoint, imports, exports, symbols) = match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
+        Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
+            (isa, sections, entry, imports, exports, symbols)
         }
         Some(other) => {
             panic!("{:?} isn't an elf, but is a {:?}?", binpath,other);
@@ -168,10 +179,17 @@ pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, (VW_CFG,IRMap) )>{
     //     println!("symbol = {:?}", symbol.name);
     // }
 
-    let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
+   
+    let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
+    let text_section = sections.get(text_section_idx).unwrap();
+    
+
+    let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
+    
 
     let mut cfgs : Vec<(String, (VW_CFG,IRMap) )> = Vec::new(); 
     while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
+        if !((addr >= text_section.start) && (addr <  (text_section.start + text_section.size))) { continue; }
         if let Some(symbol) = x86_64_data.symbol_for(addr){
         println!("Found maybe function: {:?} valid = {:?}", &symbol.1, is_valid_func_name(&symbol.1));
         if is_valid_func_name(&symbol.1) { 
@@ -190,9 +208,9 @@ pub fn get_one_resolved_cfg(binpath : &str, func : &str) -> (VW_CFG,IRMap){
     let metadata = load_metadata(binpath);
 
     // grab some details from the binary and panic if it's not what we expected
-    let (_, entrypoint, imports, exports, symbols) = match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
-        Some(ModuleInfo::ELF(isa, _, _, _sections, entry, _, imports, exports, symbols)) => {
-            (isa, entry, imports, exports, symbols)
+    let (_, sections, entrypoint, imports, exports, symbols) = match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
+        Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
+            (isa, sections, entry, imports, exports, symbols)
         }
         Some(other) => {
             panic!("{:?} isn't an elf, but is a {:?}?", binpath,other);
@@ -202,8 +220,8 @@ pub fn get_one_resolved_cfg(binpath : &str, func : &str) -> (VW_CFG,IRMap){
         }
     };
 
-    
-    let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
+    let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
+    let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
     // let symbol = x86_64_data.symbol_for(addr).unwrap();
     let addr = get_symbol_addr(symbols, func).unwrap();
     println!("Found maybe function: {:?} valid = {:?}", func, is_valid_func_name(&String::from(func)));
