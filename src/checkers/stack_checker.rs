@@ -35,7 +35,6 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
 
     fn check_statement(&self, state : &StackGrowthLattice, ir_stmt : &Stmt) -> bool {
         //1, stackgrowth is never Bottom or >= 0
-        //println!("Check Statement: {:?}", state.v);
         match state.v {
             None => {println!("Failure Case: Stackgrowth = None"); return false},
             Some((stackgrowth,_)) => { if stackgrowth > 0 {
@@ -73,7 +72,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
         true
     }
 }
-//TODO: leq => le?
+
 impl StackChecker<'_> {
     fn check_stack_read(&self, state : &StackGrowthLattice, src: &Value) -> bool{
         if let Value::Mem(size, memargs) = src {
@@ -100,11 +99,7 @@ impl StackChecker<'_> {
                     return (-state.get_probestack().unwrap() < state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <0)},
                 MemArgs::Mem2Args(memarg1, memarg2) => {
                     let offset = get_imm_mem_offset(memarg2);
-                    // println!("{:?} {:?} {:?}",
-                    // state.get_probestack().unwrap(), state.get_stackgrowth(),
-                    // offset);
                     // println!("Checking Stack Write: {:?} < {:?} < {:?} offset = {:?}",-state.get_probestack().unwrap(), state.get_stackgrowth().unwrap() + offset, 0, state.get_stackgrowth().unwrap());
-
                     return (-state.get_probestack().unwrap() < state.get_stackgrowth().unwrap() + offset) && (state.get_stackgrowth().unwrap() + offset <0)
                 },
                 _ => return false //stack accesses should never have 3 args
