@@ -51,11 +51,11 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
             Stmt::Unop(_,dst,src) => 
             // stack write: probestack <= stackgrowth + c < 0
             if is_stack_access(dst){
-                if !self.check_stack_write(state, dst){println!("check_stack_write failed"); return false}
+                if !self.check_stack_write(state, dst){println!("check_stack_write failed: access = {:?}", dst); return false}
             }
             //stack read: probestack <= stackgrowth + c < 8K
             else if is_stack_access(src) {
-                if !self.check_stack_read(state, src){println!("check_stack_read failed"); return false}
+                if !self.check_stack_read(state, src){println!("check_stack_read failed: access = {:?} probestack = {:?}", src, state.get_probestack()); return false}
             },
             _ => (),
         }
@@ -73,16 +73,17 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
         true
     }
 }
-
+//TODO: leq => le?
 impl StackChecker<'_> {
     fn check_stack_read(&self, state : &StackGrowthLattice, src: &Value) -> bool{
         if let Value::Mem(size, memargs) = src {
             match memargs{
                 MemArgs::Mem1Arg(memarg) => 
-                    return (-state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <=8096),
+                    return (-state.get_probestack().unwrap() < state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <8096),
                 MemArgs::Mem2Args(memarg1, memarg2) => {
                     let offset = get_imm_mem_offset(memarg2);
-                    return (-state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap() + offset) && (state.get_stackgrowth().unwrap() <=8096)
+                    // println!("Checking Stack Read: {:?} < {:?} < {:?} offset = {:?}",-state.get_probestack().unwrap(), state.get_stackgrowth().unwrap() + offset, 8096, state.get_stackgrowth().unwrap());
+                    return (-state.get_probestack().unwrap() < state.get_stackgrowth().unwrap() + offset) && (state.get_stackgrowth().unwrap() + offset <8096)
                 },
                 _ => return false //stack accesses should never have 3 args
             }
@@ -96,11 +97,15 @@ impl StackChecker<'_> {
                 MemArgs::Mem1Arg(memarg) => 
                 {
                     // println!("{:?} {:?}", state.get_probestack().unwrap(), state.get_stackgrowth());
-                    return (-state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <=0)},
+                    return (-state.get_probestack().unwrap() < state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <0)},
                 MemArgs::Mem2Args(memarg1, memarg2) => {
                     let offset = get_imm_mem_offset(memarg2);
-                    // println!("{:?} {:?} {:?}", state.get_probestack().unwrap(), state.get_stackgrowth(), offset);
-                    return (-state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap() + offset) && (state.get_stackgrowth().unwrap() <=0)
+                    // println!("{:?} {:?} {:?}",
+                    // state.get_probestack().unwrap(), state.get_stackgrowth(),
+                    // offset);
+                    // println!("Checking Stack Write: {:?} < {:?} < {:?} offset = {:?}",-state.get_probestack().unwrap(), state.get_stackgrowth().unwrap() + offset, 0, state.get_stackgrowth().unwrap());
+
+                    return (-state.get_probestack().unwrap() < state.get_stackgrowth().unwrap() + offset) && (state.get_stackgrowth().unwrap() + offset <0)
                 },
                 _ => return false //stack accesses should never have 3 args
             }

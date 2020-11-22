@@ -491,6 +491,7 @@ pub fn lift_cfg(program : &ModuleData, cfg : &VW_CFG, metadata : &LucetMetadata)
                 //println!("x = {:?}", x);
                 match x {
                     Some(v) => {
+                        // println!("Found Probestack: {:?} {:?} {:?}", v, v / 4096, ((v / 4096) + 1) * 4096);
                         let ir = (addr,vec![Stmt::ProbeStack(v)]);
                         block_ir.push(ir);
                         probestack_suffix = true;

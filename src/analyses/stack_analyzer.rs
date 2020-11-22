@@ -32,8 +32,9 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
                 else{ panic!("Illegal RSP write") }
             },
             Stmt::ProbeStack(new_probestack) => 
-            if let Some((x,probestack)) = in_state.v{
-                *in_state = StackGrowthLattice {v : Some ((x - *new_probestack as i64, *new_probestack as i64)) }
+            if let Some((x,_old_probestack)) = in_state.v{
+                let probed = (((*new_probestack / 4096) + 1) * 4096) as i64; // Assumes page size of 4096
+                *in_state = StackGrowthLattice {v : Some ((x - *new_probestack as i64, probed)) }
             }
             else {*in_state = Default::default() },
             _ => ()

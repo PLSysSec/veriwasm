@@ -47,7 +47,9 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
     }
 
     fn process_branch(&self, irmap : &IRMap, in_state : &SwitchLattice, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,SwitchLattice)>{
-        // println!("{:x}: Analysis: rcx = {:?}", addr, in_state.regs.rcx);
+        let defs_state = self.reaching_defs.get(addr).unwrap();
+        println!("Start of {:x}: Analysis: mem[0x98] = {:?}, mem[0x44] = {:?}", addr, defs_state.stack.map.get(&(0x10 + defs_state.stack.offset)), defs_state.stack.map.get(&(0x64 + defs_state.stack.offset)));
+        // println!("{:x}: Analysis: stack = {:?}", addr, defs_state.stack);
         if succ_addrs.len() == 2{
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
@@ -56,8 +58,11 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                 let defs_state = self.reaching_defs.get(addr).unwrap();
                 let ir_block = irmap.get(addr).unwrap();
                 let defs_state = analyze_block(&self.reaching_analyzer, defs_state, ir_block);
+                println!("End of {:x}: Analysis: mem[0x98] = {:?}, mem[0x44] = {:?}", addr, defs_state.stack.map.get(&(0x10 + defs_state.stack.offset)), defs_state.stack.map.get(&(0x64 + defs_state.stack.offset)));
+
                 
                 let checked_defs = defs_state.regs.get(&regnum, &ValSize::Size64);
+                //propagate bound across registers with the same reaching def
                 for idx in 0..15{
                     if idx != regnum{
                         let reg_def = defs_state.regs.get(&idx, &ValSize::Size64);
@@ -66,7 +71,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                         }
                     }
                 }
-
+                //propagate bound across stack slots with the same upper bound
                 for (stack_offset, stack_slot) in defs_state.stack.map.iter(){
                     if !checked_defs.is_empty() && (stack_slot.value == checked_defs){
                         let v = SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))};
