@@ -61,11 +61,13 @@ fn has_indirect_jumps(irmap: &IRMap) -> bool{
 }
 
 fn run(config : Config){
+    let mut func_counter = 0;
     let program = load_program(&config.module_path);
     println!("Loading Metadata");
     let metadata = load_metadata(&config.module_path);
     // for (func_name,cfg) in get_cfgs(&config.module_path).iter(){
     for (func_name,(cfg,irmap)) in get_resolved_cfgs(&config.module_path).iter(){
+        func_counter += 1;
         println!("Analyzing: {:?}", func_name);
         //let irmap = lift_cfg(&program, &cfg, &metadata);
         check_cfg_integrity(&cfg.blocks,&cfg.graph);
@@ -89,6 +91,7 @@ fn run(config : Config){
             assert!(call_safe);
         }
     }
+    println!("Verified {:?} functions", func_counter);
     println!("Done!");
 }
 
