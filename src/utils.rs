@@ -53,12 +53,9 @@ fn get_function_starts(entrypoint : &u64,
 
     //All symbols in text section should be function starts 
     for sym in symbols {
-        // if sym.section_index == text_section_idx{
-            // println!("sym = {:?}", sym);
             x86_64_data.contexts.put(sym.addr as u64, BaseUpdate::Specialized(
                 yaxpeax_core::arch::x86_64::x86Update::FunctionHint
             ));
-        // }
     }
 
     // and copy in names for imports
@@ -77,7 +74,7 @@ fn get_function_starts(entrypoint : &u64,
     x86_64_data
 }
 
-fn try_resolve_jumps(program : &ModuleData,  contexts: &MergedContextTable, cfg : &VW_CFG, metadata : LucetMetadata, addr: u64) -> (VW_CFG,IRMap,i32,u32){
+fn try_resolve_jumps(program : &ModuleData,  contexts: &MergedContextTable, cfg : &VW_CFG, metadata : &LucetMetadata, addr: u64) -> (VW_CFG,IRMap,i32,u32){
     let irmap = lift_cfg(&program, cfg, &metadata);
     let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
     let switch_analyzer = SwitchAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
@@ -90,12 +87,12 @@ fn try_resolve_jumps(program : &ModuleData,  contexts: &MergedContextTable, cfg 
     return (new_cfg, irmap, num_targets as i32, still_unresolved);
 }
 
-fn resolve_cfg(program : &ModuleData, contexts: &MergedContextTable, cfg : &VW_CFG, metadata : LucetMetadata, addr: u64) -> (VW_CFG,IRMap){
+fn resolve_cfg(program : &ModuleData, contexts: &MergedContextTable, cfg : &VW_CFG, metadata : &LucetMetadata, addr: u64) -> (VW_CFG,IRMap){
     let mut last_switches = -1;
-    let (mut cfg, mut irmap, mut resolved_switches, mut still_unresolved) = try_resolve_jumps(program, contexts, cfg, metadata.clone(), addr);
+    let (mut cfg, mut irmap, mut resolved_switches, mut still_unresolved) = try_resolve_jumps(program, contexts, cfg, metadata, addr);
     while resolved_switches != last_switches && (still_unresolved != 0) {
         last_switches = resolved_switches;
-        let (new_cfg, new_irmap, new_resolved_switches, new_still_unresolved) = try_resolve_jumps(program, contexts, &cfg, metadata.clone(), addr);
+        let (new_cfg, new_irmap, new_resolved_switches, new_still_unresolved) = try_resolve_jumps(program, contexts, &cfg, metadata, addr);
         cfg = new_cfg;
         irmap = new_irmap;
         if (new_resolved_switches == resolved_switches) && (new_still_unresolved != 0){
@@ -115,7 +112,7 @@ fn resolve_cfg(program : &ModuleData, contexts: &MergedContextTable, cfg : &VW_C
     (cfg,irmap)
 }
 
-pub fn fully_resolved_cfg(program : &ModuleData, contexts: &MergedContextTable, metadata : LucetMetadata, addr: u64) -> (VW_CFG,IRMap){
+pub fn fully_resolved_cfg(program : &ModuleData, contexts: &MergedContextTable, metadata : &LucetMetadata, addr: u64) -> (VW_CFG,IRMap){
     let (cfg,_) = get_cfg(program, contexts, addr, None);
     let irmap = lift_cfg(&program, &cfg, &metadata);
     if !has_indirect_jumps(&irmap){
@@ -124,12 +121,8 @@ pub fn fully_resolved_cfg(program : &ModuleData, contexts: &MergedContextTable, 
     return resolve_cfg(program, contexts, &cfg, metadata, addr)
 }
 
-pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, (VW_CFG,IRMap) )>{
-    let program = load_program(binpath);
-    let metadata = load_metadata(binpath);
-
-    // grab some details from the binary and panic if it's not what we expected
-    let (_, sections, entrypoint, imports, exports, symbols) = match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
+pub fn get_data(binpath : &str, program : &ModuleData) -> (x86_64Data,Vec<(u64,std::string::String)>){
+    let (_, sections, entrypoint, imports, exports, symbols) = match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
         Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
             (isa, sections, entry, imports, exports, symbols)
         }
@@ -144,25 +137,32 @@ pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, (VW_CFG,IRMap) )>{
     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
     let text_section = sections.get(text_section_idx).unwrap();
     
-
     let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
     
-
-    let mut cfgs : Vec<(String, (VW_CFG,IRMap) )> = Vec::new(); 
+    let mut addrs : Vec<(u64,std::string::String)> = Vec::new(); 
     while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
         if !((addr >= text_section.start) && (addr <  (text_section.start + text_section.size))) { continue; }
         if let Some(symbol) = x86_64_data.symbol_for(addr){
-        // println!("Found maybe function: {:?} valid = {:?}", &symbol.1, is_valid_func_name(&symbol.1));
         if is_valid_func_name(&symbol.1) { 
-            println!("Generating CFG for: {:?}", symbol.1);
-            let (new_cfg,irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, metadata.clone(), addr);
-            cfgs.push((symbol.1.clone(), (new_cfg,irmap) ));
+            addrs.push( (addr, symbol.1.clone()) );
             }
         }
     }
-    cfgs
+
+    (x86_64_data,addrs)
 }
 
+// pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, (VW_CFG,IRMap) )>{
+//     let program = load_program(binpath);
+//     let metadata = load_metadata(binpath);
+//     let (x86_64_data,func_addrs) = get_data(binpath, &program);
+//     let mut cfgs : Vec<(String, (VW_CFG,IRMap) )> = Vec::new(); 
+//     for (addr,symbol) in func_addrs{
+//         let (new_cfg,irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
+//         cfgs.push((symbol, (new_cfg,irmap) ));
+//     }
+//     cfgs
+// }
 
 pub fn get_one_resolved_cfg(binpath : &str, func : &str) -> (VW_CFG,IRMap){
     let program = load_program(binpath);
@@ -183,16 +183,12 @@ pub fn get_one_resolved_cfg(binpath : &str, func : &str) -> (VW_CFG,IRMap){
 
     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
     let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
-    // let symbol = x86_64_data.symbol_for(addr).unwrap();
     let addr = get_symbol_addr(symbols, func).unwrap();
     println!("Found maybe function: {:?} valid = {:?}", func, is_valid_func_name(&String::from(func)));
     assert!(is_valid_func_name(&String::from(func)));  
     println!("Generating CFG for: {:?}", func);
-    return fully_resolved_cfg(&program, &x86_64_data.contexts, metadata.clone(), addr);
+    return fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
 }
-
-
-
 
 fn get_symbol_addr(symbols : &Vec<ELFSymbol>, name : &str)-> std::option::Option<u64> {
     let mut x = None;

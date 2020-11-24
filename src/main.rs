@@ -6,9 +6,10 @@ pub mod lifter;
 pub mod ir_utils;
 pub mod checkers;
 pub mod cfg;
+use crate::utils::fully_resolved_cfg;
+use crate::utils::get_data;
 use crate::utils::get_one_resolved_cfg;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
-use crate::utils::get_resolved_cfgs;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::checkers::call_checker::check_calls;
 use crate::analyses::call_analyzer::CallAnalyzer;
@@ -65,12 +66,24 @@ fn has_indirect_jumps(irmap: &IRMap) -> bool{
 
 fn run(config : Config){
     let mut func_counter = 0;
-    let mut info: Vec<(std::string::String, usize, f64, f64, f64)> = vec![];
+    let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64)> = vec![];
     let program = load_program(&config.module_path);
     println!("Loading Metadata");
     let metadata = load_metadata(&config.module_path);
+
+    // let (x86_64_data,func_addrs) = get_data(binpath, &program);
+    // for (addr,symbol) in func_addrs{
+    //     let (new_cfg,irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
+    // }
+
     // for (func_name,cfg) in get_cfgs(&config.module_path).iter(){
-    for (func_name,(cfg,irmap)) in get_resolved_cfgs(&config.module_path).iter(){
+    // for (func_name,(cfg,irmap)) in
+    // get_resolved_cfgs(&config.module_path).iter(){
+    let (x86_64_data,func_addrs) = get_data(&config.module_path, &program);
+    for (addr,func_name) in func_addrs{
+        println!("Generating CFG for {:?}", func_name);
+        let start = Instant::now();
+        let (cfg,irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
         func_counter += 1;
         println!("Analyzing: {:?}", func_name);
         //let irmap = lift_cfg(&program, &cfg, &metadata);
@@ -98,8 +111,8 @@ fn run(config : Config){
             assert!(call_safe);
         }
         let end = Instant::now();
-        info.push((func_name.to_string(), cfg.blocks.len(), (heap_start - stack_start).as_secs_f64(), (call_start - heap_start).as_secs_f64(), (end - call_start).as_secs_f64()));
-        println!("Verified {:?} at {:?} blocks. Stack: {:?}s Heap: {:?}s Calls: {:?}s", func_name, cfg.blocks.len(), (heap_start - stack_start).as_secs_f64(), (call_start - heap_start).as_secs_f64(), (end - call_start).as_secs_f64());
+        info.push((func_name.to_string(), cfg.blocks.len(), (stack_start - start).as_secs_f64(), (heap_start - stack_start).as_secs_f64(), (call_start - heap_start).as_secs_f64(), (end - call_start).as_secs_f64()));
+        println!("Verified {:?} at {:?} blocks. CFG: {:?}s Stack: {:?}s Heap: {:?}s Calls: {:?}s", func_name, cfg.blocks.len(), (stack_start - start).as_secs_f64(), (heap_start - stack_start).as_secs_f64(), (call_start - heap_start).as_secs_f64(), (end - call_start).as_secs_f64());
         
     }
     if config.has_output{
@@ -108,16 +121,18 @@ fn run(config : Config){
         fs::write(config.output_path, data).expect("Unable to write file");
     }
 
+    let mut total_cfg_time = 0.0;
     let mut total_stack_time = 0.0;
     let mut total_heap_time = 0.0;
     let mut total_call_time = 0.0; 
-    for (_,_,stack_time,heap_time,call_time) in &info{
+    for (_,_,cfg_time, stack_time,heap_time,call_time) in &info{
+        total_cfg_time += cfg_time;
         total_stack_time += stack_time;
         total_heap_time += heap_time;
         total_call_time += call_time;
     }
     println!("Verified {:?} functions", func_counter);
-    println!("Total times = Stack: {:?}s Heap: {:?}s Call: {:?}s", total_stack_time, total_heap_time, total_call_time);
+    println!("Total times = CFG: {:?} Stack: {:?}s Heap: {:?}s Call: {:?}s", total_cfg_time, total_stack_time, total_heap_time, total_call_time);
     println!("Done!");
 }
 
@@ -169,8 +184,9 @@ fn full_test_helper(path: &str){
     let program = load_program(&path);
     println!("Loading Metadata");
     let metadata = load_metadata(&path);
-    for (func_name,(cfg,irmap)) in get_resolved_cfgs(&path).iter(){
-        println!("Analyzing: {:?}", func_name);
+    let (x86_64_data,func_addrs) = get_data(&path, &program);
+    for (addr,func_name) in func_addrs{
+        let (cfg,irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
         check_cfg_integrity(&cfg.blocks,&cfg.graph);       
         let stack_analyzer = StackAnalyzer{};
         let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer); 
