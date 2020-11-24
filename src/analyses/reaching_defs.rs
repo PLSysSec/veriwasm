@@ -33,27 +33,38 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
         s.regs.r14 = singleton(LocIdx{addr: 0xdeadbeef, idx : 13});
         s.regs.r15 = singleton(LocIdx{addr: 0xdeadbeef, idx : 14});
 
-        s.stack.update(0x10, singleton(LocIdx{addr: 0xdeadbeef, idx : 15}), 8);
-        s.stack.update(0x18, singleton(LocIdx{addr: 0xdeadbeef, idx : 16}), 8);
-        s.stack.update(0x20, singleton(LocIdx{addr: 0xdeadbeef, idx : 17}), 8);
-        s.stack.update(0x28, singleton(LocIdx{addr: 0xdeadbeef, idx : 18}), 8);
+        s.stack.update(0x10, singleton(LocIdx{addr: 0xdeadbeef, idx : 15}), 4);
+        s.stack.update(0x18, singleton(LocIdx{addr: 0xdeadbeef, idx : 16}), 4);
+        s.stack.update(0x20, singleton(LocIdx{addr: 0xdeadbeef, idx : 17}), 4);
+        s.stack.update(0x28, singleton(LocIdx{addr: 0xdeadbeef, idx : 18}), 4);
 
         s
     }
 
 
     fn aexec(&self, in_state : &mut ReachLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
-        // println!("Before Addr=0x{:x}: mem[0x44] = {:?}", loc_idx.addr, in_state.stack.map.get(&(0x64 + in_state.stack.offset)));
+        if loc_idx.addr == 0x1055bb || loc_idx.addr == 0x1055cc || loc_idx.addr == 0x1055de || loc_idx.addr == 0x105814 || loc_idx.addr == 0x001056b9{
+            println!("Before Addr=0x{:x}: mem[0x98] = {:?} mem[0x44] = {:?}", loc_idx.addr, in_state.stack.map.get(&(0x10 + in_state.stack.offset)), in_state.stack.map.get(&(0x64 + in_state.stack.offset)));
+        }
+        if loc_idx.addr == 0x001055b3 || loc_idx.addr == 0x1055c6 || loc_idx.addr == 0x1055d8 || loc_idx.addr == 0x10588f || loc_idx.addr == 0x10571c{
+            println!("Before Addr=0x{:x}: mem[0x98] = {:?} mem[0x44] = {:?}", loc_idx.addr, in_state.stack.map.get(&(0x10 + in_state.stack.offset)), in_state.stack.map.get(&(0x64 + in_state.stack.offset)));
+        }
+        if loc_idx.addr >= 0x00105814 && loc_idx.addr <= 0x10588f{
+            println!(">>>Before Addr=0x{:x}: mem[0x98] = {:?} mem[0x44] = {:?} {:?}", loc_idx.addr, in_state.stack.map.get(&(0x10 + in_state.stack.offset)), in_state.stack.map.get(&(0x64 + in_state.stack.offset)), ir_instr);
+        }
         match ir_instr{
             Stmt::Clear(dst) => in_state.set(dst, singleton(loc_idx.clone())),
             Stmt::Unop(Unopcode::Mov, dst, src) =>  {
                 if let Some(v) = in_state.get(src){
                     // println!("Addr=0x{:x}: {:?} {:?}",loc_idx.addr, v.defs, v.defs.is_empty());
                     if v.defs.is_empty(){ 
-                        // println!("Addr=0x{:x}: {:?} and {:?} = {:?}",loc_idx.addr, dst, src, singleton(loc_idx.clone()));
+                        // println!("Addr=0x{:x}: {:?} and {:?} =
+                        // {:?}",loc_idx.addr, dst, src,
+                        // singleton(loc_idx.clone()));
+                        // println!("{:x}-------{:?}",loc_idx.addr, ir_instr);
                         in_state.set(dst, singleton(loc_idx.clone()));
                         match src{
-                            Value::Mem(_,_) => in_state.set(src, singleton(loc_idx.clone())),
+                            Value::Mem(memsize,_) => in_state.set(src, singleton(loc_idx.clone())),
                             Value::Reg(_,_) => in_state.set(src, singleton(loc_idx.clone())),
                             _ => (),
                         }

@@ -48,8 +48,9 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
 
     fn process_branch(&self, irmap : &IRMap, in_state : &SwitchLattice, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,SwitchLattice)>{
         let defs_state = self.reaching_defs.get(addr).unwrap();
-        // println!("Start of {:x}: Analysis: mem[0x98] = {:?}, mem[0x44] = {:?}", addr, defs_state.stack.map.get(&(0x10 + defs_state.stack.offset)), defs_state.stack.map.get(&(0x64 + defs_state.stack.offset)));
-        // println!("{:x}: Analysis: stack = {:?}", addr, defs_state.stack);
+        // if *addr == 0x1055bb || *addr == 0x1055cc || *addr == 0x1055de || *addr == 0x105814 || *addr == 0x001056b9{
+        //     println!("Start of {:x}: Analysis: mem[0x98] = {:?}, mem[0x44] = {:?}", addr, defs_state.stack.map.get(&(0x10 + defs_state.stack.offset)), defs_state.stack.map.get(&(0x64 + defs_state.stack.offset)));
+        // }// println!("{:x}: Analysis: stack = {:?}", addr, defs_state.stack);
         if succ_addrs.len() == 2{
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
@@ -91,7 +92,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
 impl SwitchAnalyzer{
     fn aeval_unop_mem(&self, in_state : &SwitchLattice, memargs : &MemArgs, memsize : &ValSize)-> SwitchValueLattice {
         if let Some(offset) = get_rsp_offset(memargs){
-            return in_state.stack.get(offset, memsize.to_u32())
+            return in_state.stack.get(offset, memsize.to_u32() / 8)
         }
         if let MemArgs::MemScale(MemArg::Reg(regnum1,size1), MemArg::Reg(regnum2,size2), MemArg::Imm(_,_,immval) ) = memargs{
             if let (Some(SwitchValue::SwitchBase(base)),Some(SwitchValue::UpperBound(bound)),4) = (in_state.regs.get(regnum1,size1).v,in_state.regs.get(regnum2,size2).v,immval){

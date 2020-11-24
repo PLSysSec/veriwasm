@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::cmp::Ordering;
 use crate::lattices::{Lattice, BooleanLattice};
 use std::collections::HashMap;
@@ -33,6 +34,9 @@ impl<T:Lattice + Clone> StackLattice<T>{
         if (offset & 3) != 0 {
             panic!("Unsafe: Attempt to store value on the stack on not 4-byte aligned address.");
         }
+        if size > 8 {
+            panic!("Store too large!");
+        }
         //remove overlapping entries
         //if write is size 8: remove next slot (offset + 4) if one exists
         if size == 8 {
@@ -57,7 +61,12 @@ impl<T:Lattice + Clone> StackLattice<T>{
     }
 
     pub fn get(&self, offset:i64, size:u32) -> T {
-        // println!(">>>>>>>>>> Loading Value from stack: {:?} {:?}", self.offset + offset, size);
+        // println!(">>>>>>>>>> Loading Value from stack: {:?} {:?}",
+        // self.offset + offset, size);
+        if !(size == 4 || size == 8) {
+            panic!("Load wrong size! size = {:?}", size);
+        }
+        
         match self.map.get( &(self.offset + offset) ){
             Some(stack_slot) => { 
                 // println!(">>>>>>>>>> Stage 2 Loading Value from stack: {:?} {:?}",  size, stack_slot.size);

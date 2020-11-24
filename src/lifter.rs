@@ -14,7 +14,7 @@ pub enum ImmType {
     Signed,
     Unsigned
 }
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum ValSize {
     Size8,
     Size16,
@@ -30,7 +30,7 @@ impl ValSize{
         ValSize::Size16 => 16,
         ValSize::Size32 => 32,
         ValSize::Size64 => 64,
-        ValSize::SizeOther => panic!("unknown size? {:?}")
+        ValSize::SizeOther => 64//panic!("unknown size? {:?}")
         }
     }
 }
@@ -41,7 +41,7 @@ pub fn valsize(num : u32) -> ValSize{
         16 => ValSize::Size16,
         32 => ValSize::Size32,
         64 => ValSize::Size64,
-        _ => unimplemented!("")
+        _ => unimplemented!("{:?}", num)
     }
 }
 
@@ -104,7 +104,7 @@ pub enum Binopcode {
     Sub,
 }
 
-fn convert_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> Value{
+fn get_reg_size(reg : yaxpeax_x86::long_mode::RegSpec) -> ValSize{
     let size = match reg.bank{
         RegisterBank::Q => ValSize::Size64,
         RegisterBank::D => ValSize::Size32,
@@ -115,6 +115,21 @@ fn convert_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> Value{
         RegisterBank::EIP => panic!("Write to EIP: {:?}", reg.bank),
         _ => ValSize::SizeOther //xmm and ymm
     };
+    return size
+}
+
+fn convert_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> Value{
+    // let size = match reg.bank{
+    //     RegisterBank::Q => ValSize::Size64,
+    //     RegisterBank::D => ValSize::Size32,
+    //     RegisterBank::W => ValSize::Size16,
+    //     RegisterBank::B => ValSize::Size8,
+    //     RegisterBank::rB => ValSize::Size8,
+    //     RegisterBank::RIP => panic!("Write to RIP: {:?}", reg.bank),
+    //     RegisterBank::EIP => panic!("Write to EIP: {:?}", reg.bank),
+    //     _ => ValSize::SizeOther //xmm and ymm
+    // };
+    let size = get_reg_size(reg);
     Value::Reg(reg.num, size)
 }
 
@@ -129,8 +144,8 @@ fn convert_memarg_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> MemArg{
     MemArg::Reg(reg.num, size)
 }
 
-//TODO: make valsize multiplied by 8 (or just generally get a proper size)
-fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{
+//TODO: make size of memory args more correct?
+fn convert_operand(op : yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Value{
     match op{
         Operand::ImmediateI8(imm) => Value::Imm(ImmType::Signed, ValSize::Size8, imm as i64),
         Operand::ImmediateU8(imm) => Value::Imm(ImmType::Unsigned, ValSize::Size8, imm as i64),
@@ -142,28 +157,28 @@ fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{
         Operand::ImmediateI64(imm) => Value::Imm(ImmType::Signed, ValSize::Size64, imm as i64),
         Operand::Register(reg) => convert_reg(reg),
         //u32 and u64 are address sizes
-        Operand::DisplacementU32(imm) => Value::Mem(ValSize::Size64, MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size32, imm as i64))), //mem[c]
-        Operand::DisplacementU64(imm) => Value::Mem(ValSize::Size64, MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size64, imm as i64))), //mem[c]
-        Operand::RegDeref(reg) => Value::Mem(valsize(reg.width() as u32), MemArgs::Mem1Arg(convert_memarg_reg(reg) )), // mem[reg]
-        Operand::RegDisp(reg, imm) => Value::Mem(valsize(reg.width() as u32), MemArgs::Mem2Args(convert_memarg_reg(reg), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) ), //mem[reg + c]
-        Operand::RegIndexBase(reg1, reg2) => Value::Mem(valsize(reg1.width() as u32), MemArgs::Mem2Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2)) ), // mem[reg1 + reg2]
-        Operand::RegIndexBaseDisp(reg1, reg2, imm) => Value::Mem(valsize(reg1.width() as u32), MemArgs::Mem3Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) ), //mem[reg1 + reg2 + c]
+        Operand::DisplacementU32(imm) => Value::Mem(memsize, MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size32, imm as i64))), //mem[c]
+        Operand::DisplacementU64(imm) => Value::Mem(memsize, MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size64, imm as i64))), //mem[c]
+        Operand::RegDeref(reg) => Value::Mem(memsize, MemArgs::Mem1Arg(convert_memarg_reg(reg) )), // mem[reg]
+        Operand::RegDisp(reg, imm) => Value::Mem(memsize, MemArgs::Mem2Args(convert_memarg_reg(reg), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) ), //mem[reg + c]
+        Operand::RegIndexBase(reg1, reg2) => Value::Mem(memsize, MemArgs::Mem2Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2)) ), // mem[reg1 + reg2]
+        Operand::RegIndexBaseDisp(reg1, reg2, imm) => Value::Mem(memsize, MemArgs::Mem3Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2), MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) ), //mem[reg1 + reg2 + c]
         Operand::RegScale(_,_) => panic!("Memory operations with scaling prohibited"), // mem[reg * c]
         Operand::RegScaleDisp(_,_,_) => panic!("Memory operations with scaling prohibited"), //mem[reg*c1 + c2]
         Operand::RegIndexBaseScale(reg1,reg2,scale) => //mem[reg1 + reg2*c]
             if scale == 1 {
-                Value::Mem(valsize(reg1.width() as u32), 
+                Value::Mem(memsize, 
                 MemArgs::Mem2Args(convert_memarg_reg(reg1), 
                 convert_memarg_reg(reg2)) )
             } else {
-            Value::Mem(valsize(reg1.width() as u32), 
+            Value::Mem(memsize, 
                 MemArgs::MemScale(convert_memarg_reg(reg1), 
                 convert_memarg_reg(reg2), 
                 MemArg::Imm(ImmType::Signed, ValSize::Size32, scale as i64)) )
             },
             Operand::RegIndexBaseScaleDisp(reg1,reg2,scale,imm) => {
                 assert_eq!(scale,1); 
-                Value::Mem(valsize(reg1.width() as u32), 
+                Value::Mem(memsize, 
                 MemArgs::Mem3Args(convert_memarg_reg(reg1), 
                 convert_memarg_reg(reg2), 
                 MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64)) )
@@ -172,51 +187,69 @@ fn convert_operand(op : yaxpeax_x86::long_mode::Operand) -> Value{
     }
 }
 
-// fn is_relevant_dst(instr : &yaxpeax_x86::long_mode::Instruction) -> bool{
-//     if let Operand::Register(reg) = instr.operand(0) {
-//         true
-//     }
-//     else{true}
-//     false
-// }
-
 fn clear_dst(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
-    Stmt::Clear(convert_operand(instr.operand(0)))
+    Stmt::Clear(convert_operand(instr.operand(0), ValSize::Size8))//TODO: fix this
+}
+
+fn get_operand_size(op : yaxpeax_x86::long_mode::Operand) -> Option<ValSize>{
+    match op{
+    Operand::ImmediateI8(_) |
+    Operand::ImmediateU8(_) => Some(ValSize::Size8),
+    Operand::ImmediateI16(_) |
+    Operand::ImmediateU16(_) => Some(ValSize::Size16),
+    Operand::ImmediateU32(_) |
+    Operand::ImmediateI32(_) => Some(ValSize::Size32),
+    Operand::ImmediateU64(_) |
+    Operand::ImmediateI64(_) => Some(ValSize::Size64),
+    Operand::Register(reg) => Some(get_reg_size(reg)),
+    //u32 and u64 are address sizes
+    Operand::DisplacementU32(_) |
+    Operand::DisplacementU64(_) |
+    Operand::RegDeref(_) |
+    Operand::RegDisp(_, _) | 
+    Operand::RegIndexBase(_, _) |
+    Operand::RegIndexBaseDisp(_, _, _) |
+    Operand::RegScale(_,_) |
+    Operand::RegScaleDisp(_,_,_) |
+    Operand::RegIndexBaseScale(_,_,_) |
+    Operand::RegIndexBaseScaleDisp(_, _, _, _) |
+    Operand::Nothing => None
+    }
 }
 
 fn unop(opcode: Unopcode, instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
-    Stmt::Unop(opcode, convert_operand(instr.operand(0)), convert_operand(instr.operand(1)))
+    let memsize = match (get_operand_size(instr.operand(0)), get_operand_size(instr.operand(1))){
+        (None,None) => panic!("Two Memory Args?"),
+        (Some(x),None) => x,
+        (None,Some(x)) => x,
+        (Some(x),Some(y)) => {x},//TODO: is this right?
+    };
+    Stmt::Unop(opcode, convert_operand(instr.operand(0),memsize), convert_operand(instr.operand(1),memsize))
 }
 
 fn binop(opcode: Binopcode, instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
+    let memsize = match (get_operand_size(instr.operand(0)), get_operand_size(instr.operand(1))){
+        (None,None) => panic!("Two Memory Args?"),
+        (Some(x),None) => x,
+        (None,Some(x)) => x,
+        (Some(x),Some(y)) => {x},//TODO: fix this
+    };
     // if two operands than dst is src1
-    if instr.operand_count() == 2{ Stmt::Binop(opcode, convert_operand(instr.operand(0)), convert_operand(instr.operand(0)), convert_operand(instr.operand(1)))}
-    else{Stmt::Binop(opcode, convert_operand(instr.operand(0)), convert_operand(instr.operand(1)), convert_operand(instr.operand(2)))}
+    if instr.operand_count() == 2{ 
+        Stmt::Binop(opcode, convert_operand(instr.operand(0),memsize), convert_operand(instr.operand(0),memsize), convert_operand(instr.operand(1),memsize))
+    }
+    else{
+        Stmt::Binop(opcode, convert_operand(instr.operand(0),memsize), convert_operand(instr.operand(1),memsize), convert_operand(instr.operand(2),memsize))
+    }
 }
 
 
-// fn cmp(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
-//     // if two operands than dst is src1
-//     if instr.operand_count() == 2 { 
-//         Stmt::Binop(Binopcode::Cmp, 
-//             convert_operand(instr.operand(0)), 
-//             convert_operand(instr.operand(0)), 
-//             convert_operand(instr.operand(1))
-//     }
-//     else{
-//         Stmt::Binop(Binopcode::Cmp, 
-//             convert_operand(instr.operand(0)), 
-//             convert_operand(instr.operand(1)), 
-//             convert_operand(instr.operand(2)))
-//     }
-// }
-
 fn branch(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
-    Stmt::Branch(instr.opcode, convert_operand(instr.operand(0)))
+    Stmt::Branch(instr.opcode, convert_operand(instr.operand(0), ValSize::Size64))
 }
 
 fn call(instr : &yaxpeax_x86::long_mode::Instruction, metadata : &LucetMetadata) -> Stmt{
-    let dst = convert_operand(instr.operand(0));
+    let dst = convert_operand(instr.operand(0), ValSize::Size64);
     // if let Value::Imm(_,_,offset) = dst {
     //     // if offset == metadata.lucet_probestack{
     //     //     Stmt::ProbeStack()
@@ -234,10 +267,10 @@ fn lea(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Stmt{
         if reg.bank == RegisterBank::RIP{
             //addr + instruction length + displacement
             let target = (*addr as i64) + (instr.length as i64) + (instr.disp as i64);
-            return Stmt::Unop(Unopcode::Mov, convert_operand(dst), Value::Imm(ImmType::Signed, ValSize::Size64, target)) 
+            return Stmt::Unop(Unopcode::Mov, convert_operand(dst, ValSize::SizeOther), Value::Imm(ImmType::Signed, ValSize::Size64, target)) 
         }
     }
-    match convert_operand(src1){
+    match convert_operand(src1, get_operand_size(dst).unwrap()){
         Value::Mem(_, memargs) => 
             match memargs {
                 MemArgs::Mem1Arg(arg) => match arg{
@@ -290,11 +323,11 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata 
         Opcode::PUSH => { let width = instr.operand(0).width(); 
             assert_eq!(width, 8);//8 bytes
             instrs.push(Stmt::Binop(Binopcode::Sub, Value::Reg(4, ValSize::Size64), Value::Reg(4, ValSize::Size64), mk_value_i64(width.into())));
-            instrs.push(Stmt::Unop(Unopcode::Mov, Value::Mem(valsize((width*8) as u32), MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64))), convert_operand(instr.operand(0))))
+            instrs.push(Stmt::Unop(Unopcode::Mov, Value::Mem(valsize((width*8) as u32), MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64))), convert_operand(instr.operand(0), ValSize::SizeOther)))
         },
         Opcode::POP => { let width = instr.operand(0).width(); 
             assert_eq!(width, 8);//8 bytes
-            instrs.push(Stmt::Unop(Unopcode::Mov, convert_operand(instr.operand(0)), Value::Mem(valsize( (width*8) as u32), MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)))  ));
+            instrs.push(Stmt::Unop(Unopcode::Mov, convert_operand(instr.operand(0), ValSize::SizeOther), Value::Mem(valsize( (width*8) as u32), MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)))  ));
             instrs.push(Stmt::Binop(Binopcode::Add, Value::Reg(4, ValSize::Size64), Value::Reg(4, ValSize::Size64), mk_value_i64(width.into())))
         },
 
@@ -424,7 +457,7 @@ pub type IRMap =  HashMap<u64, IRBlock>;
 
 fn is_probestack(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata : &LucetMetadata) -> bool {
     if let Opcode::CALL = instr.opcode{
-        if let Value::Imm(_,_,offset) = convert_operand(instr.operand(0)){
+        if let Value::Imm(_,_,offset) = convert_operand(instr.operand(0), ValSize::SizeOther){
             // 5 = size of call instruction
             if 5 + offset + (*addr as i64) == metadata.lucet_probestack as i64{
                 return true
@@ -437,8 +470,8 @@ fn is_probestack(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, meta
 fn extract_probestack_arg(instr : &yaxpeax_x86::long_mode::Instruction) -> Option<u64> {
     // if let Some(instr) = maybe_instr{
         if let Opcode::MOV = instr.opcode{
-            if let Value::Reg(0,ValSize::Size32) = convert_operand(instr.operand(0)){
-                if let Value::Imm(_,_,x) = convert_operand(instr.operand(1)){
+            if let Value::Reg(0,ValSize::Size32) = convert_operand(instr.operand(0), ValSize::SizeOther){
+                if let Value::Imm(_,_,x) = convert_operand(instr.operand(1), ValSize::SizeOther){
                     if instr.operand_count() == 2{
                         return Some(x as u64)
                     }
@@ -452,8 +485,8 @@ fn extract_probestack_arg(instr : &yaxpeax_x86::long_mode::Instruction) -> Optio
 
 fn check_probestack_suffix(instr : &yaxpeax_x86::long_mode::Instruction) -> bool {
         if let Opcode::SUB = instr.opcode{
-            if let Value::Reg(4,ValSize::Size64) = convert_operand(instr.operand(0)){
-                if let Value::Reg(0,ValSize::Size64) = convert_operand(instr.operand(1)){
+            if let Value::Reg(4,ValSize::Size64) = convert_operand(instr.operand(0), ValSize::SizeOther){//size is dummy
+                if let Value::Reg(0,ValSize::Size64) = convert_operand(instr.operand(1), ValSize::SizeOther){
                     if instr.operand_count() == 2{
                         return true
                     }

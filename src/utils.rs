@@ -74,9 +74,11 @@ fn get_function_starts(entrypoint : &u64,
     x86_64_data
 }
 
-fn try_resolve_jumps(program : &ModuleData,  contexts: &MergedContextTable, cfg : &VW_CFG, metadata : &LucetMetadata, addr: u64) -> (VW_CFG,IRMap,i32,u32){
-    let irmap = lift_cfg(&program, cfg, &metadata);
+fn try_resolve_jumps(program : &ModuleData,  contexts: &MergedContextTable, cfg : &VW_CFG, metadata : &LucetMetadata, irmap: &IRMap, addr: u64) -> (VW_CFG,IRMap,i32,u32){
+    // let irmap = lift_cfg(&program, cfg, &metadata);
+    println!("Performing a reaching defs pass");
     let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
+    println!("Performing a jump resolution pass");
     let switch_analyzer = SwitchAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs, reaching_analyzer : ReachingDefnAnalyzer{}};
     let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
     let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
@@ -87,12 +89,12 @@ fn try_resolve_jumps(program : &ModuleData,  contexts: &MergedContextTable, cfg 
     return (new_cfg, irmap, num_targets as i32, still_unresolved);
 }
 
-fn resolve_cfg(program : &ModuleData, contexts: &MergedContextTable, cfg : &VW_CFG, metadata : &LucetMetadata, addr: u64) -> (VW_CFG,IRMap){
+fn resolve_cfg(program : &ModuleData, contexts: &MergedContextTable, cfg : &VW_CFG, metadata : &LucetMetadata, orig_irmap: &IRMap, addr: u64) -> (VW_CFG,IRMap){
     let mut last_switches = -1;
-    let (mut cfg, mut irmap, mut resolved_switches, mut still_unresolved) = try_resolve_jumps(program, contexts, cfg, metadata, addr);
-    while resolved_switches != last_switches && (still_unresolved != 0) {
-        last_switches = resolved_switches;
-        let (new_cfg, new_irmap, new_resolved_switches, new_still_unresolved) = try_resolve_jumps(program, contexts, &cfg, metadata, addr);
+    let (mut cfg, mut irmap, mut resolved_switches, mut still_unresolved) = try_resolve_jumps(program, contexts, cfg, metadata, orig_irmap, addr);
+    while still_unresolved != 0 {
+        // last_switches = resolved_switches;
+        let (new_cfg, new_irmap, new_resolved_switches, new_still_unresolved) = try_resolve_jumps(program, contexts, &cfg, metadata, &irmap, addr);
         cfg = new_cfg;
         irmap = new_irmap;
         if (new_resolved_switches == resolved_switches) && (new_still_unresolved != 0){
@@ -118,7 +120,7 @@ pub fn fully_resolved_cfg(program : &ModuleData, contexts: &MergedContextTable, 
     if !has_indirect_jumps(&irmap){
         return (cfg,irmap);
     }
-    return resolve_cfg(program, contexts, &cfg, metadata, addr)
+    return resolve_cfg(program, contexts, &cfg, metadata, &irmap, addr)
 }
 
 pub fn get_data(binpath : &str, program : &ModuleData) -> (x86_64Data,Vec<(u64,std::string::String)>){

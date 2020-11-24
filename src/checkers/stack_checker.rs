@@ -75,7 +75,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
 
 impl StackChecker<'_> {
     fn check_stack_read(&self, state : &StackGrowthLattice, src: &Value) -> bool{
-        if let Value::Mem(size, memargs) = src {
+        if let Value::Mem(_, memargs) = src {
             match memargs{
                 MemArgs::Mem1Arg(memarg) => 
                     return (-state.get_probestack().unwrap() < state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <8096),
@@ -91,7 +91,7 @@ impl StackChecker<'_> {
     }
 
     fn check_stack_write(&self, state : &StackGrowthLattice, dst: &Value) -> bool{
-        if let Value::Mem(size, memargs) = dst {
+        if let Value::Mem(_, memargs) = dst {
             match memargs{
                 MemArgs::Mem1Arg(memarg) => 
                 {

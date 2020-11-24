@@ -115,7 +115,7 @@ impl CallAnalyzer{
                     }
                     else if is_stack_access(value){
                         let offset = extract_stack_offset(memargs);
-                        return in_state.stack.get(offset, memsize.to_u32())
+                        return in_state.stack.get(offset, memsize.to_u32()/8)
                     },
 
                 Value::Reg(regnum, size) => return in_state.regs.get(regnum, size),

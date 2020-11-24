@@ -132,7 +132,7 @@ fn run(config : Config){
         total_call_time += call_time;
     }
     println!("Verified {:?} functions", func_counter);
-    println!("Total times = CFG: {:?} Stack: {:?}s Heap: {:?}s Call: {:?}s", total_cfg_time, total_stack_time, total_heap_time, total_call_time);
+    println!("Total time = {:?}s CFG: {:?} Stack: {:?}s Heap: {:?}s Call: {:?}s", total_cfg_time + total_stack_time + total_heap_time + total_call_time, total_cfg_time, total_stack_time, total_heap_time, total_call_time);
     println!("Done!");
 }
 
@@ -254,10 +254,10 @@ fn full_test_libogg() {
     full_test_helper("./veriwasm_data/firefox_libs/liboggwasm.so")
 }
 
-#[test]
-fn full_test_shootout() {
-    full_test_helper("./veriwasm_data/shootout/shootout.so")
-}
+// #[test]
+// fn full_test_shootout() {
+//     full_test_helper("./veriwasm_data/shootout/shootout.so")
+// }
 
 
 #[test]

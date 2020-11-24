@@ -78,6 +78,10 @@ pub fn run_worklist<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone>
             if statemap.contains_key(&succ_addr){
                 let old_state = statemap.get(&succ_addr).unwrap();
                 let merged_state = old_state.meet(&branch_state);   
+                // if succ_addr == 0x001055bb{
+                //     println!(">>>Meet: 0x{:x} => 0x{:x} merging {:?} into {:?}", addr, succ_addr, branch_state, old_state);
+                //     println!("merged_state = {:?}", merged_state);
+                // }
                 if merged_state > *old_state {
                     println!("{:?} {:?}", merged_state, old_state);
                     panic!("Meet monoticity error");

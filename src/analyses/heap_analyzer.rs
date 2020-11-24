@@ -47,8 +47,8 @@ impl HeapAnalyzer{
                 // put stack access here?
                 if is_stack_access(value){
                     let offset = extract_stack_offset(memargs);
-                    let v = in_state.stack.get(offset, memsize.to_u32());
-                    //println!("stack load({:?}) = {:?}", offset, v);
+                    let v = in_state.stack.get(offset, memsize.to_u32()/8);
+                    println!("stack load({:?},{:?}) = {:?}", offset, memsize.to_u32(), v);
                     return v
                 }
             }

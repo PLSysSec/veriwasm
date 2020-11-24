@@ -123,18 +123,18 @@ impl<T:Lattice + Clone> VarState for VariableState<T> {
     type Var = T;
     fn set(&mut self, index : &Value, value : T) -> (){
         match index{
-            Value::Mem(_, memargs) => match memargs{
+            Value::Mem(memsize, memargs) => match memargs{
                 MemArgs::Mem1Arg(arg) => 
-                    if let MemArg::Reg(regnum, size) = arg{
+                    if let MemArg::Reg(regnum, _) = arg{
                         if *regnum == 4{
-                            self.stack.update(0, value, size.to_u32() / 8)
+                            self.stack.update(0, value, memsize.to_u32() / 8)
                         }
                     },
                 MemArgs::Mem2Args(arg1, arg2) => 
-                    if let MemArg::Reg(regnum, size) = arg1{
+                    if let MemArg::Reg(regnum, _) = arg1{
                         if *regnum == 4{
-                            if let MemArg::Imm(imm_sign,_,offset) = arg2{
-                                self.stack.update(*offset, value, size.to_u32() / 8)
+                            if let MemArg::Imm(_,_,offset) = arg2{
+                                self.stack.update(*offset, value, memsize.to_u32() / 8)
                             }
                         }
                     },
@@ -147,19 +147,19 @@ impl<T:Lattice + Clone> VarState for VariableState<T> {
 
     fn get(&mut self, index : &Value) -> Option<T>{
         match index{
-            Value::Mem(_, memargs) => match memargs{
+            Value::Mem(memsize, memargs) => match memargs{
                 MemArgs::Mem1Arg(arg) => {
-                    if let MemArg::Reg(regnum, size) = arg{
+                    if let MemArg::Reg(regnum, _) = arg{
                         if *regnum == 4{
-                            return Some(self.stack.get(0, size.to_u32() / 8));
+                            return Some(self.stack.get(0, memsize.to_u32() / 8));
                         }
                     } 
                     None},
                 MemArgs::Mem2Args(arg1, arg2) => {
-                    if let MemArg::Reg(regnum, size) = arg1{
+                    if let MemArg::Reg(regnum, _) = arg1{
                         if *regnum == 4{
-                            if let MemArg::Imm(imm_sign,_,offset) = arg2{
-                                return Some(self.stack.get(*offset, size.to_u32() / 8));
+                            if let MemArg::Imm(_,_,offset) = arg2{
+                                return Some(self.stack.get(*offset, memsize.to_u32() / 8));
                             }
                         }
                     }

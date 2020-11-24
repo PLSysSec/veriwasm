@@ -37,7 +37,7 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
             //  println!("=============== call rdi = {:?}", state.regs.rdi.v);
              match state.regs.rdi.v{
                  Some(HeapValue::HeapBase) => (),
-                 _ => {println!("Call failure"); return false}
+                 _ => {println!("Call failure {:?}", state.stack.get(0,8)); return false}
              }},
              //2. Check that all load and store are safe
              Stmt::Unop(_, dst, src) => 
@@ -56,7 +56,7 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
 
 impl HeapChecker<'_> {
     fn check_global_access(&self, state : &HeapLattice, access: &Value) -> bool{
-        if let Value::Mem(size, memargs) = access {
+        if let Value::Mem(memsize, memargs) = access {
             match memargs{
                 MemArgs::Mem1Arg(MemArg::Reg(regnum,ValSize::Size64)) => 
                     if let  Some(HeapValue::GlobalsBase) = state.regs.get(regnum,&ValSize::Size64).v { 
