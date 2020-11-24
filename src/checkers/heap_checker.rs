@@ -179,8 +179,7 @@ impl HeapChecker<'_> {
         // Case 6: its unknown
         println!("None of the memory accesses!");
         print_mem_access(state, access);
-        //TODO: change back to false --- currently misses jump tables
-        false
+        return false
     }
    
 }

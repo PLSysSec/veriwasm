@@ -48,7 +48,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
 
     fn process_branch(&self, irmap : &IRMap, in_state : &SwitchLattice, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,SwitchLattice)>{
         let defs_state = self.reaching_defs.get(addr).unwrap();
-        println!("Start of {:x}: Analysis: mem[0x98] = {:?}, mem[0x44] = {:?}", addr, defs_state.stack.map.get(&(0x10 + defs_state.stack.offset)), defs_state.stack.map.get(&(0x64 + defs_state.stack.offset)));
+        // println!("Start of {:x}: Analysis: mem[0x98] = {:?}, mem[0x44] = {:?}", addr, defs_state.stack.map.get(&(0x10 + defs_state.stack.offset)), defs_state.stack.map.get(&(0x64 + defs_state.stack.offset)));
         // println!("{:x}: Analysis: stack = {:?}", addr, defs_state.stack);
         if succ_addrs.len() == 2{
             let mut not_branch_state = in_state.clone();
@@ -58,7 +58,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                 let defs_state = self.reaching_defs.get(addr).unwrap();
                 let ir_block = irmap.get(addr).unwrap();
                 let defs_state = analyze_block(&self.reaching_analyzer, defs_state, ir_block);
-                println!("End of {:x}: Analysis: mem[0x98] = {:?}, mem[0x44] = {:?}", addr, defs_state.stack.map.get(&(0x10 + defs_state.stack.offset)), defs_state.stack.map.get(&(0x64 + defs_state.stack.offset)));
+                // println!("End of {:x}: Analysis: mem[0x98] = {:?}, mem[0x44] = {:?}", addr, defs_state.stack.map.get(&(0x10 + defs_state.stack.offset)), defs_state.stack.map.get(&(0x64 + defs_state.stack.offset)));
 
                 
                 let checked_defs = defs_state.regs.get(&regnum, &ValSize::Size64);

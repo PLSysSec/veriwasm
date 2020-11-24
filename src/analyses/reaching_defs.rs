@@ -1,7 +1,7 @@
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::lattices::reachingdefslattice::{ReachLattice, singleton, LocIdx};
 use crate::analyses::{AbstractAnalyzer, run_worklist, AnalysisResult};
-use crate::lifter::{IRMap, Stmt, Binopcode, Unopcode};
+use crate::lifter::{IRMap, Stmt, Binopcode, Unopcode, Value};
 use crate::utils::{LucetMetadata};
 use crate::lattices::VarState;
 
@@ -43,14 +43,37 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
 
 
     fn aexec(&self, in_state : &mut ReachLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
+        // println!("Before Addr=0x{:x}: mem[0x44] = {:?}", loc_idx.addr, in_state.stack.map.get(&(0x64 + in_state.stack.offset)));
         match ir_instr{
             Stmt::Clear(dst) => in_state.set(dst, singleton(loc_idx.clone())),
             Stmt::Unop(Unopcode::Mov, dst, src) =>  {
                 if let Some(v) = in_state.get(src){
-                    in_state.set(dst, v)
+                    // println!("Addr=0x{:x}: {:?} {:?}",loc_idx.addr, v.defs, v.defs.is_empty());
+                    if v.defs.is_empty(){ 
+                        // println!("Addr=0x{:x}: {:?} and {:?} = {:?}",loc_idx.addr, dst, src, singleton(loc_idx.clone()));
+                        in_state.set(dst, singleton(loc_idx.clone()));
+                        match src{
+                            Value::Mem(_,_) => in_state.set(src, singleton(loc_idx.clone())),
+                            Value::Reg(_,_) => in_state.set(src, singleton(loc_idx.clone())),
+                            _ => (),
+                        }
+                        // in_state.set(src, singleton(loc_idx.clone()));
+                    
+                    }
+                    else{ 
+                        // println!("Addr=0x{:x}: {:?} = {:?}",loc_idx.addr, dst, v);
+                        in_state.set(dst, v); 
+                    }
                 }
                 else{
-                    in_state.set(dst, singleton(loc_idx.clone()))
+                    // println!("Addr=0x{:x}: {:?} and {:?} = {:?}",loc_idx.addr, dst, src, singleton(loc_idx.clone()));
+                    in_state.set(dst, singleton(loc_idx.clone()));
+                    match src{
+                        Value::Mem(_,_) => in_state.set(src, singleton(loc_idx.clone())),
+                        Value::Reg(_,_) => in_state.set(src, singleton(loc_idx.clone())),
+                        _ => (),
+                    }
+                    // in_state.set(src, singleton(loc_idx.clone()));
                 }
                 //in_state.set(dst, singleton(loc_idx.clone()))
             },

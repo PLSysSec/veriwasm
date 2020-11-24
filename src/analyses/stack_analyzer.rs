@@ -11,12 +11,12 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
         StackGrowthLattice::new((0,4096))
     }
 
-    fn aexec(&self, in_state : &mut StackGrowthLattice, ir_instr : &Stmt, _loc_idx : &LocIdx) -> () {
-        //println!("Stack aexec: {:?} @ {:?}", ir_instr, _loc_idx);
+    fn aexec(&self, in_state : &mut StackGrowthLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
+        // println!("Stack aexec: {:x} : {:?} rsp = {:?}", loc_idx.addr, ir_instr, in_state.v);
         match ir_instr{
             Stmt::Clear(dst) => if is_rsp(dst){*in_state = Default::default()},
             Stmt::Unop(_, dst, _) => if is_rsp(dst){*in_state = Default::default()},
-            Stmt::Binop(opcode, dst, src1, src2) =>  
+            Stmt::Binop(opcode, dst, src1, src2) =>{  
             if is_rsp(dst) {
                 if is_rsp(src1){ 
                     let offset = get_imm_offset(src2);
@@ -29,7 +29,8 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
                     }
                     else {*in_state = Default::default() }
                 }
-                else{ panic!("Illegal RSP write") }
+                else{*in_state = Default::default() }
+            }
             },
             Stmt::ProbeStack(new_probestack) => 
             if let Some((x,_old_probestack)) = in_state.v{

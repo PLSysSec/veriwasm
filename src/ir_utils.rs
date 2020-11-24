@@ -1,10 +1,13 @@
 use crate::lifter::{Value,ValSize, MemArg, MemArgs};
 
 pub fn is_rsp(v : &Value) -> bool{
-    if let Value::Reg(4, ValSize::Size64) = v {
-        return true
+    match v{
+        Value::Reg(4,ValSize::Size64) => return true,
+        Value::Reg(4,ValSize::Size32) |
+        Value::Reg(4,ValSize::Size16) |
+        Value::Reg(4,ValSize::Size8) => panic!("Illegal RSP access"),
+        _ => return false
     }
-    false
 }
 
 pub fn is_irrelevant_reg(v : &Value) -> bool{

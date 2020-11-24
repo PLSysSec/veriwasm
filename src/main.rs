@@ -23,6 +23,9 @@ use lifter::{Stmt, Value};
 use crate::checkers::stack_checker::check_stack;
 use crate::checkers::heap_checker::check_heap;
 use std::panic;
+use std::time::{Duration, Instant};
+use serde_json;
+use std::fs;
 
 pub struct Config{
     module_path: String,
@@ -62,6 +65,7 @@ fn has_indirect_jumps(irmap: &IRMap) -> bool{
 
 fn run(config : Config){
     let mut func_counter = 0;
+    let mut info: Vec<(std::string::String, usize, f64, f64, f64)> = vec![];
     let program = load_program(&config.module_path);
     println!("Loading Metadata");
     let metadata = load_metadata(&config.module_path);
@@ -73,15 +77,18 @@ fn run(config : Config){
         check_cfg_integrity(&cfg.blocks,&cfg.graph);
         // assert_eq!(cfg.blocks.keys(), ir);
        
+        let stack_start = Instant::now();
         let stack_analyzer = StackAnalyzer{};
         let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer); 
         let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
         assert!(stack_safe);
         println!("Checking Heap Safety");
+        let heap_start = Instant::now();
         let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
         let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer); 
         let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
         assert!(heap_safe);
+        let call_start = Instant::now();
         println!("Checking Call Safety");
         if has_indirect_calls(&irmap){
             let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
@@ -90,8 +97,27 @@ fn run(config : Config){
             let call_safe = check_calls(call_result, &irmap, &call_analyzer);
             assert!(call_safe);
         }
+        let end = Instant::now();
+        info.push((func_name.to_string(), cfg.blocks.len(), (heap_start - stack_start).as_secs_f64(), (call_start - heap_start).as_secs_f64(), (end - call_start).as_secs_f64()));
+        println!("Verified {:?} at {:?} blocks. Stack: {:?}s Heap: {:?}s Calls: {:?}s", func_name, cfg.blocks.len(), (heap_start - stack_start).as_secs_f64(), (call_start - heap_start).as_secs_f64(), (end - call_start).as_secs_f64());
+        
+    }
+    if config.has_output{
+        let data = serde_json::to_string(&info).unwrap();
+        println!("Dumping Stats to {}", config.output_path);
+        fs::write(config.output_path, data).expect("Unable to write file");
+    }
+
+    let mut total_stack_time = 0.0;
+    let mut total_heap_time = 0.0;
+    let mut total_call_time = 0.0; 
+    for (_,_,stack_time,heap_time,call_time) in &info{
+        total_stack_time += stack_time;
+        total_heap_time += heap_time;
+        total_call_time += call_time;
     }
     println!("Verified {:?} functions", func_counter);
+    println!("Total times = Stack: {:?}s Heap: {:?}s Call: {:?}s", total_stack_time, total_heap_time, total_call_time);
     println!("Done!");
 }
 
@@ -125,7 +151,7 @@ fn main() {
     let num_jobs  = num_jobs_opt.map(|s| s.parse::<u32>().unwrap_or(1)).unwrap_or(1);
     let quiet = matches.is_present("quiet");
 
-    let has_output = if output_path == "" {true} else {false};
+    let has_output = if output_path == "" {false} else {true};
 
     let metadata_path = module_path.clone();
 
@@ -321,134 +347,134 @@ fn full_test_rust_lucet() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="assertion failed: stack_safe")]
 fn negative_test_1() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_1_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="assertion failed: stack_safe")]
 fn negative_test_2() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_2_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="assertion failed: stack_safe")]
 fn negative_test_3() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_3_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="Jump Targets Broken, target = None")]
 fn negative_test_4() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_4_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="assertion failed: call_safe")]
 fn negative_test_5() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_5_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="Jump Targets Broken, target = None")]
 fn negative_test_6() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_6_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="assertion failed: heap_safe")]
 fn negative_test_7() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_7_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="assertion failed: heap_safe")]
 fn negative_test_8() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_8_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="assertion failed: heap_safe")]
 fn negative_test_9() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_9_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="assertion failed: heap_safe")]
 fn negative_test_10() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_10_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="assertion failed: heap_safe")]
 fn negative_test_11() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_11_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="not implemented")]
 fn negative_test_12() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_12_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="not implemented")]
 fn negative_test_13() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_13_testfail");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="assertion failed: heap_safe")]
 fn negative_test_14() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_14_testfail");
 }
 
 // # NaCl issue #23
 #[test]
-#[should_panic]
+#[should_panic(expected="assertion failed: call_safe")]
 fn negative_test_nacl_23() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_23");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="not implemented")]
 fn negative_test_nacl_323_1() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_323_1");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="not implemented")]
 fn negative_test_nacl_323_2() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_323_2");
 }
 
 #[test]
-#[should_panic]
-fn negative_nacl_323_3() {
+#[should_panic(expected="not implemented")]
+fn negative_test_nacl_323_3() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_323_3");
 }
 
 #[test]
-#[should_panic]
-fn negative_nacl_323_4() {
+#[should_panic(expected="assertion failed: stack_safe")]
+fn negative_test_nacl_323_4() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_323_4");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="not implemented")]
 fn negative_test_nacl_390() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_390");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="Illegal RSP access")]
 fn negative_test_nacl_1585() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_1585");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="not implemented")]
 fn negative_test_nacl_2532() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_nacl_2532");
 }
@@ -460,13 +486,13 @@ fn negative_test_bakersfield_1() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="assertion failed: stack_safe")]
 fn negative_test_misfit_1() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_misfit_1");
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="Jump Targets Broken, target = None")]
 fn negative_test_cranelift_805() {
     negative_test_helper("veriwasm_data/negative_tests/negative_tests.so", "guest_func_cranelift_805");
 }

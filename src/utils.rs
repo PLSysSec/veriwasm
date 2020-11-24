@@ -54,7 +54,7 @@ fn get_function_starts(entrypoint : &u64,
     //All symbols in text section should be function starts 
     for sym in symbols {
         // if sym.section_index == text_section_idx{
-            println!("sym = {:?}", sym);
+            // println!("sym = {:?}", sym);
             x86_64_data.contexts.put(sym.addr as u64, BaseUpdate::Specialized(
                 yaxpeax_core::arch::x86_64::x86Update::FunctionHint
             ));
@@ -104,12 +104,12 @@ fn resolve_cfg(program : &ModuleData, contexts: &MergedContextTable, cfg : &VW_C
         resolved_switches = new_resolved_switches;
         still_unresolved = new_still_unresolved;
     } 
-    println!("======> Resolved CFG");
-    for block_addr in cfg.graph.nodes(){
-        let dests: Vec<u64> = cfg.graph.neighbors(block_addr).collect();
-        let out_addrs: Vec<std::string::String> = dests.clone().into_iter().map(|x| format!("{:x}", x)).rev().collect(); 
-        println!("{:x} {:?}", block_addr, out_addrs);
-    }
+    // println!("======> Resolved CFG");
+    // for block_addr in cfg.graph.nodes(){
+    //     let dests: Vec<u64> = cfg.graph.neighbors(block_addr).collect();
+    //     let out_addrs: Vec<std::string::String> = dests.clone().into_iter().map(|x| format!("{:x}", x)).rev().collect(); 
+    //     println!("{:x} {:?}", block_addr, out_addrs);
+    // }
     assert_eq!(cfg.graph.node_count(), irmap.keys().len());
     assert_eq!(still_unresolved, 0);
     (cfg,irmap)
@@ -152,7 +152,7 @@ pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, (VW_CFG,IRMap) )>{
     while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
         if !((addr >= text_section.start) && (addr <  (text_section.start + text_section.size))) { continue; }
         if let Some(symbol) = x86_64_data.symbol_for(addr){
-        println!("Found maybe function: {:?} valid = {:?}", &symbol.1, is_valid_func_name(&symbol.1));
+        // println!("Found maybe function: {:?} valid = {:?}", &symbol.1, is_valid_func_name(&symbol.1));
         if is_valid_func_name(&symbol.1) { 
             println!("Generating CFG for: {:?}", symbol.1);
             let (new_cfg,irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, metadata.clone(), addr);
