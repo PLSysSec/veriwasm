@@ -122,8 +122,11 @@ impl<T:Lattice + Clone> Lattice for StackLattice<T> {
              match other.map.get(k){
                 Some(v2) => 
                 if v1.size == v2.size {
-                    let newslot =  StackSlot {size : v1.size, value : v1.value.meet(&v2.value.clone())};
-                    newmap.insert(*k, newslot); 
+                    let new_v = v1.value.meet(&v2.value.clone());
+                    if new_v != Default::default(){
+                        let newslot =  StackSlot {size : v1.size, value : new_v};
+                        newmap.insert(*k, newslot); 
+                    }
                 },
                 None => ()
              }

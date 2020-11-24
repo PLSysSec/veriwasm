@@ -27,10 +27,10 @@ impl PartialOrd for ReachingDefnLattice {
             return Some(Ordering::Equal)
         }
         else if self.defs.is_subset(&other.defs){
-            return Some(Ordering::Less)
+            return Some(Ordering::Greater)
         }
         else if other.defs.is_subset(&self.defs){
-            return Some(Ordering::Greater)
+            return Some(Ordering::Less)
         }
         else{
             return None
@@ -46,7 +46,7 @@ impl PartialEq for ReachingDefnLattice {
 
 impl Lattice for ReachingDefnLattice {
     fn meet(&self, other : &Self) -> Self {
-        let newdefs :  BTreeSet<LocIdx> =  self.defs.intersection(&other.defs).cloned().collect();
+        let newdefs :  BTreeSet<LocIdx> =  self.defs.union(&other.defs).cloned().collect();
         ReachingDefnLattice {defs : newdefs}
     }
 } 

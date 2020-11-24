@@ -43,15 +43,15 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
 
 
     fn aexec(&self, in_state : &mut ReachLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
-        if loc_idx.addr == 0x1055bb || loc_idx.addr == 0x1055cc || loc_idx.addr == 0x1055de || loc_idx.addr == 0x105814 || loc_idx.addr == 0x001056b9{
-            println!("Before Addr=0x{:x}: mem[0x98] = {:?} mem[0x44] = {:?}", loc_idx.addr, in_state.stack.map.get(&(0x10 + in_state.stack.offset)), in_state.stack.map.get(&(0x64 + in_state.stack.offset)));
+        if loc_idx.addr == 0x1055bb || loc_idx.addr == 0x1055cc || loc_idx.addr == 0x1055de || loc_idx.addr == 0x105814 || loc_idx.addr == 0x001056b9 || loc_idx.addr == 0x0010554c{
+            println!("Start: Before Addr=0x{:x}: mem[0x98] = {:?} mem[0x44] = {:?}", loc_idx.addr, in_state.stack.map.get(&(0x10 + in_state.stack.offset)), in_state.stack.map.get(&(0x64 + in_state.stack.offset)));
         }
         if loc_idx.addr == 0x001055b3 || loc_idx.addr == 0x1055c6 || loc_idx.addr == 0x1055d8 || loc_idx.addr == 0x10588f || loc_idx.addr == 0x10571c{
-            println!("Before Addr=0x{:x}: mem[0x98] = {:?} mem[0x44] = {:?}", loc_idx.addr, in_state.stack.map.get(&(0x10 + in_state.stack.offset)), in_state.stack.map.get(&(0x64 + in_state.stack.offset)));
+            println!("End  : Before Addr=0x{:x}: mem[0x98] = {:?} mem[0x44] = {:?}", loc_idx.addr, in_state.stack.map.get(&(0x10 + in_state.stack.offset)), in_state.stack.map.get(&(0x64 + in_state.stack.offset)));
         }
-        if loc_idx.addr >= 0x00105814 && loc_idx.addr <= 0x10588f{
-            println!(">>>Before Addr=0x{:x}: mem[0x98] = {:?} mem[0x44] = {:?} {:?}", loc_idx.addr, in_state.stack.map.get(&(0x10 + in_state.stack.offset)), in_state.stack.map.get(&(0x64 + in_state.stack.offset)), ir_instr);
-        }
+        // if loc_idx.addr >= 0x00105814 && loc_idx.addr <= 0x10588f{
+        //     println!(">>>Before Addr=0x{:x}: mem[0x98] = {:?} mem[0x44] = {:?} {:?}", loc_idx.addr, in_state.stack.map.get(&(0x10 + in_state.stack.offset)), in_state.stack.map.get(&(0x64 + in_state.stack.offset)), ir_instr);
+        // }
         match ir_instr{
             Stmt::Clear(dst) => in_state.set(dst, singleton(loc_idx.clone())),
             Stmt::Unop(Unopcode::Mov, dst, src) =>  {
@@ -63,11 +63,11 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
                         // singleton(loc_idx.clone()));
                         // println!("{:x}-------{:?}",loc_idx.addr, ir_instr);
                         in_state.set(dst, singleton(loc_idx.clone()));
-                        match src{
-                            Value::Mem(memsize,_) => in_state.set(src, singleton(loc_idx.clone())),
-                            Value::Reg(_,_) => in_state.set(src, singleton(loc_idx.clone())),
-                            _ => (),
-                        }
+                        // match src{
+                        //     Value::Mem(memsize,_) => in_state.set(src, singleton(loc_idx.clone())),
+                        //     Value::Reg(_,_) => in_state.set(src, singleton(loc_idx.clone())),
+                        //     _ => (),
+                        // }
                         // in_state.set(src, singleton(loc_idx.clone()));
                     
                     }
@@ -79,11 +79,11 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
                 else{
                     // println!("Addr=0x{:x}: {:?} and {:?} = {:?}",loc_idx.addr, dst, src, singleton(loc_idx.clone()));
                     in_state.set(dst, singleton(loc_idx.clone()));
-                    match src{
-                        Value::Mem(_,_) => in_state.set(src, singleton(loc_idx.clone())),
-                        Value::Reg(_,_) => in_state.set(src, singleton(loc_idx.clone())),
-                        _ => (),
-                    }
+                    // match src{
+                    //     Value::Mem(_,_) => in_state.set(src, singleton(loc_idx.clone())),
+                    //     Value::Reg(_,_) => in_state.set(src, singleton(loc_idx.clone())),
+                    //     _ => (),
+                    // }
                     // in_state.set(src, singleton(loc_idx.clone()));
                 }
                 //in_state.set(dst, singleton(loc_idx.clone()))
