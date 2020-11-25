@@ -94,13 +94,21 @@ fn run(config : Config){
         let stack_analyzer = StackAnalyzer{};
         let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer); 
         let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
-        assert!(stack_safe);
+        if !stack_safe{
+            panic!("Not Stack Safe");
+        }
+        // assert!(stack_safe);
+        // println!("stack_safe = {:?}", stack_safe);
         println!("Checking Heap Safety");
         let heap_start = Instant::now();
         let heap_analyzer = HeapAnalyzer{metadata : metadata.clone()};
         let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer); 
         let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
-        assert!(heap_safe);
+        if !heap_safe{
+            panic!("Not Heap Safe");
+        }
+        // assert!(heap_safe);
+        // println!("heap_safe = {:?}", heap_safe);
         let call_start = Instant::now();
         println!("Checking Call Safety");
         if has_indirect_calls(&irmap){
@@ -108,7 +116,11 @@ fn run(config : Config){
             let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
             let call_result = run_worklist(&cfg, &irmap, &call_analyzer);    
             let call_safe = check_calls(call_result, &irmap, &call_analyzer);
-            assert!(call_safe);
+            if !call_safe{
+                panic!("Not Call Safe");
+            }
+            // println!("call_safe = {:?}", call_safe);
+            // assert!(call_safe);
         }
         let end = Instant::now();
         info.push((func_name.to_string(), cfg.blocks.len(), (stack_start - start).as_secs_f64(), (heap_start - stack_start).as_secs_f64(), (call_start - heap_start).as_secs_f64(), (end - call_start).as_secs_f64()));
