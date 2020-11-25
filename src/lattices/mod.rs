@@ -196,17 +196,6 @@ impl<T:Lattice + Clone> VarState for VariableState<T> {
     }
 } 
 
-// //TODO: complete transition to default aexec
-// impl<T:Lattice + Clone> VariableState<T>{
-//     pub fn default_exec_binop(&mut self, dst: &Value, src1: &Value, src2: &Value){
-//         self.adjust_stack_offset(dst, src1, src2); 
-//         self.set_to_bot(dst)
-//     }
-// }
-
-
-
-
 #[test]
 fn boolean_lattice_test() {
     let x  = BooleanLattice {v : false};

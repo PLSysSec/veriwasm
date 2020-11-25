@@ -80,6 +80,7 @@ fn run(config : Config){
     // for (func_name,(cfg,irmap)) in
     // get_resolved_cfgs(&config.module_path).iter(){
     let (x86_64_data,func_addrs) = get_data(&config.module_path, &program);
+    let valid_funcs : Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     for (addr,func_name) in func_addrs{
         println!("Generating CFG for {:?}", func_name);
         let start = Instant::now();
@@ -115,7 +116,7 @@ fn run(config : Config){
             let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
             let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
             let call_result = run_worklist(&cfg, &irmap, &call_analyzer);    
-            let call_safe = check_calls(call_result, &irmap, &call_analyzer);
+            let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs);
             if !call_safe{
                 panic!("Not Call Safe");
             }
@@ -197,6 +198,7 @@ fn full_test_helper(path: &str){
     println!("Loading Metadata");
     let metadata = load_metadata(&path);
     let (x86_64_data,func_addrs) = get_data(&path, &program);
+    let valid_funcs : Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     for (addr,func_name) in func_addrs{
         let (cfg,irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
         check_cfg_integrity(&cfg.blocks,&cfg.graph);       
@@ -214,7 +216,7 @@ fn full_test_helper(path: &str){
             let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
             let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
             let call_result = run_worklist(&cfg, &irmap, &call_analyzer);    
-            let call_safe = check_calls(call_result, &irmap, &call_analyzer);
+            let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs);
             assert!(call_safe);
         }
     }
@@ -241,9 +243,10 @@ fn negative_test_helper(path: &str, func_name: &str){
     println!("Checking Call Safety");
     if has_indirect_calls(&irmap){
         let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
+        let valid_funcs = vec![];
         let call_analyzer = CallAnalyzer{metadata : metadata.clone(), reaching_defs : reaching_defs.clone(), reaching_analyzer : ReachingDefnAnalyzer{}};
         let call_result = run_worklist(&cfg, &irmap, &call_analyzer);    
-        let call_safe = check_calls(call_result, &irmap, &call_analyzer);
+        let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs);
         assert!(call_safe);
         
     }

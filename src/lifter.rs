@@ -144,7 +144,6 @@ fn convert_memarg_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> MemArg{
     MemArg::Reg(reg.num, size)
 }
 
-//TODO: make size of memory args more correct?
 fn convert_operand(op : yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Value{
     match op{
         Operand::ImmediateI8(imm) => Value::Imm(ImmType::Signed, ValSize::Size8, imm as i64),
@@ -222,7 +221,7 @@ fn unop(opcode: Unopcode, instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
         (None,None) => panic!("Two Memory Args?"),
         (Some(x),None) => x,
         (None,Some(x)) => x,
-        (Some(x),Some(y)) => {x},//TODO: is this right?
+        (Some(x),Some(y)) => {x},
     };
     Stmt::Unop(opcode, convert_operand(instr.operand(0),memsize), convert_operand(instr.operand(1),memsize))
 }
@@ -232,7 +231,7 @@ fn binop(opcode: Binopcode, instr : &yaxpeax_x86::long_mode::Instruction) -> Stm
         (None,None) => panic!("Two Memory Args?"),
         (Some(x),None) => x,
         (None,Some(x)) => x,
-        (Some(x),Some(y)) => {x},//TODO: fix this
+        (Some(x),Some(y)) => {x},
     };
     // if two operands than dst is src1
     if instr.operand_count() == 2{ 
@@ -250,13 +249,6 @@ fn branch(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
 
 fn call(instr : &yaxpeax_x86::long_mode::Instruction, metadata : &LucetMetadata) -> Stmt{
     let dst = convert_operand(instr.operand(0), ValSize::Size64);
-    // if let Value::Imm(_,_,offset) = dst {
-    //     // if offset == metadata.lucet_probestack{
-    //     //     Stmt::ProbeStack()
-    //     // }
-    //     println!("Lifting Call dst = {:x} lucet_probestack = {:x}", offset, metadata.lucet_probestack);
-    // }
-    
     Stmt::Call(dst)
 }
 
@@ -517,11 +509,7 @@ pub fn lift_cfg(program : &ModuleData, cfg : &VW_CFG, metadata : &LucetMetadata)
                
                 continue;
             }
-            //println!("{:x?}", addr);
             if is_probestack(instr, &addr, &metadata){
-                //TODO: append probestack
-                //let x = extract_probestack_arg(&last_instr);
-                //println!("x = {:?}", x);
                 match x {
                     Some(v) => {
                         // println!("Found Probestack: {:?} {:?} {:?}", v, v / 4096, ((v / 4096) + 1) * 4096);

@@ -16,7 +16,7 @@ use std::collections::BTreeSet;
 pub struct CallAnalyzer{
     pub metadata: LucetMetadata,
     pub reaching_defs : AnalysisResult<ReachLattice>,
-    pub reaching_analyzer : ReachingDefnAnalyzer
+    pub reaching_analyzer : ReachingDefnAnalyzer,
 }
 
 impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
@@ -28,8 +28,6 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2))
     }
 
-    //TODO: need to add final instruction to process_branch args
-    //TODO: figure out how to extract zflag
     fn process_branch(&self, irmap : &IRMap, in_state : &CallCheckLattice, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,CallCheckLattice)>{
         if succ_addrs.len() == 2{
             let mut not_branch_state = in_state.clone();
@@ -64,7 +62,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                 }
             }
             
-            //3. resolve ptr thunks in stack slots -- TODO
+            //3. resolve ptr thunks in stack slots -- 
             for (stack_offset, stack_slot) in defs_state.stack.map.iter(){
                 if !checked_defs.is_empty() && (stack_slot.value == checked_defs){
                     let v = StackSlot{size: stack_slot.size, value : checked_ptr.clone()};

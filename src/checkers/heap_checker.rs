@@ -117,7 +117,6 @@ impl HeapChecker<'_> {
     }
 
     fn check_metadata_access(&self, state : &HeapLattice, access: &Value) -> bool{
-        //TODO: allow metadata access if global_table_base is either of the args
         if let Value::Mem(size, memargs) = access {
             match memargs{
                 //Case 1: mem[globals_base]
