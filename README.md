@@ -3,7 +3,7 @@ veriwasm, but now in Rust!
 
 To Setup:  
 `git submodule update --init --recursive`  
-`cargo build  `
+`cargo build --release  `
 
 To Run:  
 `cargo run --release -- -i <input path> -o <output path for statistics> `
