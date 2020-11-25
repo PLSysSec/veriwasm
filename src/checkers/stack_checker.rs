@@ -81,7 +81,7 @@ impl StackChecker<'_> {
                     return (-state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap()) && (state.get_stackgrowth().unwrap() <8096),
                 MemArgs::Mem2Args(memarg1, memarg2) => {
                     let offset = get_imm_mem_offset(memarg2);
-                    println!("Checking Stack Read: {:?} <= {:?} < {:?} offset = {:?}",-state.get_probestack().unwrap(), state.get_stackgrowth().unwrap() + offset, 8096, state.get_stackgrowth().unwrap());
+                    // println!("Checking Stack Read: {:?} <= {:?} < {:?} offset = {:?}",-state.get_probestack().unwrap(), state.get_stackgrowth().unwrap() + offset, 8096, state.get_stackgrowth().unwrap());
                     return (-state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap() + offset) && (state.get_stackgrowth().unwrap() + offset <8096)
                 },
                 _ => return false //stack accesses should never have 3 args

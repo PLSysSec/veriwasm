@@ -19,7 +19,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
 
     fn aexec_unop(&self, in_state : &mut HeapLattice, dst : &Value, src : &Value) -> (){
         let v = self.aeval_unop(in_state, src);
-        //println!("dst = {:?} = {:?}", dst, v);
+        // println!("dst = {:?} = {:?}, rax = {:?}", dst, v, in_state.regs.rax);
         in_state.set(dst, v)
     }
 }
@@ -69,7 +69,7 @@ impl HeapAnalyzer{
                 else if (*immval as u64) == self.metadata.lucet_tables {
                     return HeapValueLattice::new(HeapValue::LucetTables)
                 }
-                else if (*immval > 0) && (*immval < (1 << 32) ) {
+                else if (*immval >= 0) && (*immval < (1 << 32) ) {
                     return HeapValueLattice::new(HeapValue::Bounded4GB)
                 }
             }

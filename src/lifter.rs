@@ -324,27 +324,34 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata 
         },
 
         Opcode::NOP | Opcode::FILD | Opcode::STD | Opcode::CLD | Opcode::STI => (),
+        Opcode::IDIV | Opcode::DIV => { 
+            instrs.push(Stmt::Clear(Value::Reg(0, ValSize::Size64))); // clear RAX 
+            instrs.push(Stmt::Clear(Value::Reg(2, ValSize::Size64))); // clear RDX
+        },
+
+        Opcode::XOR => {
+            //XOR reg, reg => mov reg, 0
+            if instr.operand_count() == 2 && instr.operand(0) == instr.operand(1){
+                instrs.push(Stmt::Unop(Unopcode::Mov, convert_operand(instr.operand(0), ValSize::Size64), Value::Imm(ImmType::Signed, ValSize::Size64, 0)));
+            } 
+            else {instrs.push(clear_dst(instr))}
+        }, 
 
         Opcode::OR | Opcode::SHR | Opcode::RCL | Opcode::RCR | Opcode::ROL | Opcode::ROR | 
         Opcode::CMOVA|Opcode::CMOVB|Opcode::CMOVG|Opcode::CMOVGE|Opcode::CMOVL|Opcode::CMOVLE|Opcode::CMOVNA|Opcode::CMOVNB|
         Opcode::CMOVNO|Opcode::CMOVNP|Opcode::CMOVNS|Opcode::CMOVNZ|Opcode::CMOVO|Opcode::CMOVP|Opcode::CMOVS|Opcode::CMOVZ | 
         SETO|SETNO|SETB|SETAE|SETZ|SETNZ|SETBE|SETA|SETS|
         SETNS|SETP|SETNP|SETL|SETGE|SETLE|SETG |
-        Opcode::XOR | Opcode::SAR | Opcode::ADC | Opcode::XOR | Opcode::ROUNDSS |
-        Opcode::MUL | Opcode::MOVSS | Opcode::IMUL | Opcode::DIV | Opcode::XORPD |
-        Opcode::MUL | Opcode::POR | Opcode::PSHUFB | Opcode::PSHUFD |
+        Opcode::SAR | Opcode::ADC |  Opcode::ROUNDSS |
+        Opcode::MUL | Opcode::MOVSS | Opcode::IMUL | Opcode::XORPD |
+        Opcode::POR | Opcode::PSHUFB | Opcode::PSHUFD |
         Opcode::PTEST | Opcode::PXOR | Opcode::ANDNPS |   Opcode::XORPS | 
-        Opcode::XORPD | Opcode::CMPPD | Opcode::CMPPS | Opcode::ANDPS |
+        Opcode::CMPPD | Opcode::CMPPS | Opcode::ANDPS |
         Opcode::ORPS | Opcode::MOVAPS | Opcode::DIVSD |
         Opcode::MULSS | Opcode::ADDSD | Opcode::UCOMISD |
         Opcode::SUBSS | Opcode::ROUNDSD | Opcode::NOT | Opcode::UCOMISS | Opcode::POPCNT |
-        Opcode::SUBSD | Opcode::MULSD | Opcode::DIVSS | Opcode::IDIV | Opcode::ANDNPS | Opcode::LZCNT |
-        Opcode::ANDPS | Opcode::DIV | Opcode::DIVPD | Opcode::DIVPS |
-        Opcode::DIVSD | Opcode::DIVSS |
-        Opcode::IDIV |
-        Opcode::IMUL |
-        Opcode::XORPD |
-        Opcode::XORPS |
+        Opcode::SUBSD | Opcode::MULSD | Opcode::DIVSS | Opcode::LZCNT |
+        Opcode::DIVPD | Opcode::DIVPS |
         Opcode::BLENDVPS |
         Opcode::BLENDVPD |
         Opcode::MAXPD |
@@ -357,9 +364,6 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata 
         Opcode::MINSS |
         Opcode::MULPD |
         Opcode::MULPS |
-        Opcode::MULSD |
-        Opcode::MULSS |
-        Opcode::ORPS |
         Opcode::PMULLW |
         Opcode::PMULLD |
         Opcode::CVTDQ2PS |
@@ -369,7 +373,7 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata 
         Opcode::CVTSS2SD |
         Opcode::CVTTSD2SI |
         Opcode::CVTTSS2SI |
-        Opcode::ADDPS | Opcode::ADDPD | Opcode::ADDSD | Opcode::ADDSS | 
+        Opcode::ADDPS | Opcode::ADDPD |  Opcode::ADDSS | 
         Opcode::PSLLW |
         Opcode::PSLLD |
         Opcode::PSLLQ |
@@ -435,9 +439,9 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata 
         Opcode::PMOVZXBW |
         Opcode::PMOVZXWD | Opcode::PMOVZXDQ |
         Opcode::SQRTPD | Opcode::SQRTPS | Opcode::SQRTSD | Opcode::SQRTSS |
-        Opcode::MOVLPS | Opcode::MOVAPS | Opcode::MOVLHPS|
+        Opcode::MOVLPS |  Opcode::MOVLHPS|
         Opcode::MOVUPS | Opcode::SUBPD | Opcode::SUBPS |
-        Opcode::SUBSD | Opcode::SUBSS | Opcode::TZCNT |
+        Opcode::TZCNT |
         Opcode::SBB | Opcode::BSR | Opcode::BSF => instrs.push(clear_dst(instr)),
         _ => unimplemented!()
     };

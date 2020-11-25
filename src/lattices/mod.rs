@@ -9,7 +9,7 @@ pub mod reachingdefslattice;
 use crate::ir_utils::{get_imm_offset,is_rsp};
 use crate::lattices::regslattice::X86RegsLattice;
 use crate::lattices::stacklattice::StackLattice;
-use crate::lifter::{Value, MemArgs, MemArg, Binopcode};
+use crate::lifter::{Value, MemArgs, MemArg, Binopcode, ValSize};
 use std::fmt::Debug;
 use std::cmp::Ordering;
 
@@ -140,7 +140,10 @@ impl<T:Lattice + Clone> VarState for VariableState<T> {
                     },
                 _ => ()
             },
-            Value::Reg(regnum,s2) => self.regs.set(regnum, s2, value),
+            Value::Reg(regnum,s2) => {
+                if let ValSize::SizeOther = s2 {}
+                else{self.regs.set(regnum, s2, value)}
+            },
             Value::Imm(_,_,_) => panic!("Trying to write to an immediate value"),
         }
     } 
