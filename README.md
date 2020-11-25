@@ -6,7 +6,7 @@ To Setup:
 `cargo build  `
 
 To Run:  
-`cargo run -- -i <input path>  `
+`cargo run --release -- -i <input path>  `
 
 To Test:  
 `git clone git@github.com:PLSysSec/veriwasm_data.git`  
