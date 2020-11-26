@@ -5,7 +5,6 @@ pub mod metadata;
 pub mod lifter;
 pub mod ir_utils;
 pub mod checkers;
-pub mod cfg;
 use crate::utils::fully_resolved_cfg;
 use crate::utils::get_data;
 use crate::utils::get_one_resolved_cfg;

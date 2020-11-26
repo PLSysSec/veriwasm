@@ -1,4 +1,5 @@
 // use lucet_module::Module;
+/*
 use crate::utils::load_program;
 use lucet_runtime::{self, DlModule, Limits, MmapRegion, PublicKey, Region, RunResult};
 use lucet_module::{self,
@@ -299,3 +300,5 @@ fn load_module<'b, 'a: 'b>(
         function_manifest,
     }
 }
+
+*/
