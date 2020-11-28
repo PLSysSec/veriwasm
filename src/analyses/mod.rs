@@ -26,7 +26,7 @@ pub trait AbstractAnalyzer<State:Lattice + VarState + Clone> {
 
     fn aexec(&self, in_state : &mut State, ir_instr : &Stmt, loc_idx : &LocIdx) -> (){
         match ir_instr{
-            Stmt::Clear(dst) => in_state.set_to_bot(dst),
+            Stmt::Clear(dst, srcs) => in_state.set_to_bot(dst),
             Stmt::Unop(_, dst, src) => self.aexec_unop(in_state, &dst, &src, loc_idx),
             Stmt::Binop(opcode, dst, src1, src2) =>  {self.aexec_binop(in_state, opcode, dst, src1, src2, loc_idx); in_state.adjust_stack_offset(opcode,dst,src1,src2)},
             Stmt::Call(_) => in_state.on_call(),

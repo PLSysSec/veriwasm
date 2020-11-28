@@ -53,7 +53,7 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
         //     println!(">>>Before Addr=0x{:x}: mem[0x98] = {:?} mem[0x44] = {:?} {:?}", loc_idx.addr, in_state.stack.map.get(&(0x10 + in_state.stack.offset)), in_state.stack.map.get(&(0x64 + in_state.stack.offset)), ir_instr);
         // }
         match ir_instr{
-            Stmt::Clear(dst) => in_state.set(dst, singleton(loc_idx.clone())),
+            Stmt::Clear(dst, srcs) => in_state.set(dst, singleton(loc_idx.clone())),
             Stmt::Unop(Unopcode::Mov, dst, src) =>  {
                 if let Some(v) = in_state.get(src){
                     // println!("Addr=0x{:x}: {:?} {:?}",loc_idx.addr, v.defs, v.defs.is_empty());

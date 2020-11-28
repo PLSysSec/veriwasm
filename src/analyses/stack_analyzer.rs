@@ -14,7 +14,7 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
     fn aexec(&self, in_state : &mut StackGrowthLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
         // println!("Stack aexec: {:x} : {:?} rsp = {:?}", loc_idx.addr, ir_instr, in_state.v);
         match ir_instr{
-            Stmt::Clear(dst) => if is_rsp(dst){*in_state = Default::default()},
+            Stmt::Clear(dst, srcs) => if is_rsp(dst){*in_state = Default::default()},
             Stmt::Unop(_, dst, _) => if is_rsp(dst){*in_state = Default::default()},
             Stmt::Binop(opcode, dst, src1, src2) =>{  
             if is_rsp(dst) {

@@ -74,7 +74,7 @@ pub enum Value {
 // }
 #[derive(Debug)]
 pub enum Stmt {
-    Clear(Value),
+    Clear(Value, Vec<Value>),
     Unop(Unopcode, Value, Value),
     Binop(Binopcode, Value, Value, Value),
     Undefined,
@@ -186,8 +186,20 @@ fn convert_operand(op : yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Va
     }
 }
 
+fn get_sources(instr : &yaxpeax_x86::long_mode::Instruction) -> Vec<Value>{
+    match instr.operand_count(){
+        0 => vec![],
+        1 => vec![],
+        2 => vec![],
+        3 => vec![],
+        4 => vec![],
+        _ => panic!("Too many arguments?"),
+    }
+}
+
 fn clear_dst(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
-    Stmt::Clear(convert_operand(instr.operand(0), ValSize::Size8))//TODO: fix this
+    let srcs : Vec<Value> = get_sources(instr);
+    Stmt::Clear(convert_operand(instr.operand(0), ValSize::Size8), srcs)//TODO: fix this
 }
 
 fn get_operand_size(op : yaxpeax_x86::long_mode::Operand) -> Option<ValSize>{
@@ -325,8 +337,8 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata 
 
         Opcode::NOP | Opcode::FILD | Opcode::STD | Opcode::CLD | Opcode::STI => (),
         Opcode::IDIV | Opcode::DIV => { 
-            instrs.push(Stmt::Clear(Value::Reg(0, ValSize::Size64))); // clear RAX 
-            instrs.push(Stmt::Clear(Value::Reg(2, ValSize::Size64))); // clear RDX
+            instrs.push(Stmt::Clear(Value::Reg(0, ValSize::Size64), vec![])); // clear RAX 
+            instrs.push(Stmt::Clear(Value::Reg(2, ValSize::Size64), vec![])); // clear RDX
         },
 
         Opcode::XOR => {
