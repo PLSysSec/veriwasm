@@ -189,17 +189,17 @@ fn convert_operand(op : yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Va
 fn get_sources(instr : &yaxpeax_x86::long_mode::Instruction) -> Vec<Value>{
     match instr.operand_count(){
         0 => vec![],
-        1 => vec![],
-        2 => vec![],
-        3 => vec![],
-        4 => vec![],
+        1 => vec![convert_operand(instr.operand(0), ValSize::Size32)],
+        2 => vec![convert_operand(instr.operand(0), ValSize::Size32), convert_operand(instr.operand(1), ValSize::Size32)],
+        3 => vec![convert_operand(instr.operand(0), ValSize::Size32), convert_operand(instr.operand(1), ValSize::Size32), convert_operand(instr.operand(2), ValSize::Size32)],
+        4 => vec![convert_operand(instr.operand(0), ValSize::Size32), convert_operand(instr.operand(1), ValSize::Size32), convert_operand(instr.operand(2), ValSize::Size32), convert_operand(instr.operand(3), ValSize::Size32)],
         _ => panic!("Too many arguments?"),
     }
 }
 
 fn clear_dst(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
     let srcs : Vec<Value> = get_sources(instr);
-    Stmt::Clear(convert_operand(instr.operand(0), ValSize::Size8), srcs)//TODO: fix this
+    Stmt::Clear(convert_operand(instr.operand(0), ValSize::Size8), srcs)
 }
 
 fn get_operand_size(op : yaxpeax_x86::long_mode::Operand) -> Option<ValSize>{
