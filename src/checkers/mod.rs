@@ -20,7 +20,7 @@ pub trait Checker<State:Lattice + Clone> {
             for (addr,ir_stmts) in self.irmap().get(&block_addr).unwrap(){
                 for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
                     // println!("------------{:x} {:?}", addr, ir_stmt);
-                    if !self.check_statement(&state, ir_stmt){
+                    if !self.check_statement(&state, ir_stmt, &LocIdx {addr : *addr, idx : idx as u32}){
                         return false
                     }
                     self.aexec(&mut state, ir_stmt, &LocIdx {addr : *addr, idx : idx as u32});
@@ -29,5 +29,5 @@ pub trait Checker<State:Lattice + Clone> {
         }
         true
     }
-    fn check_statement(&self, state : &State, ir_stmt : &Stmt) -> bool;
+    fn check_statement(&self, state : &State, ir_stmt : &Stmt,  loc_idx : &LocIdx) -> bool;
 }

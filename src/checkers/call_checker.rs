@@ -29,7 +29,7 @@ impl Checker<CallCheckLattice> for CallChecker<'_> {
         self.analyzer.aexec(state, ir_stmt, loc)
     }
 
-    fn check_statement(&self, state : &CallCheckLattice, ir_stmt : &Stmt) -> bool {
+    fn check_statement(&self, state : &CallCheckLattice, ir_stmt : &Stmt,  loc_idx : &LocIdx) -> bool {
         //1. Check that all indirect calls use resolved function pointer
         if let Stmt::Call(v) = ir_stmt{
             if !self.check_indirect_call(state, v){

@@ -1,3 +1,4 @@
+use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{VariableState,Lattice};
 use crate::lattices::davlattice::{DAV};
 use std::cmp::Ordering;
@@ -28,12 +29,12 @@ impl Default for CallCheckValueLattice {
 }
 
 impl Lattice for CallCheckValueLattice {
-    fn meet(&self, other : &Self) -> Self {
+    fn meet(&self, other : &Self, loc_idx : &LocIdx) -> Self {
         if self.v.clone() == other.v {CallCheckValueLattice {v : self.v.clone()}}
         else {
             match (self.v.clone(), other.v.clone()){
                 (Some(CallCheckValue::PtrOffset(x)),Some(CallCheckValue::PtrOffset(y))) => 
-                    CallCheckValueLattice { v : Some(CallCheckValue::PtrOffset(x.meet(&y)))},
+                    CallCheckValueLattice { v : Some(CallCheckValue::PtrOffset(x.meet(&y, loc_idx)))},
                 (_,_) => CallCheckValueLattice { v : None}
             }
         }
@@ -87,10 +88,10 @@ fn call_lattice_test() {
     assert_eq!(x3 < x4, false);
     assert_eq!(x4 < x5, true);
 
-    assert_eq!(x1.meet(&x2) == CallCheckValueLattice {v : None}, true);
-    assert_eq!(x2.meet(&x3) == CallCheckValueLattice {v : None}, true);
-    assert_eq!(x3.meet(&x4) == CallCheckValueLattice {v : Some(CallCheckValue::PtrOffset(DAV::Unknown))}, true);
-    assert_eq!(x4.meet(&x5) ==CallCheckValueLattice {v : Some(CallCheckValue::PtrOffset(DAV::Unknown))}, true);
+    assert_eq!(x1.meet(&x2, &LocIdx{addr: 0,idx: 0}) == CallCheckValueLattice {v : None}, true);
+    assert_eq!(x2.meet(&x3, &LocIdx{addr: 0,idx: 0}) == CallCheckValueLattice {v : None}, true);
+    assert_eq!(x3.meet(&x4, &LocIdx{addr: 0,idx: 0}) == CallCheckValueLattice {v : Some(CallCheckValue::PtrOffset(DAV::Unknown))}, true);
+    assert_eq!(x4.meet(&x5, &LocIdx{addr: 0,idx: 0}) ==CallCheckValueLattice {v : Some(CallCheckValue::PtrOffset(DAV::Unknown))}, true);
 
 
 }

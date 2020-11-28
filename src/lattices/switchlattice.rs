@@ -1,3 +1,4 @@
+use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::VariableState;
 use crate::lattices::{ConstLattice, Lattice};
 
@@ -42,10 +43,10 @@ fn switch_lattice_test() {
     assert_eq!(x3 < x4, false);
     assert_eq!(x4 < x5, false);
 
-    assert_eq!(x1.meet(&x2) == SwitchValueLattice {v : None}, true);
-    assert_eq!(x2.meet(&x3) == SwitchValueLattice {v :  Some(SwitchValue::SwitchBase(1))}, true);
-    assert_eq!(x3.meet(&x4) == SwitchValueLattice {v : None}, true);
-    assert_eq!(x4.meet(&x5) == SwitchValueLattice {v : None}, true);
+    assert_eq!(x1.meet(&x2,  &LocIdx{addr: 0,idx: 0}) == SwitchValueLattice {v : None}, true);
+    assert_eq!(x2.meet(&x3,  &LocIdx{addr: 0,idx: 0}) == SwitchValueLattice {v :  Some(SwitchValue::SwitchBase(1))}, true);
+    assert_eq!(x3.meet(&x4,  &LocIdx{addr: 0,idx: 0}) == SwitchValueLattice {v : None}, true);
+    assert_eq!(x4.meet(&x5,  &LocIdx{addr: 0,idx: 0}) == SwitchValueLattice {v : None}, true);
 
 
 }

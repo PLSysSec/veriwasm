@@ -1,3 +1,4 @@
+use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lifter::{Binopcode,Value};
 use std::cmp::Ordering;
 use crate::lattices::{Lattice, ConstLattice, VarState};
@@ -54,7 +55,7 @@ fn stack_growth_lattice_test() {
     assert_eq!(x2 < x3, false);
     assert_eq!(x3 < x4, false);
 
-    assert_eq!(x1.meet(&x2) == StackGrowthLattice {v : None}, true);
-    assert_eq!(x2.meet(&x3) == StackGrowthLattice {v : Some((1,4096))}, true);
-    assert_eq!(x3.meet(&x4) == StackGrowthLattice {v : None}, true);
+    assert_eq!(x1.meet(&x2,  &LocIdx{addr: 0,idx: 0}) == StackGrowthLattice {v : None}, true);
+    assert_eq!(x2.meet(&x3,  &LocIdx{addr: 0,idx: 0}) == StackGrowthLattice {v : Some((1,4096))}, true);
+    assert_eq!(x3.meet(&x4,  &LocIdx{addr: 0,idx: 0}) == StackGrowthLattice {v : None}, true);
 }

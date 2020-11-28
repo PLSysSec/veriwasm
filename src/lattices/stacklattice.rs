@@ -1,3 +1,4 @@
+use crate::lattices::reachingdefslattice::LocIdx;
 use std::collections::HashSet;
 use std::cmp::Ordering;
 use crate::lattices::{Lattice, BooleanLattice};
@@ -116,13 +117,13 @@ impl<T:Lattice + Clone> PartialEq for StackLattice<T> {
 
 //assumes that stack offset is equal in both stack lattices
 impl<T:Lattice + Clone> Lattice for StackLattice<T> {
-    fn meet(&self, other : &Self) -> Self {
+    fn meet(&self, other : &Self, loc_idx : &LocIdx) -> Self {
         let mut newmap : HashMap <i64, StackSlot<T>> = HashMap::new();
         for (k,v1) in self.map.iter(){
              match other.map.get(k){
                 Some(v2) => 
                 if v1.size == v2.size {
-                    let new_v = v1.value.meet(&v2.value.clone());
+                    let new_v = v1.value.meet(&v2.value.clone(), loc_idx);
                     if new_v != Default::default(){
                         let newslot =  StackSlot {size : v1.size, value : new_v};
                         newmap.insert(*k, newslot); 
@@ -210,7 +211,7 @@ fn stack_lattice_test_ord() {
     assert_eq!(x1 < x2, false);
 
     //check meet of 1 entry vs 2
-    assert_eq!(x1.meet(&x2) == x2, true);
+    assert_eq!(x1.meet(&x2,  &LocIdx{addr: 0,idx: 0}) == x2, true);
     
 }
 

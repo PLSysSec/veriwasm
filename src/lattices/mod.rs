@@ -6,6 +6,7 @@ pub mod calllattice;
 pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod reachingdefslattice;
+use crate::lattices::reachingdefslattice::LocIdx;
 use crate::ir_utils::{get_imm_offset,is_rsp};
 use crate::lattices::regslattice::X86RegsLattice;
 use crate::lattices::stacklattice::StackLattice;
@@ -14,7 +15,7 @@ use std::fmt::Debug;
 use std::cmp::Ordering;
 
 pub trait Lattice: PartialOrd + Eq + Default + Debug{
-    fn meet(&self, other : &Self) -> Self;
+    fn meet(&self, other : &Self,  loc: &LocIdx) -> Self;
 }
 
 pub trait VarState{
@@ -45,7 +46,7 @@ impl PartialEq for BooleanLattice {
 }
 
 impl Lattice for BooleanLattice {
-    fn meet(&self, other : &Self) -> Self {
+    fn meet(&self, other : &Self, loc_idx : &LocIdx) -> Self {
         BooleanLattice {v : self.v && other.v}
     }
 } 
@@ -83,7 +84,7 @@ impl<T:Eq + Copy + Debug> PartialEq for ConstLattice<T> {
 }
 
 impl<T:Eq + Copy + Debug> Lattice for ConstLattice<T> {
-    fn meet(&self, other : &Self) -> Self {
+    fn meet(&self, other : &Self, loc_idx : &LocIdx) -> Self {
         if self.v == other.v {ConstLattice {v : self.v}}
         else {ConstLattice { v : None}}
     }
@@ -110,10 +111,10 @@ pub struct VariableState<T:Lattice + Clone>{
 }
 
 impl<T:Lattice + Clone> Lattice for VariableState<T> {
-    fn meet(&self, other : &Self) -> Self {
+    fn meet(&self, other : &Self, loc_idx : &LocIdx) -> Self {
         VariableState { 
-            regs : self.regs.meet(&other.regs), 
-            stack : self.stack.meet(&other.stack)
+            regs : self.regs.meet(&other.regs, loc_idx), 
+            stack : self.stack.meet(&other.stack, loc_idx)
         }
     }
 } 

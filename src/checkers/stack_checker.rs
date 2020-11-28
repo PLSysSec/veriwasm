@@ -33,7 +33,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
         self.analyzer.aexec(state, ir_stmt, loc)
     }
 
-    fn check_statement(&self, state : &StackGrowthLattice, ir_stmt : &Stmt) -> bool {
+    fn check_statement(&self, state : &StackGrowthLattice, ir_stmt : &Stmt,  loc_idx : &LocIdx) -> bool {
         //1, stackgrowth is never Bottom or >= 0
         match state.v {
             None => {println!("Failure Case: Stackgrowth = None"); return false},

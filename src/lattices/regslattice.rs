@@ -1,3 +1,4 @@
+use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lifter::ValSize;
 use crate::lattices::{Lattice, BooleanLattice};
 
@@ -175,25 +176,25 @@ impl<T:Lattice + Clone> X86RegsLattice<T>{
 // }
 
 impl<T:Lattice + Clone> Lattice for X86RegsLattice<T> {
-    fn meet(&self, other : &Self) -> Self {
+    fn meet(&self, other : &Self, loc_idx : &LocIdx) -> Self {
         X86RegsLattice {
-            rax : self.rax.meet(&other.rax), 
-            rbx: self.rbx.meet(&other.rbx), 
-            rcx : self.rcx.meet(&other.rcx),
-            rdx : self.rdx.meet(&other.rdx),
-            rdi : self.rdi.meet(&other.rdi),
-            rsi : self.rsi.meet(&other.rsi),
-            rsp : self.rsp.meet(&other.rsp),
-            rbp : self.rbp.meet(&other.rbp),
-            r8 : self.r8.meet(&other.r8),
-            r9 : self.r9.meet(&other.r9),
-            r10 : self.r10.meet(&other.r10),
-            r11 : self.r11.meet(&other.r11),
-            r12 : self.r12.meet(&other.r12),
-            r13 : self.r13.meet(&other.r13),
-            r14 : self.r14.meet(&other.r14),
-            r15 : self.r15.meet(&other.r15),
-            zf : self.zf.meet(&other.zf)
+            rax : self.rax.meet(&other.rax, loc_idx), 
+            rbx: self.rbx.meet(&other.rbx, loc_idx), 
+            rcx : self.rcx.meet(&other.rcx, loc_idx),
+            rdx : self.rdx.meet(&other.rdx, loc_idx),
+            rdi : self.rdi.meet(&other.rdi, loc_idx),
+            rsi : self.rsi.meet(&other.rsi, loc_idx),
+            rsp : self.rsp.meet(&other.rsp, loc_idx),
+            rbp : self.rbp.meet(&other.rbp, loc_idx),
+            r8 : self.r8.meet(&other.r8, loc_idx),
+            r9 : self.r9.meet(&other.r9, loc_idx),
+            r10 : self.r10.meet(&other.r10, loc_idx),
+            r11 : self.r11.meet(&other.r11, loc_idx),
+            r12 : self.r12.meet(&other.r12, loc_idx),
+            r13 : self.r13.meet(&other.r13, loc_idx),
+            r14 : self.r14.meet(&other.r14, loc_idx),
+            r15 : self.r15.meet(&other.r15, loc_idx),
+            zf : self.zf.meet(&other.zf, loc_idx)
         }
     }
 } 
@@ -275,7 +276,7 @@ fn regs_lattice_test() {
     assert_eq!(r2 < r3, false);
     assert_eq!(r2 <= r3, false);
 
-    assert_eq!(r2.meet(&r3) == r1, true);
-    assert_eq!(r1.meet(&r2) == r1, true);
+    assert_eq!(r2.meet(&r3,  &LocIdx{addr: 0,idx: 0}) == r1, true);
+    assert_eq!(r1.meet(&r2,  &LocIdx{addr: 0,idx: 0}) == r1, true);
 
 }

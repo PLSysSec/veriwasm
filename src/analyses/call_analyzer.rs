@@ -20,11 +20,11 @@ pub struct CallAnalyzer{
 }
 
 impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
-    fn aexec_unop(&self, in_state : &mut CallCheckLattice, dst : &Value, src : &Value) -> (){
+    fn aexec_unop(&self, in_state : &mut CallCheckLattice, dst : &Value, src : &Value, loc_idx : &LocIdx) -> (){
         in_state.set(dst, self.aeval_unop(in_state, src))
     }
 
-    fn aexec_binop(&self, in_state : &mut CallCheckLattice, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value) -> (){
+    fn aexec_binop(&self, in_state : &mut CallCheckLattice, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value, loc_idx : &LocIdx) -> (){
         in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2))
     }
 

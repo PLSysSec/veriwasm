@@ -1,3 +1,4 @@
+use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use std::cmp::Ordering;
 use crate::lattices::{Lattice};
@@ -39,7 +40,7 @@ impl PartialOrd for DAV {
 // }
 
 impl Lattice for DAV {
-    fn meet(&self, other : &Self) -> Self {
+    fn meet(&self, other : &Self, loc_idx : &LocIdx) -> Self {
         match (self, other){
             (DAV::Unknown,_) => DAV::Unknown,
             (_,DAV::Unknown) => DAV::Unknown,

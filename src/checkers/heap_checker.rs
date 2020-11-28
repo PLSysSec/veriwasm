@@ -27,7 +27,7 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
         self.analyzer.aexec(state, ir_stmt, loc)
     }
 
-    fn check_statement(&self, state : &HeapLattice, ir_stmt : &Stmt) -> bool {
+    fn check_statement(&self, state : &HeapLattice, ir_stmt : &Stmt,  loc_idx : &LocIdx) -> bool {
         // println!("rdi = {:?} r15 = {:?} stack = {:?}", state.regs.rdi,
         // state.regs.r15, state.stack);
         // println!("Checking statement for heap {:?} r13 = {:?} stack[0x58] = {:?}", ir_stmt, state.regs.r13, state.stack.get(0x10,ValSize::Size64.to_u32() / 8));

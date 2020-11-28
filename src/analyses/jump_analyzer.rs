@@ -26,12 +26,12 @@ pub struct SwitchAnalyzer{
 }
 
 impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
-    fn aexec_unop(&self, in_state : &mut SwitchLattice, dst : &Value, src : &Value) -> (){
+    fn aexec_unop(&self, in_state : &mut SwitchLattice, dst : &Value, src : &Value, loc_idx : &LocIdx) -> (){
         // println!("exec unop: dst = {:?} rcx = {:?}", dst, in_state.regs.rcx);
         in_state.set(dst, self.aeval_unop(in_state, src))
     }
 
-    fn aexec_binop(&self, in_state : &mut SwitchLattice, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value) -> (){
+    fn aexec_binop(&self, in_state : &mut SwitchLattice, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value, loc_idx : &LocIdx) -> (){
         if let Binopcode::Cmp = opcode{
             // println!("CMP: {:?} = {:?} {:?}", dst, src1, src2);
             // match (in_state.,in_state.regs.get(regnum2).v){

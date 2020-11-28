@@ -1,3 +1,4 @@
+use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::heaplattice::{HeapValueLattice, HeapLattice, HeapValue};
 use crate::analyses::{AbstractAnalyzer};
 use crate::lifter::{Value, MemArgs, MemArg, ValSize};
@@ -17,7 +18,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         result
     }
 
-    fn aexec_unop(&self, in_state : &mut HeapLattice, dst : &Value, src : &Value) -> (){
+    fn aexec_unop(&self, in_state : &mut HeapLattice, dst : &Value, src : &Value, loc_idx : &LocIdx) -> (){
         let v = self.aeval_unop(in_state, src);
         // println!("dst = {:?} = {:?}, rax = {:?}", dst, v, in_state.regs.rax);
         in_state.set(dst, v)

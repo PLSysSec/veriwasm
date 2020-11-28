@@ -17,18 +17,18 @@ pub trait AbstractAnalyzer<State:Lattice + VarState + Clone> {
     fn process_branch(&self, irmap : &IRMap, in_state : &State, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,State)>{
         succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
     }
-    fn aexec_unop(&self, in_state : &mut State, dst : &Value, src : &Value) -> (){
+    fn aexec_unop(&self, in_state : &mut State, dst : &Value, src : &Value, loc_idx : &LocIdx) -> (){
         in_state.set_to_bot(dst)
     }
-    fn aexec_binop(&self, in_state : &mut State, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value) -> (){
+    fn aexec_binop(&self, in_state : &mut State, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value, loc_idx : &LocIdx) -> (){
         in_state.set_to_bot(dst)
     }
 
     fn aexec(&self, in_state : &mut State, ir_instr : &Stmt, loc_idx : &LocIdx) -> (){
         match ir_instr{
             Stmt::Clear(dst) => in_state.set_to_bot(dst),
-            Stmt::Unop(_, dst, src) => self.aexec_unop(in_state, &dst, &src),
-            Stmt::Binop(opcode, dst, src1, src2) =>  {self.aexec_binop(in_state, opcode, dst, src1, src2); in_state.adjust_stack_offset(opcode,dst,src1,src2)},
+            Stmt::Unop(_, dst, src) => self.aexec_unop(in_state, &dst, &src, loc_idx),
+            Stmt::Binop(opcode, dst, src1, src2) =>  {self.aexec_binop(in_state, opcode, dst, src1, src2, loc_idx); in_state.adjust_stack_offset(opcode,dst,src1,src2)},
             Stmt::Call(_) => in_state.on_call(),
             _ => ()
         }
@@ -77,7 +77,7 @@ pub fn run_worklist<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone>
             let mut has_change = false;
             if statemap.contains_key(&succ_addr){
                 let old_state = statemap.get(&succ_addr).unwrap();
-                let merged_state = old_state.meet(&branch_state);   
+                let merged_state = old_state.meet(&branch_state, &LocIdx {addr : addr, idx : 0});   
                 // if succ_addr == 0x001055bb{
                 //     println!(">>>Meet: 0x{:x} => 0x{:x} merging {:?} into {:?}", addr, succ_addr, branch_state, old_state);
                 //     println!("merged_state = {:?}", merged_state);
