@@ -40,13 +40,36 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
                  _ => {println!("Call failure {:?}", state.stack.get(0,8)); return false}
              }},
              //2. Check that all load and store are safe
-             Stmt::Unop(_, dst, src) => 
+             Stmt::Unop(_, dst, src) => {
              if is_mem_access(dst){
                 if !self.check_mem_access(state, dst){return false}
             }
             //stack read: probestack <= stackgrowth + c < 8K
-            else if is_mem_access(src) {
+            if is_mem_access(src) {
                 if !self.check_mem_access(state, src){return false}
+                }
+            },
+
+            Stmt::Binop(_, dst, src1, src2) =>{
+                if is_mem_access(dst){
+                    if !self.check_mem_access(state, dst){return false}
+                }
+                if is_mem_access(src1){
+                    if !self.check_mem_access(state, src1){return false}
+                } 
+                if is_mem_access(src2){
+                    if !self.check_mem_access(state, src2){return false}
+                }
+            },
+            Stmt::Clear(dst, srcs) =>{
+                if is_mem_access(dst){
+                    if !self.check_mem_access(state, dst){return false}
+                }
+                for src in srcs{
+                    if is_mem_access(src){
+                        if !self.check_mem_access(state, src){return false}
+                    }
+                }
             },
              _ => ()
         }
