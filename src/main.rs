@@ -1,7 +1,6 @@
 pub mod lattices;
 pub mod utils;
 pub mod analyses;
-pub mod metadata;
 pub mod lifter;
 pub mod ir_utils;
 pub mod checkers;
