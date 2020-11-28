@@ -32,7 +32,7 @@ impl Checker<CallCheckLattice> for CallChecker<'_> {
     fn check_statement(&self, state : &CallCheckLattice, ir_stmt : &Stmt,  loc_idx : &LocIdx) -> bool {
         //1. Check that all indirect calls use resolved function pointer
         if let Stmt::Call(v) = ir_stmt{
-            if !self.check_indirect_call(state, v){
+            if !self.check_indirect_call(state, v, loc_idx){
                 println!("Failure Case: Indirect Call"); 
                 return false
             }
@@ -51,7 +51,7 @@ impl Checker<CallCheckLattice> for CallChecker<'_> {
 
 impl CallChecker<'_>{
 
-    fn check_indirect_call(&self, state: &CallCheckLattice, target: &Value) -> bool {
+    fn check_indirect_call(&self, state: &CallCheckLattice, target: &Value, loc_idx: &LocIdx) -> bool {
         match target{
             Value::Reg(regnum, size) => 
                 if let Some(CallCheckValue::FnPtr) = state.regs.get(regnum, size).v{    
@@ -59,7 +59,10 @@ impl CallChecker<'_>{
             },
             Value::Mem(_,_) => return false,
             Value::Imm(_,_,imm) => return true,
-            // {println!("Checking calls: imm = {:?} {:?}", imm, *imm as u64); return self.funcs.contains( &(*imm as u64)) } //TODO: check that this is in our set of target funcs
+            // {
+            //     println!("Checking calls: imm = 0x{:x}", (*imm as u64 + loc_idx.addr + 5)); 
+            //     return self.funcs.contains( &(*imm as u64 + loc_idx.addr + 5)) 
+            // }, //TODO: check that this is in our set of target funcs
         }
         false
     }
