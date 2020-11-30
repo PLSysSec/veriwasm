@@ -25,7 +25,11 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
     }
 
     fn aexec_binop(&self, in_state : &mut CallCheckLattice, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value, loc_idx : &LocIdx) -> (){
-        in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2))
+        match opcode{
+            Binopcode::Cmp => (),
+            Binopcode::Test => (),
+            _ => in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2))
+        }
     }
 
     fn process_branch(&self, irmap : &IRMap, in_state : &CallCheckLattice, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,CallCheckLattice)>{

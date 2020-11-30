@@ -42,8 +42,13 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
             }
         }
             //self.aeval_binop(in_state, opcode, src1, src2);
-            // in_state.set(Value::Reg(), self.aeval_binop(in_state, opcode, src1, src2))
-        in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2))
+            // in_state.set(Value::Reg(), self.aeval_binop(in_state, opcode,
+            // src1, src2))
+        match opcode{
+            Binopcode::Cmp => (),
+            Binopcode::Test => (),
+            _ => in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2))
+        }
     }
 
     fn process_branch(&self, irmap : &IRMap, in_state : &SwitchLattice, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,SwitchLattice)>{

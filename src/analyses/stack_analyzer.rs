@@ -16,6 +16,8 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
         match ir_instr{
             Stmt::Clear(dst, srcs) => if is_rsp(dst){*in_state = Default::default()},
             Stmt::Unop(_, dst, _) => if is_rsp(dst){*in_state = Default::default()},
+            Stmt::Binop(Binopcode::Cmp, dst, src1, src2) => (),
+            Stmt::Binop(Binopcode::Test, dst, src1, src2) => (),
             Stmt::Binop(opcode, dst, src1, src2) =>{  
             if is_rsp(dst) {
                 if is_rsp(src1){ 

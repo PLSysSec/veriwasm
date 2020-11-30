@@ -21,7 +21,11 @@ pub trait AbstractAnalyzer<State:Lattice + VarState + Clone> {
         in_state.set_to_bot(dst)
     }
     fn aexec_binop(&self, in_state : &mut State, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value, loc_idx : &LocIdx) -> (){
-        in_state.set_to_bot(dst)
+        match opcode{
+            Binopcode::Cmp => (),
+            Binopcode::Test => (),
+            _ => in_state.set_to_bot(dst)
+        }
     }
 
     fn aexec(&self, in_state : &mut State, ir_instr : &Stmt, loc_idx : &LocIdx) -> (){
