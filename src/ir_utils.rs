@@ -10,6 +10,13 @@ pub fn is_rsp(v : &Value) -> bool{
     }
 }
 
+pub fn is_zf(v : &Value) -> bool{
+    match v{
+        Value::Reg(16,_) => return true,
+        _ => return false
+    }
+}
+
 pub fn is_irrelevant_reg(v : &Value) -> bool{
     if let Value::Reg(_, ValSize::SizeOther) = v {
         return true

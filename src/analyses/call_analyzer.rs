@@ -94,12 +94,10 @@ pub fn is_table_size(in_state : &CallCheckLattice, memargs : &MemArgs) -> bool{
 
 pub fn is_fn_ptr(in_state : &CallCheckLattice, memargs : &MemArgs) -> bool{
     if let MemArgs::Mem3Args(MemArg::Reg(regnum1,size1), MemArg::Reg(regnum2,size2), MemArg::Imm(_,_,immval))  = memargs{ 
-        {
         match (in_state.regs.get(regnum1, size1).v,in_state.regs.get(regnum2, size2).v,immval){
             (Some(CallCheckValue::GuestTableBase),Some(CallCheckValue::PtrOffset(DAV::Checked)),8) => return true,
             (Some(CallCheckValue::PtrOffset(DAV::Checked)),Some(CallCheckValue::GuestTableBase),8) => return true,
             _ => return false
-            }
         }
     }
     false
