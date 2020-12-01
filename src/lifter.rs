@@ -1,3 +1,4 @@
+use yaxpeax_core::arch::x86_64::analyses::data_flow::Location;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::utils::LucetMetadata;
 use yaxpeax_x86::long_mode::Opcode::*;
@@ -8,6 +9,8 @@ use yaxpeax_x86::long_mode::{Arch as AMD64, Operand, RegSpec, RegisterBank, Opco
 use yaxpeax_arch::Arch;
 use yaxpeax_core::arch::InstructionSpan;
 use yaxpeax_arch::LengthedInstruction;
+use yaxpeax_core::data::{Direction, ValueLocations};
+
 
 #[derive(Debug)]
 pub enum ImmType {
@@ -119,16 +122,6 @@ fn get_reg_size(reg : yaxpeax_x86::long_mode::RegSpec) -> ValSize{
 }
 
 fn convert_reg(reg : yaxpeax_x86::long_mode::RegSpec) -> Value{
-    // let size = match reg.bank{
-    //     RegisterBank::Q => ValSize::Size64,
-    //     RegisterBank::D => ValSize::Size32,
-    //     RegisterBank::W => ValSize::Size16,
-    //     RegisterBank::B => ValSize::Size8,
-    //     RegisterBank::rB => ValSize::Size8,
-    //     RegisterBank::RIP => panic!("Write to RIP: {:?}", reg.bank),
-    //     RegisterBank::EIP => panic!("Write to EIP: {:?}", reg.bank),
-    //     _ => ValSize::SizeOther //xmm and ymm
-    // };
     let size = get_reg_size(reg);
     Value::Reg(reg.num, size)
 }
@@ -198,6 +191,14 @@ fn get_sources(instr : &yaxpeax_x86::long_mode::Instruction) -> Vec<Value>{
 }
 
 fn clear_dst(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
+    let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
+    let dsts: Vec<&Location> = uses_vec.iter().filter_map(|(loc, dir)| {
+        match (loc, dir) {
+            (Some(loc), Direction::Write) => { Some(loc) },
+            _ => None
+        }
+    }).collect();
+    // println!("dsts: {:?}", dsts);
     let srcs : Vec<Value> = get_sources(instr);
     Stmt::Clear(convert_operand(instr.operand(0), ValSize::Size8), srcs)
 }
@@ -291,9 +292,7 @@ fn lea(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Stmt{
 pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata : &LucetMetadata) -> Vec<Stmt>{
     let mut instrs = Vec::new();
     //println!("{:?} {:?} instr", addr, instr);
-    if (*addr) == 0x022f38 {
-        println!("Instr at addr: {:x} {:?}", addr, instr);
-    }
+
     match instr.opcode{
         Opcode::MOV => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::MOVSX => instrs.push(unop(Unopcode::Mov, instr)),
@@ -310,10 +309,11 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata 
         Opcode::TEST => instrs.push(binop(Binopcode::Test,instr)), 
         Opcode::CMP => instrs.push(binop(Binopcode::Cmp,instr)),
         // Opcode::CMP => instrs.push(cmp(instr)),
-        Opcode::AND => instrs.push(binop(Binopcode::And,instr)), 
-        Opcode::ADD => instrs.push(binop(Binopcode::Add,instr)), 
-        Opcode::SUB => instrs.push(binop(Binopcode::Sub,instr)),
-        Opcode::SHL => instrs.push(binop(Binopcode::Shl,instr)),
+        //instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), vec![]))
+        Opcode::AND => { instrs.push(binop(Binopcode::And,instr))}, 
+        Opcode::ADD => { instrs.push(binop(Binopcode::Add,instr))}, 
+        Opcode::SUB => { instrs.push(binop(Binopcode::Sub,instr))},
+        Opcode::SHL => { instrs.push(binop(Binopcode::Shl,instr))},
 
         Opcode::UD2 => instrs.push(Stmt::Undefined),
         
@@ -337,6 +337,7 @@ pub fn lift(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, metadata 
 
         Opcode::NOP | Opcode::FILD | Opcode::STD | Opcode::CLD | Opcode::STI => (),
         Opcode::IDIV | Opcode::DIV => { 
+            // instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), vec![]));
             instrs.push(Stmt::Clear(Value::Reg(0, ValSize::Size64), vec![])); // clear RAX 
             instrs.push(Stmt::Clear(Value::Reg(2, ValSize::Size64), vec![])); // clear RDX
         },
@@ -476,19 +477,16 @@ fn is_probestack(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64, meta
 }
 
 fn extract_probestack_arg(instr : &yaxpeax_x86::long_mode::Instruction) -> Option<u64> {
-    // if let Some(instr) = maybe_instr{
-        if let Opcode::MOV = instr.opcode{
-            if let Value::Reg(0,ValSize::Size32) = convert_operand(instr.operand(0), ValSize::SizeOther){
-                if let Value::Imm(_,_,x) = convert_operand(instr.operand(1), ValSize::SizeOther){
-                    if instr.operand_count() == 2{
-                        return Some(x as u64)
-                    }
+    if let Opcode::MOV = instr.opcode{
+        if let Value::Reg(0,ValSize::Size32) = convert_operand(instr.operand(0), ValSize::SizeOther){
+            if let Value::Imm(_,_,x) = convert_operand(instr.operand(1), ValSize::SizeOther){
+                if instr.operand_count() == 2{
+                    return Some(x as u64)
                 }
-            } 
-        // }
+            }
+        } 
     }
     None
-    // panic!("Broken Probestack?")
 }
 
 fn check_probestack_suffix(instr : &yaxpeax_x86::long_mode::Instruction) -> bool {

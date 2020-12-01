@@ -45,6 +45,7 @@ impl<T:Lattice + Clone> X86RegsLattice<T>{
             13 => self.r13.clone(),
             14 => self.r14.clone(),
             15 => self.r15.clone(),
+            16 => self.zf.clone(),
             _ => panic!("Unknown register: index = {:?}", index)
         }
     }
@@ -70,6 +71,7 @@ impl<T:Lattice + Clone> X86RegsLattice<T>{
             13 => self.r13 = value,
             14 => self.r14 = value,
             15 => self.r15 = value,
+            16 => self.zf = value,
             _ => panic!("Unknown register: index = {:?}", index)
         }
     }
@@ -114,66 +116,6 @@ impl<T:Lattice + Clone> X86RegsLattice<T>{
         if self.zf != Default::default() {println!("zf = {:?}", self.zf)}
     }
 }
-
-
-// impl Index<u32> for X86RegsLattice<T:Lattice + Clone> {
-//     type Output = T;
-
-//     fn index(&self, index: u32) -> &Self::Output {
-//         match index {
-//             0 => &self.rax,
-//             1 => &self.rcx,
-//             2 => &self.rdx,
-//             3 => &self.rbx,
-//             4 => &self.rsp,
-//             5 => &self.rbp,
-//             6 => &self.rsi,
-//             7 => &self.rdi,
-//             8 => &self.r8,
-//             9 => &self.r9,
-//             10 => &self.r10,
-//             11 => &self.r11,
-//             12 => &self.r12,
-//             13 => &self.r13,
-//             14 => &self.r14,
-//             15 => &self.r15,
-//             _ => panic!("Unknown register: index = {:?}", index)
-//         }
-//     }
-// }
-
-// impl<T:Lattice + Clone> PartialOrd for X86RegsLattice<T> {
-//     fn partial_cmp(&self, other: &X86RegsLattice<T>) -> Option<Ordering> {
-//         if 
-//         self.rax > other.rax && self.rbx > other.rbx && self.rcx > other.rcx && self.rdx > other.rdx &&
-//         self.rdi > other.rdi && self.rsi > other.rsi && self.rsp > other.rsp && self.rbp > other.rbp && self.r8 > other.r8 &&
-//         self.r9 > other.r9 && self.r10 > other.r10 && self.r11 > other.r11 && self.r12 > other.r12 && 
-//         self.r13 > other.r13 && self.r14 > other.r14 && self.r15 > other.r15 && self.zf > other.zf  
-//         {Some(Ordering::Greater)}
-//         else if 
-//         self.rax < other.rax && self.rbx < other.rbx && self.rcx < other.rcx && self.rdx < other.rdx &&
-//         self.rdi < other.rdi && self.rsi < other.rsi && self.rsp < other.rsp && self.rbp < other.rbp && self.r8 < other.r8 &&
-//         self.r9 < other.r9 && self.r10 < other.r10 && self.r11 < other.r11 && self.r12 < other.r12 && 
-//         self.r13 < other.r13 && self.r14 < other.r14 && self.r15 < other.r15 && self.zf < other.zf 
-//         {Some(Ordering::Less)}
-//         else if 
-//         self.rax == other.rax && self.rbx == other.rbx && self.rcx == other.rcx && self.rdx == other.rdx &&
-//         self.rdi == other.rdi && self.rsi == other.rsi && self.rsp == other.rsp && self.rbp == other.rbp && self.r8 == other.r8 &&
-//         self.r9 == other.r9 && self.r10 == other.r10 && self.r11 == other.r11 && self.r12 == other.r12 && 
-//         self.r13 == other.r13 && self.r14 == other.r14 && self.r15 == other.r15 && self.zf == other.zf 
-//         {Some(Ordering::Equal)}
-//         else {None}
-//     }
-// }
-
-// impl<T:Lattice + Clone> PartialEq for X86RegsLattice<T> {
-//     fn eq(&self, other: &X86RegsLattice<T>) -> bool {
-//         self.rax == other.rax && self.rbx == other.rbx && self.rcx == other.rcx && self.rdx == other.rdx &&
-//         self.rdi == other.rdi && self.rsi == other.rsi && self.rsp == other.rsp && self.rbp == other.rbp && self.r8 == other.r8 &&
-//         self.r9 == other.r9 && self.r10 == other.r10 && self.r11 == other.r11 && self.r12 == other.r12 && 
-//         self.r13 == other.r13 && self.r14 == other.r14 && self.r15 == other.r15 && self.zf == other.zf 
-//     }
-// }
 
 impl<T:Lattice + Clone> Lattice for X86RegsLattice<T> {
     fn meet(&self, other : &Self, loc_idx : &LocIdx) -> Self {

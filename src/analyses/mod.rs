@@ -43,6 +43,26 @@ fn analyze_block<T:AbstractAnalyzer<State>, State:VarState + Lattice + Clone> (a
     let mut new_state = state.clone();
     for (addr,instruction) in irblock.iter(){
         for (idx,ir_insn) in instruction.iter().enumerate(){
+            // if *addr == 0x01bdd7 || *addr == 0x01be3e || *addr == 0x01bf39 ||
+            // *addr == 0x0001bece{
+            // if *addr == 0x00015def || *addr == 0x15e2b{
+            //     println!(">>> {:x} {:?}", addr, state);
+            // } 
+            // if *addr == 0x00015eac || *addr == 0x15ee6{
+            //     println!(">>> {:x} {:?}", addr, state);
+            // } 
+            // if *addr == 0x00015d81 || *addr == 0x15daf{
+            //     println!(">>> {:x} {:?}", addr, state);
+            // } 
+            // if *addr == 0x00015cf4 || *addr == 0x15d22{
+            //     println!(">>> {:x} {:?}", addr, state);
+            // } 
+            // if *addr == 0x00015c6d || *addr == 0x15c9c{
+            //     println!(">>> {:x} {:?}", addr, state);
+            // } 
+            // if *addr == 0x00015ca2 || *addr == 0x00015cf1{
+            //     println!(">>> {:x} {:?}", addr, state);
+            // } 
             analyzer.aexec(&mut new_state, ir_insn, &LocIdx {addr : *addr, idx : idx as u32});
         }
     }

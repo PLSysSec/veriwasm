@@ -59,13 +59,14 @@ pub fn resolve_jumps(
         // println!("{:x}: rcx = {:?}", block_addr, state.regs.rcx);
         for (addr,ir_stmts) in irmap.get(&block_addr).unwrap(){
             for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
-                // if(*addr >= 0x10554c && *addr <= 0x1055b3){
-                //     println!("------------\n{:x} {:?} rax = {:?} r14 = {:?} r15 = {:?}", addr, ir_stmt,state.regs.rax, state.regs.r14, state.regs.r15);
-                // }
+                if(*addr >= 0x0001bf31 && *addr <= 0x0001bf39){
+                    println!("------------\n{:x} {:?} rax = {:?} rbx = {:?} r15 = {:?}", addr, ir_stmt,state.regs.rax, state.regs.rbx, state.regs.r15);
+                }
                 match ir_stmt {
                     Stmt::Branch(_, Value::Reg(regnum,regsize)) => {
                         let aval = state.regs.get(regnum, regsize);
                         println!("extracting jmp target @ {:x}", addr);
+                        // println!("0x{:x}  rax = {:?} rbx = {:?} r15 = {:?}", addr, state.regs.rax, state.regs.rbx, state.regs.r15);
                         let targets = extract_jmp_targets(program, &aval);
                         switch_targets.insert(*addr, targets);
                     },

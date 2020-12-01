@@ -228,7 +228,8 @@ fn negative_test_helper(path: &str, func_name: &str){
     let metadata = load_metadata(&path);
     let (cfg,irmap) = get_one_resolved_cfg(path,func_name);
     println!("Analyzing: {:?}", func_name);
-    check_cfg_integrity(&cfg.blocks,&cfg.graph);       
+    check_cfg_integrity(&cfg.blocks,&cfg.graph);  
+    println!("Checking Stack Safety");     
     let stack_analyzer = StackAnalyzer{};
     let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer); 
     let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);

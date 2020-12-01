@@ -33,17 +33,13 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
 
     fn aexec_binop(&self, in_state : &mut SwitchLattice, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value, loc_idx : &LocIdx) -> (){
         if let Binopcode::Cmp = opcode{
-            // println!("CMP: {:?} = {:?} {:?}", dst, src1, src2);
-            // match (in_state.,in_state.regs.get(regnum2).v){
             match (src1,src2){
                 (Value::Reg(regnum,_),Value::Imm(_,_,imm)) | (Value::Imm(_,_,imm),Value::Reg(regnum,_)) =>
                     in_state.regs.zf = SwitchValueLattice::new(SwitchValue::ZF(*imm as u32, *regnum)),
                 _ => ()
             }
         }
-            //self.aeval_binop(in_state, opcode, src1, src2);
-            // in_state.set(Value::Reg(), self.aeval_binop(in_state, opcode,
-            // src1, src2))
+            
         match opcode{
             Binopcode::Cmp => (),
             Binopcode::Test => (),
@@ -56,6 +52,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         // if *addr == 0x1055bb || *addr == 0x1055cc || *addr == 0x1055de || *addr == 0x105814 || *addr == 0x001056b9{
         //     println!("Start of {:x}: Analysis: mem[0x98] = {:?}, mem[0x44] = {:?}", addr, defs_state.stack.map.get(&(0x10 + defs_state.stack.offset)), defs_state.stack.map.get(&(0x64 + defs_state.stack.offset)));
         // }// println!("{:x}: Analysis: stack = {:?}", addr, defs_state.stack);
+        
         if succ_addrs.len() == 2{
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
@@ -121,7 +118,6 @@ impl SwitchAnalyzer{
 
     // 1. x = switch_base + offset
     pub fn aeval_binop(&self, in_state : &SwitchLattice, opcode : &Binopcode, src1 : &Value, src2: &Value) -> SwitchValueLattice{
-        
         if let Binopcode::Add = opcode{
             if let (Value::Reg(regnum1, size1), Value::Reg(regnum2, size2)) = (src1,src2){
                 match (in_state.regs.get(regnum1,size1).v,in_state.regs.get(regnum2,size2).v){
