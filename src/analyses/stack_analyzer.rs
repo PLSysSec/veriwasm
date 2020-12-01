@@ -25,7 +25,18 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
                     if let Some((x,probestack)) = in_state.v{
                         match opcode{
                             Binopcode::Add => {/*println!("{:?} += {:?}",x, offset);*/ *in_state = StackGrowthLattice {v : Some ((x + offset, probestack))}},
-                            Binopcode::Sub => {/*println!("{:?} -= {:?}",x, offset);*/ *in_state = StackGrowthLattice {v : Some ((x - offset, probestack))}},
+                            Binopcode::Sub => {/*println!("{:?} -= {:?}",x, offset);*/
+                                if (offset - x) > probestack + 4096{
+                                    panic!("Probestack violation")
+                                } 
+                                else if (offset - x) > probestack{
+                                    //if we touch next page after the space
+                                    //we've probed, it cannot skip guard page
+                                    *in_state = StackGrowthLattice {v : Some ((x - offset, probestack + 4096))};
+                                    return;
+                                }
+                                *in_state = StackGrowthLattice {v : Some ((x - offset, probestack))}
+                            },
                             _ => panic!("Illegal RSP write")
                         }
                     }
