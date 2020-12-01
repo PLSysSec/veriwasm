@@ -508,11 +508,9 @@ pub fn lift_cfg(program : &ModuleData, cfg : &VW_CFG, metadata : &LucetMetadata)
     for block_addr in g.nodes(){
         let mut block_ir : Vec<(u64, Vec<Stmt>)> = Vec::new();
         let block = cfg.get_block(block_addr);
-        // println!("Lifting Block: {:x} : {:x}", block_addr, block.end);
         let mut iter = program.instructions_spanning(<AMD64 as Arch>::Decoder::default(), block.start, block.end);
         let mut probestack_suffix = false;
         let mut x : Option<u64> = None;
-        // let mut last_instr : Option<&yaxpeax_x86::long_mode::Instruction> = None;
         while let Some((addr, instr)) = iter.next() {
 
             if probestack_suffix {

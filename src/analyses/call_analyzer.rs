@@ -73,9 +73,8 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     branch_state.stack.map.insert(*stack_offset, v);
                 }
             }
-
+            
             vec![(succ_addrs[0].clone(),not_branch_state), (succ_addrs[1].clone(),branch_state)]
-            //succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
         }
         else {succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()}
     }
