@@ -33,10 +33,11 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
         s.regs.r14 = singleton(LocIdx{addr: 0xdeadbeef, idx : 13});
         s.regs.r15 = singleton(LocIdx{addr: 0xdeadbeef, idx : 14});
 
-        s.stack.update(0x10, singleton(LocIdx{addr: 0xdeadbeef, idx : 15}), 4);
-        s.stack.update(0x18, singleton(LocIdx{addr: 0xdeadbeef, idx : 16}), 4);
-        s.stack.update(0x20, singleton(LocIdx{addr: 0xdeadbeef, idx : 17}), 4);
-        s.stack.update(0x28, singleton(LocIdx{addr: 0xdeadbeef, idx : 18}), 4);
+        s.stack.update(0x8, singleton(LocIdx{addr: 0xdeadbeef, idx : 15}), 4);
+        s.stack.update(0x10, singleton(LocIdx{addr: 0xdeadbeef, idx : 16}), 4);
+        s.stack.update(0x18, singleton(LocIdx{addr: 0xdeadbeef, idx : 17}), 4);
+        s.stack.update(0x20, singleton(LocIdx{addr: 0xdeadbeef, idx : 18}), 4);
+        s.stack.update(0x28, singleton(LocIdx{addr: 0xdeadbeef, idx : 19}), 4);
 
         s
     }

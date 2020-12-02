@@ -53,11 +53,11 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
 
     fn process_branch(&self, irmap : &IRMap, in_state : &SwitchLattice, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,SwitchLattice)>{
         let defs_state = self.reaching_defs.get(addr).unwrap();
-        // if *addr == 0x001235 || *addr == 0x001284{
-        //     println!("Start of {:x}: r15={:?} rax={:?} r10={:?} zf={:?}", addr, in_state.regs.r15, in_state.regs.rax, in_state.regs.r10, in_state.regs.zf);
-        //     // println!("Defs: {:x}: rax={:?} rcx={:?}", addr, defs_state.regs.rax, defs_state.regs.rcx);
+        // if *addr == 0x03455{
+        //     // println!("Start of {:x}: r15={:?} rax={:?} r10={:?} zf={:?}", addr, in_state.regs.r15, in_state.regs.rax, in_state.regs.r10, in_state.regs.zf);
+        //     println!("Defs: {:x}: rax={:?} r15={:?}", addr, defs_state.regs.rax, defs_state.regs.r15);
         // }
-        // }// println!("{:x}: Analysis: stack = {:?}", addr, defs_state.stack);
+        //}// println!("{:x}: Analysis: stack = {:?}", addr, defs_state.stack);
         
         if succ_addrs.len() == 2{
             let mut not_branch_state = in_state.clone();
