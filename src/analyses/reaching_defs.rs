@@ -1,7 +1,7 @@
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::lattices::reachingdefslattice::{ReachLattice, singleton, LocIdx};
 use crate::analyses::{AbstractAnalyzer, run_worklist, AnalysisResult};
-use crate::lifter::{IRMap, Stmt, Binopcode, Unopcode, Value};
+use crate::lifter::{IRMap, Stmt, Binopcode, Unopcode, Value, ValSize};
 use crate::utils::{LucetMetadata};
 use crate::lattices::VarState;
 
@@ -68,7 +68,25 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
                 in_state.adjust_stack_offset(opcode, dst, src1, src2);  
                 in_state.set(dst, singleton(loc_idx.clone()))
             },
-            Stmt::Call(_) => in_state.regs.clear_regs(),
+            Stmt::Call(_) => //in_state.regs.clear_regs(),
+            {
+                in_state.regs.rax = singleton(LocIdx{addr: loc_idx.addr, idx : 0});
+                in_state.regs.rcx = singleton(LocIdx{addr: loc_idx.addr, idx : 1});
+                in_state.regs.rdx = singleton(LocIdx{addr: loc_idx.addr, idx : 2});
+                in_state.regs.rbx = singleton(LocIdx{addr: loc_idx.addr, idx : 3});
+                in_state.regs.rbp = singleton(LocIdx{addr: loc_idx.addr, idx : 4});
+                in_state.regs.rsi = singleton(LocIdx{addr: loc_idx.addr, idx : 5});
+                in_state.regs.rdi = singleton(LocIdx{addr: loc_idx.addr, idx : 6});
+        
+                in_state.regs.r8 = singleton(LocIdx{addr: loc_idx.addr, idx : 7});
+                in_state.regs.r9 = singleton(LocIdx{addr: loc_idx.addr, idx : 8});
+                in_state.regs.r10 = singleton(LocIdx{addr: loc_idx.addr, idx : 9});
+                in_state.regs.r11 = singleton(LocIdx{addr: loc_idx.addr, idx : 10});
+                in_state.regs.r12 = singleton(LocIdx{addr: loc_idx.addr, idx : 11});
+                in_state.regs.r13 = singleton(LocIdx{addr: loc_idx.addr, idx : 12});
+                in_state.regs.r14 = singleton(LocIdx{addr: loc_idx.addr, idx : 13});
+                in_state.regs.r15 = singleton(LocIdx{addr: loc_idx.addr, idx : 14});
+            }
             _ => ()
         }
     }

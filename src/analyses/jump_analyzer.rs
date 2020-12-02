@@ -53,8 +53,10 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
 
     fn process_branch(&self, irmap : &IRMap, in_state : &SwitchLattice, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,SwitchLattice)>{
         let defs_state = self.reaching_defs.get(addr).unwrap();
-        // if *addr == 0x1055bb || *addr == 0x1055cc || *addr == 0x1055de || *addr == 0x105814 || *addr == 0x001056b9{
-        //     println!("Start of {:x}: Analysis: mem[0x98] = {:?}, mem[0x44] = {:?}", addr, defs_state.stack.map.get(&(0x10 + defs_state.stack.offset)), defs_state.stack.map.get(&(0x64 + defs_state.stack.offset)));
+        // if *addr == 0x001235 || *addr == 0x001284{
+        //     println!("Start of {:x}: r15={:?} rax={:?} r10={:?} zf={:?}", addr, in_state.regs.r15, in_state.regs.rax, in_state.regs.r10, in_state.regs.zf);
+        //     // println!("Defs: {:x}: rax={:?} rcx={:?}", addr, defs_state.regs.rax, defs_state.regs.rcx);
+        // }
         // }// println!("{:x}: Analysis: stack = {:?}", addr, defs_state.stack);
         
         if succ_addrs.len() == 2{
@@ -65,8 +67,9 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                 let defs_state = self.reaching_defs.get(addr).unwrap();
                 let ir_block = irmap.get(addr).unwrap();
                 let defs_state = analyze_block(&self.reaching_analyzer, defs_state, ir_block);
-                // println!("End of {:x}: Analysis: mem[0x98] = {:?}, mem[0x44] = {:?}", addr, defs_state.stack.map.get(&(0x10 + defs_state.stack.offset)), defs_state.stack.map.get(&(0x64 + defs_state.stack.offset)));
-
+                // if *addr == 0x002938{
+                //     println!("propagating {:x}: rax={:?} rcx={:?} zf={:?}", addr, in_state.regs.rax, in_state.regs.rcx, in_state.regs.zf);
+                // }
                 
                 let checked_defs = defs_state.regs.get(&regnum, &ValSize::Size64);
                 //propagate bound across registers with the same reaching def
@@ -116,7 +119,11 @@ impl SwitchAnalyzer{
         match src{
             Value::Mem(memsize, memargs) => self.aeval_unop_mem(in_state, memargs, memsize),
             Value::Reg(regnum, size) => in_state.regs.get(regnum, size),
-            Value::Imm(_,_,immval) => SwitchValueLattice::new(SwitchValue::SwitchBase(*immval as u32))
+            Value::Imm(_,_,immval) => if *immval == 0{
+                SwitchValueLattice::new(SwitchValue::UpperBound(1))
+            }else{
+                SwitchValueLattice::new(SwitchValue::SwitchBase(*immval as u32))
+                }
             }   
         }
 
