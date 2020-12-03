@@ -47,7 +47,16 @@ def get_aggregate_data(dataset):
         min_t = min(times)
         total_t = sum(times)
         num_funcs = len(times)
-        aggregate_data.append( (name,average_t,median_t,max_t,min_t,num_funcs,total_t) )
+        N = len(times) // 100
+        print("top 1% = ", N, " functions out of", len(times))
+        top_n = sorted(times, reverse = True)[:N] 
+        top_percent = sum(top_n) / total_t
+        cfg_percent = sum([x[2] for x in data]) / total_t
+        stack_percent = sum([x[3] for x in data]) / total_t
+        heap_percent = sum([x[4] for x in data]) / total_t
+        call_percent = sum([x[5] for x in data]) / total_t
+        print(top_n, top_percent)
+        aggregate_data.append( (name,average_t,median_t,max_t,min_t,num_funcs,total_t,top_percent, cfg_percent, stack_percent, heap_percent, call_percent))
     return aggregate_data
     
 
@@ -67,7 +76,7 @@ def generate_summary_table(aggregate_data):
     min_row +=       " & ".join([str(round(d[4],2)) for d in aggregate_data]) + "\\\\"
     num_funcs_row += " & ".join([str(round(d[5],2)) for d in aggregate_data]) + "\\\\"
     total_row +=     " & ".join([str(round(d[6],2)) for d in aggregate_data]) + "\\\\" 
-    table_str = "\n\\hline\n".join([names_row, average_row, median_row, max_row, min_row, num_funcs_row, total_row]) + "\n"
+    table_str = "\n".join([names_row, average_row, median_row, max_row, min_row, num_funcs_row, total_row]) + "\n"
     return table_str
 
 #print out some quick statistics
@@ -76,13 +85,24 @@ def summarise_data(aggregate_data):
     maxes = [round(d[3],2) for d in aggregate_data]
     num_funcs = [round(d[5],2) for d in aggregate_data] 
     times = [round(d[6],2) for d in aggregate_data] 
+    one_percent = [d[7] for d in aggregate_data]
+    cfg_percent = [d[8] for d in aggregate_data]
+    stack_percent = [d[9] for d in aggregate_data]
+    heap_percent = [d[10] for d in aggregate_data]
+    call_percent = [d[11] for d in aggregate_data]
     #print(averages)
     #medians = [round(d[2],2) for d in aggregate_data]
     #print(medians)
     print(f"Number of binaries = {len(times)}")
     print(f"Median function validation time: {median(medians)}")
     num_above_min = len([time for time in maxes if time > 60.0])
-    print(f"Number of functions with a function that took > 1 minute to validate: {num_above_min}")
+    print(f"Number of binariess with a function that took > 1 minute to validate: {num_above_min}")
+    print(f"Top 1% of functions account for (on average) {sum(one_percent) / len(one_percent) * 100}% of total execution time")
+    print(f"{sum(cfg_percent) / len(one_percent) * 100}% of verification time spent making CFGs")
+    print(f"{sum(stack_percent) / len(stack_percent) * 100}% of verification time spent checking stack")
+    print(f"{sum(heap_percent) / len(heap_percent) * 100}% of verification time spent checking heap")
+    print(f"{sum(call_percent) / len(call_percent) * 100}% of verification time spent checking calls")
+
     print(f"Average Time = {sum(times) / len(times)}")
     #print(f"Average Max function Time = {sum(maxes) / len(maxes)}")
     print(f"Min Validation Time: {min(times)}")
