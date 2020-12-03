@@ -1,8 +1,10 @@
 import json
 import sys
+import math
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import MultipleLocator
 #matplotlib.use('tkagg')
 
 def median(lst):
@@ -38,6 +40,7 @@ def get_data(filenames):
 
 def get_aggregate_data(dataset):
     aggregate_data = []
+    #print(len(dataset.keys()))
     for name,data in dataset.items():
         name = name.split('/')[-1].split(".")[0]
         times = [x[2] + x[3] + x[4] + x[5] for x in data]
@@ -91,9 +94,11 @@ def summarise_data(aggregate_data):
     print(f"Min Functions: {min(num_funcs)}")
     print(f"Max Functions: {max(num_funcs)}")
     print(f"Median Functions: {median(num_funcs)}")
+    fig, ax = plt.subplots()
+    ax.xaxis.set_minor_locator(MultipleLocator(5))
     plt.xlabel('Module Validation Time (s)')
     plt.ylabel('# of Modules')  
-    plt.hist(times, bins=20)
+    plt.hist(times, bins= math.ceil((max(times) - min(times))/5) )
     print("Histogram Created")
     plt.savefig('fastly_times.pdf')  
     print("Histogram Saved")
