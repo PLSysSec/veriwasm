@@ -1,22 +1,22 @@
 use crate::lattices::{Lattice, VariableState};
-use std::collections::BTreeSet;
 use std::cmp::Ordering;
+use std::collections::BTreeSet;
 
 #[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Debug)]
-pub struct LocIdx{
+pub struct LocIdx {
     pub addr: u64,
-    pub idx : u32
+    pub idx: u32,
 }
 
 #[derive(Eq, Clone, Debug)]
-pub struct ReachingDefnLattice{
-    pub defs: BTreeSet<LocIdx>
+pub struct ReachingDefnLattice {
+    pub defs: BTreeSet<LocIdx>,
 }
 
-pub type ReachLattice =  VariableState<ReachingDefnLattice>;
+pub type ReachLattice = VariableState<ReachingDefnLattice>;
 
-impl ReachingDefnLattice{
-    pub fn is_empty(&self) -> bool{
+impl ReachingDefnLattice {
+    pub fn is_empty(&self) -> bool {
         self.defs.is_empty()
     }
 }
@@ -24,16 +24,13 @@ impl ReachingDefnLattice{
 impl PartialOrd for ReachingDefnLattice {
     fn partial_cmp(&self, other: &ReachingDefnLattice) -> Option<Ordering> {
         if &self.defs == &other.defs {
-            return Some(Ordering::Equal)
-        }
-        else if self.defs.is_subset(&other.defs){
-            return Some(Ordering::Greater)
-        }
-        else if other.defs.is_subset(&self.defs){
-            return Some(Ordering::Less)
-        }
-        else{
-            return None
+            return Some(Ordering::Equal);
+        } else if self.defs.is_subset(&other.defs) {
+            return Some(Ordering::Greater);
+        } else if other.defs.is_subset(&self.defs) {
+            return Some(Ordering::Less);
+        } else {
+            return None;
         }
     }
 }
@@ -45,24 +42,25 @@ impl PartialEq for ReachingDefnLattice {
 }
 
 impl Lattice for ReachingDefnLattice {
-    fn meet(&self, other : &Self, _loc_idx : &LocIdx) -> Self {
-        let newdefs :  BTreeSet<LocIdx> =  self.defs.union(&other.defs).cloned().collect();
-        ReachingDefnLattice {defs : newdefs}
+    fn meet(&self, other: &Self, _loc_idx: &LocIdx) -> Self {
+        let newdefs: BTreeSet<LocIdx> = self.defs.union(&other.defs).cloned().collect();
+        ReachingDefnLattice { defs: newdefs }
     }
-} 
+}
 
 impl Default for ReachingDefnLattice {
     fn default() -> Self {
-        ReachingDefnLattice {defs :  BTreeSet::new()}
+        ReachingDefnLattice {
+            defs: BTreeSet::new(),
+        }
     }
 }
 
-pub fn singleton(loc_idx : LocIdx) -> ReachingDefnLattice{
+pub fn singleton(loc_idx: LocIdx) -> ReachingDefnLattice {
     let mut bset = BTreeSet::new();
     bset.insert(loc_idx);
-    ReachingDefnLattice{defs: bset}
+    ReachingDefnLattice { defs: bset }
 }
-
 
 // #[test]
 // fn heap_reaching_defs_test() {
@@ -70,7 +68,6 @@ pub fn singleton(loc_idx : LocIdx) -> ReachingDefnLattice{
 //     let d2 = LocIdx{addr: 2, idx : 2};
 //     let d3 = LocIdx{addr: 3, idx : 3};
 //     let d4 = LocIdx{addr: 4, idx : 4};
-
 
 //     let mut bset1 = BTreeSet::new();
 //     bset1.insert(d1);
