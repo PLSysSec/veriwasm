@@ -1,7 +1,7 @@
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::lattices::reachingdefslattice::{ReachLattice, singleton, LocIdx};
 use crate::analyses::{AbstractAnalyzer, run_worklist, AnalysisResult};
-use crate::lifter::{IRMap, Stmt, Binopcode, Unopcode, Value, ValSize};
+use crate::lifter::{IRMap, Stmt, Binopcode, Unopcode};
 use crate::utils::{LucetMetadata};
 use crate::lattices::VarState;
 
@@ -44,7 +44,7 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
 
     fn aexec(&self, in_state : &mut ReachLattice, ir_instr : &Stmt, loc_idx : &LocIdx) -> () {
         match ir_instr{
-            Stmt::Clear(dst, srcs) => in_state.set(dst, singleton(loc_idx.clone())),
+            Stmt::Clear(dst, _) => in_state.set(dst, singleton(loc_idx.clone())),
             Stmt::Unop(Unopcode::Mov, dst, src) =>  {
                 if let Some(v) = in_state.get(src){
                     if v.defs.is_empty(){ 
@@ -59,10 +59,10 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
                 }
                 //in_state.set(dst, singleton(loc_idx.clone()))
             },
-            Stmt::Binop(Binopcode::Cmp, dst, src1, src2) =>  {
+            Stmt::Binop(Binopcode::Cmp, _, _, _) =>  {
                 //Ignore compare
             },
-            Stmt::Binop(Binopcode::Test, dst, src1, src2) =>  {
+            Stmt::Binop(Binopcode::Test, _, _, _) =>  {
                 //Ignore test
             },
             Stmt::Binop(opcode, dst, src1, src2) =>  {

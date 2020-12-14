@@ -7,8 +7,7 @@ use crate::checkers::jump_resolver::resolve_jumps;
 use crate::analyses::jump_analyzer::analyze_jumps;
 use crate::analyses::reaching_defs::analyze_reaching_defs;
 use crate::lifter::lift_cfg;
-use yaxpeax_core::analyses::control_flow::VW_CFG;
-use yaxpeax_core::analyses::control_flow::get_cfg;
+use yaxpeax_core::analyses::control_flow::{VW_CFG,get_cfg};
 use std::path::Path;
 use yaxpeax_arch::Arch;
 use yaxpeax_x86::long_mode::{Arch as AMD64};
@@ -184,7 +183,7 @@ pub fn get_one_resolved_cfg(binpath : &str, func : &str) -> (VW_CFG,IRMap){
     };
 
     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
-    let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
+    let x86_64_data = get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
     let addr = get_symbol_addr(symbols, func).unwrap();
     println!("Found maybe function: {:?} valid = {:?}", func, is_valid_func_name(&String::from(func)));
     assert!(is_valid_func_name(&String::from(func)));  

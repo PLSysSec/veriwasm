@@ -1,17 +1,15 @@
-use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lifter::{Binopcode,Value};
-use std::cmp::Ordering;
-use crate::lattices::{Lattice, ConstLattice, VarState};
+use crate::lattices::{ConstLattice, VarState};
 
 pub type StackGrowthLattice = ConstLattice<(i64,i64)>;
 
 impl VarState for StackGrowthLattice {
     type Var = i64;
-    fn get(&mut self, index : &Value) -> Option<Self::Var> {unimplemented!()}
-    fn set(&mut self, index : &Value, v : Self::Var) -> (){unimplemented!()}
-    fn set_to_bot(&mut self, index : &Value) -> (){unimplemented!()}
+    fn get(&mut self, _index : &Value) -> Option<Self::Var> {unimplemented!()}
+    fn set(&mut self, _index : &Value, _v : Self::Var) -> (){unimplemented!()}
+    fn set_to_bot(&mut self, _index : &Value) -> (){unimplemented!()}
     fn on_call(&mut self) -> (){unimplemented!()}
-    fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value, src1: &Value, src2: &Value){unimplemented!()}
+    fn adjust_stack_offset(&mut self, _opcode: &Binopcode, _dst: &Value, _src1: &Value, _src2: &Value){unimplemented!()}
 }
 
 impl StackGrowthLattice{
@@ -33,6 +31,9 @@ impl StackGrowthLattice{
 
 #[test]
 fn stack_growth_lattice_test() {
+    use crate::lattices::reachingdefslattice::LocIdx;
+    use crate::lattices::Lattice;
+
     let x1  = StackGrowthLattice {v : None};
     let x2  = StackGrowthLattice {v : Some((1,4096))};
     let x3  = StackGrowthLattice {v : Some((1,4096))};

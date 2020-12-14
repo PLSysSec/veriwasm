@@ -22,22 +22,22 @@ use lifter::{Stmt, Value};
 use crate::checkers::stack_checker::check_stack;
 use crate::checkers::heap_checker::check_heap;
 use std::panic;
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 use serde_json;
 use std::fs;
 
 pub struct Config{
     module_path: String,
-    num_jobs: u32,
+    _num_jobs: u32,
     output_path : String,
     has_output : bool,
-    quiet : bool
+    _quiet : bool
 }
 
 fn has_indirect_calls(irmap: &IRMap) -> bool{
-    for (block_addr, ir_block) in irmap {
-        for (addr,ir_stmts) in ir_block{
-            for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
+    for (_block_addr, ir_block) in irmap {
+        for (_addr,ir_stmts) in ir_block{
+            for (_idx,ir_stmt) in ir_stmts.iter().enumerate(){
                 match ir_stmt{
                     Stmt::Call(Value::Reg(_,_)) | Stmt::Call(Value::Mem(_,_)) => return true,
                     _ => ()
@@ -49,9 +49,9 @@ fn has_indirect_calls(irmap: &IRMap) -> bool{
 }
 
 fn has_indirect_jumps(irmap: &IRMap) -> bool{
-    for (block_addr, ir_block) in irmap {
-        for (addr,ir_stmts) in ir_block{
-            for (idx,ir_stmt) in ir_stmts.iter().enumerate(){
+    for (_block_addr, ir_block) in irmap {
+        for (_addr,ir_stmts) in ir_block{
+            for (_idx,ir_stmt) in ir_stmts.iter().enumerate(){
                 match ir_stmt{
                     Stmt::Branch(_,Value::Reg(_,_)) | Stmt::Branch(_,Value::Mem(_,_)) => return true,
                     _ => ()
@@ -179,14 +179,14 @@ fn main() {
 
     let has_output = if output_path == "" {false} else {true};
 
-    let metadata_path = module_path.clone();
+    // let metadata_path = module_path.clone();
 
     let config = Config{
         module_path: module_path.to_string(), 
-        num_jobs: num_jobs, 
+        _num_jobs: num_jobs, 
         output_path : output_path.to_string(),
         has_output : has_output, 
-        quiet:quiet};
+        _quiet:quiet};
 
     run(config);
 }

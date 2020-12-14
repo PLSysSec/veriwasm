@@ -46,7 +46,7 @@ impl PartialEq for BooleanLattice {
 }
 
 impl Lattice for BooleanLattice {
-    fn meet(&self, other : &Self, loc_idx : &LocIdx) -> Self {
+    fn meet(&self, other : &Self, _loc_idx : &LocIdx) -> Self {
         BooleanLattice {v : self.v && other.v}
     }
 } 
@@ -84,7 +84,7 @@ impl<T:Eq + Copy + Debug> PartialEq for ConstLattice<T> {
 }
 
 impl<T:Eq + Copy + Debug> Lattice for ConstLattice<T> {
-    fn meet(&self, other : &Self, loc_idx : &LocIdx) -> Self {
+    fn meet(&self, other : &Self, _loc_idx : &LocIdx) -> Self {
         if self.v == other.v {ConstLattice {v : self.v}}
         else {ConstLattice { v : None}}
     }

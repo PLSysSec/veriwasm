@@ -79,7 +79,7 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
 
 impl HeapChecker<'_> {
     fn check_global_access(&self, state : &HeapLattice, access: &Value) -> bool{
-        if let Value::Mem(memsize, memargs) = access {
+        if let Value::Mem(_, memargs) = access {
             match memargs{
                 MemArgs::Mem1Arg(MemArg::Reg(regnum,ValSize::Size64)) => 
                     if let  Some(HeapValue::GlobalsBase) = state.regs.get(regnum,&ValSize::Size64).v { 
@@ -97,8 +97,7 @@ impl HeapChecker<'_> {
     }
 
     fn check_heap_access(&self, state : &HeapLattice, access: &Value) -> bool{
-        // println!("ch");
-        if let Value::Mem(size, memargs) = access {
+        if let Value::Mem(_, memargs) = access {
             match memargs{
                 // if only arg is heapbase
                 MemArgs::Mem1Arg(MemArg::Reg(regnum,ValSize::Size64)) => 
@@ -214,7 +213,7 @@ pub fn memarg_repr(state: &HeapLattice, memarg: &MemArg) -> String{
 }
 
 pub fn print_mem_access(state: &HeapLattice, access: &Value){
-    if let Value::Mem(size, memargs) = access {
+    if let Value::Mem(_, memargs) = access {
         match memargs{
             MemArgs::Mem1Arg(x) => println!("mem[{:?}]", memarg_repr(state, x)),
             MemArgs::Mem2Args(x,y) => println!("mem[{:?} + {:?}]", memarg_repr(state, x), memarg_repr(state, y)),

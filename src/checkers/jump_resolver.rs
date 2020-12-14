@@ -1,20 +1,20 @@
 use crate::lattices::switchlattice::{SwitchValueLattice, SwitchValue, SwitchLattice};
 use crate::analyses::jump_analyzer::SwitchAnalyzer;
-use crate::lifter::{Stmt, Value, ValSize, MemArg, MemArgs, IRMap};
+use crate::lifter::{Stmt, Value, IRMap};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use std::collections::HashMap;
-use yaxpeax_core::memory::{MemoryRepr, MemoryRange};
+use yaxpeax_core::memory::{MemoryRepr};
 use yaxpeax_core::memory::repr::process::ModuleData;
 
 
 pub struct JumpResolver<'a>{
-    irmap : &'a  IRMap, 
-    analyzer : &'a SwitchAnalyzer
+    _irmap : &'a  IRMap, 
+    _analyzer : &'a SwitchAnalyzer
 }
  
 fn load_target(program : &ModuleData, addr: u64) -> i64{
-    let b0 = (program.read(addr).unwrap() as u32);
+    let b0 = program.read(addr).unwrap() as u32;
     let b1 = (program.read(addr + 1).unwrap() as u32) << 8;
     let b2 = (program.read(addr + 2).unwrap() as u32) << 16;
     let b3 = (program.read(addr + 3).unwrap() as u32) << 24;

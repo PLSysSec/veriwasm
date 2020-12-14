@@ -1,5 +1,4 @@
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::{ConstLattice, VariableState, Lattice};
+use crate::lattices::{ConstLattice, VariableState};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum HeapValue {
@@ -17,6 +16,10 @@ pub type HeapLattice =  VariableState<HeapValueLattice>;
 
 #[test]
 fn heap_lattice_test() {
+    use crate::lattices::reachingdefslattice::LocIdx;
+    use crate::lattices::Lattice;
+
+
     let x1  = HeapValueLattice {v : None};
     let x2  = HeapValueLattice {v : Some(HeapValue::HeapBase)};
     let x3  = HeapValueLattice {v : Some(HeapValue::HeapBase)};

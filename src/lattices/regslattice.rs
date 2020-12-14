@@ -1,6 +1,6 @@
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lifter::ValSize;
-use crate::lattices::{Lattice, BooleanLattice};
+use crate::lattices::{Lattice};
 
 #[derive(Default, PartialEq, Eq, Clone, PartialOrd, Debug)]
 pub struct X86RegsLattice<T:Lattice + Clone>{
@@ -144,8 +144,7 @@ impl<T:Lattice + Clone> Lattice for X86RegsLattice<T> {
 
 #[test]
 fn regs_lattice_test() {
-    let f  = BooleanLattice {v : false};
-    let t  = BooleanLattice {v : true};
+    use crate::lattices::BooleanLattice;
 
     let r1 = X86RegsLattice {
         rax : BooleanLattice {v : false}, 

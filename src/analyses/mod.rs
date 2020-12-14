@@ -14,13 +14,13 @@ pub type AnalysisResult<T>  = HashMap<u64, T>;
 
 pub trait AbstractAnalyzer<State:Lattice + VarState + Clone> {
     fn init_state(&self) -> State{Default::default()}
-    fn process_branch(&self, irmap : &IRMap, in_state : &State, succ_addrs : &Vec<u64>, addr : &u64) -> Vec<(u64,State)>{
+    fn process_branch(&self, _irmap : &IRMap, in_state : &State, succ_addrs : &Vec<u64>, _addr : &u64) -> Vec<(u64,State)>{
         succ_addrs.into_iter().map(|addr| (addr.clone(),in_state.clone()) ).collect()
     }
-    fn aexec_unop(&self, in_state : &mut State, dst : &Value, src : &Value, loc_idx : &LocIdx) -> (){
+    fn aexec_unop(&self, in_state : &mut State, dst : &Value, _src : &Value, _loc_idx : &LocIdx) -> (){
         in_state.set_to_bot(dst)
     }
-    fn aexec_binop(&self, in_state : &mut State, opcode : &Binopcode, dst: &Value, src1 : &Value, src2: &Value, loc_idx : &LocIdx) -> (){
+    fn aexec_binop(&self, in_state : &mut State, opcode : &Binopcode, dst: &Value, _src1 : &Value, _src2: &Value, _loc_idx : &LocIdx) -> (){
         match opcode{
             Binopcode::Cmp => (),
             Binopcode::Test => (),
@@ -30,7 +30,7 @@ pub trait AbstractAnalyzer<State:Lattice + VarState + Clone> {
 
     fn aexec(&self, in_state : &mut State, ir_instr : &Stmt, loc_idx : &LocIdx) -> (){
         match ir_instr{
-            Stmt::Clear(dst, srcs) => in_state.set_to_bot(dst),
+            Stmt::Clear(dst, _srcs) => in_state.set_to_bot(dst),
             Stmt::Unop(_, dst, src) => self.aexec_unop(in_state, &dst, &src, loc_idx),
             Stmt::Binop(opcode, dst, src1, src2) =>  {self.aexec_binop(in_state, opcode, dst, src1, src2, loc_idx); in_state.adjust_stack_offset(opcode,dst,src1,src2)},
             Stmt::Call(_) => in_state.on_call(),

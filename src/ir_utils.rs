@@ -37,7 +37,7 @@ pub fn memarg_is_stack(memarg: &MemArg) -> bool {
 }
 
 pub fn is_stack_access(v: &Value) -> bool {
-    if let Value::Mem(size, memargs) = v {
+    if let Value::Mem(_size, memargs) = v {
         match memargs{
             MemArgs::Mem1Arg(memarg) => 
                 return memarg_is_stack(memarg),
@@ -54,15 +54,15 @@ pub fn is_stack_access(v: &Value) -> bool {
 
 pub fn extract_stack_offset(memargs: &MemArgs) -> i64{
     match memargs{
-        MemArgs::Mem1Arg(memarg) => 0,
-        MemArgs::Mem2Args(memarg1, memarg2) => get_imm_mem_offset(memarg2),
-        MemArgs::Mem3Args(memarg1, memarg2, memarg3) | 
-        MemArgs::MemScale(memarg1, memarg2, memarg3) => panic!("extract_stack_offset failed")
+        MemArgs::Mem1Arg(_memarg) => 0,
+        MemArgs::Mem2Args(_memarg1, memarg2) => get_imm_mem_offset(memarg2),
+        MemArgs::Mem3Args(_memarg1, _memarg2, _memarg3) | 
+        MemArgs::MemScale(_memarg1, _memarg2, _memarg3) => panic!("extract_stack_offset failed")
     }
 }
 
 pub fn is_mem_access(v: &Value) -> bool {
-    if let Value::Mem(size, memargs) = v { true }
+    if let Value::Mem(_, _) = v { true }
     else { false }
 }
 

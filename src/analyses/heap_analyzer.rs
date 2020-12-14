@@ -18,7 +18,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         result
     }
 
-    fn aexec_unop(&self, in_state : &mut HeapLattice, dst : &Value, src : &Value, loc_idx : &LocIdx) -> (){
+    fn aexec_unop(&self, in_state : &mut HeapLattice, dst : &Value, src : &Value, _loc_idx : &LocIdx) -> (){
         let v = self.aeval_unop(in_state, src);
         // println!("dst = {:?} = {:?}, rax = {:?}", dst, v, in_state.regs.rax);
         in_state.set(dst, v)
@@ -26,7 +26,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
 }
 
 pub fn is_globalbase_access(in_state : &HeapLattice, memargs : &MemArgs) -> bool {
-    if let MemArgs::Mem2Args(arg1, arg2) = memargs{ 
+    if let MemArgs::Mem2Args(arg1, _arg2) = memargs{ 
         if let MemArg::Reg(regnum,size) = arg1{
             assert_eq!(size.to_u32(), 64);
             let base = in_state.regs.get(regnum, size);

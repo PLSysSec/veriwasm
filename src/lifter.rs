@@ -3,12 +3,10 @@ use yaxpeax_core::analyses::control_flow::VW_CFG;
 use crate::utils::LucetMetadata;
 use yaxpeax_x86::long_mode::Opcode::*;
 use std::collections::HashMap;
-// use yaxpeax_core::analyses::control_flow::ControlFlowGraph;
 use yaxpeax_core::memory::repr::process::ModuleData;
-use yaxpeax_x86::long_mode::{Arch as AMD64, Operand, RegSpec, RegisterBank, Opcode};
+use yaxpeax_x86::long_mode::{Arch as AMD64, Operand, RegisterBank, Opcode};
 use yaxpeax_arch::Arch;
 use yaxpeax_core::arch::InstructionSpan;
-use yaxpeax_arch::LengthedInstruction;
 use yaxpeax_core::data::{Direction, ValueLocations};
 
 
@@ -260,7 +258,7 @@ fn branch(instr : &yaxpeax_x86::long_mode::Instruction) -> Stmt{
     Stmt::Branch(instr.opcode, convert_operand(instr.operand(0), ValSize::Size64))
 }
 
-fn call(instr : &yaxpeax_x86::long_mode::Instruction, metadata : &LucetMetadata) -> Stmt{
+fn call(instr : &yaxpeax_x86::long_mode::Instruction, _metadata : &LucetMetadata) -> Stmt{
     let dst = convert_operand(instr.operand(0), ValSize::Size64);
     Stmt::Call(dst)
 }
@@ -279,7 +277,7 @@ fn lea(instr : &yaxpeax_x86::long_mode::Instruction, addr : &u64) -> Stmt{
         Value::Mem(_, memargs) => 
             match memargs {
                 MemArgs::Mem1Arg(arg) => match arg{
-                    MemArg::Imm(_,_,val) => unop(Unopcode::Mov, instr),
+                    MemArg::Imm(_,_,_val) => unop(Unopcode::Mov, instr),
                     _ => clear_dst(instr)
                 },
                 _ => clear_dst(instr)
