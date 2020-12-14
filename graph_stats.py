@@ -15,7 +15,7 @@ def median(lst):
 def graph_blocks_vs_time(dataset):
     for data in dataset.values():
         times = [x[1] for x in data]
-        block_counts = [x[2] for x in data]
+        block_counts = [x[2] + x[3] + x[4] + x[5] for x in data]
         plt.plot(block_counts, times, 'o')
     plt.show()
     #raise NotImplementedError
@@ -52,14 +52,16 @@ def get_aggregate_data(dataset):
         num_funcs = len(times)
         N = len(times) // 100
         print("top 1% = ", N, " functions out of", len(times))
-        top_n = sorted(times, reverse = True)[:N] 
-        top_percent = sum(top_n) / total_t
+        top_n = sorted(data, key=lambda x: (x[2] + x[3] + x[4] + x[5]), reverse = True)[:N] 
+        top_percent = sum([x[2] + x[3] + x[4] + x[5] for x in top_n]) / total_t
+        top_percent_medians = median([x[1] for x in top_n])
         cfg_percent = sum([x[2] for x in data]) / total_t
         stack_percent = sum([x[3] for x in data]) / total_t
         heap_percent = sum([x[4] for x in data]) / total_t
         call_percent = sum([x[5] for x in data]) / total_t
         print(top_n, top_percent)
-        aggregate_data.append( (name,average_t,median_t,max_t,min_t,num_funcs,total_t,top_percent, cfg_percent, stack_percent, heap_percent, call_percent))
+        median_blocks = median([x[1] for x in data])
+        aggregate_data.append( (name,average_t,median_t,max_t,min_t,num_funcs,total_t,top_percent, cfg_percent, stack_percent, heap_percent, call_percent, median_blocks, top_percent_medians))
     return aggregate_data
     
 
@@ -93,6 +95,8 @@ def summarise_data(aggregate_data):
     stack_percent = [d[9] for d in aggregate_data]
     heap_percent = [d[10] for d in aggregate_data]
     call_percent = [d[11] for d in aggregate_data]
+    median_blocks = [d[12] for d in aggregate_data]
+    top_percent_median_blocks = [d[13] for d in aggregate_data]
     #print(averages)
     #medians = [round(d[2],2) for d in aggregate_data]
     #print(medians)
@@ -114,6 +118,8 @@ def summarise_data(aggregate_data):
     print(f"Min Functions: {min(num_funcs)}")
     print(f"Max Functions: {max(num_funcs)}")
     print(f"Median Functions: {median(num_funcs)}")
+    print(f"Median of Median of blocks in modules: {median(median_blocks)}")
+    print(f"Median of Median of blocks in top 1% of functions in modules: {median(top_percent_median_blocks)}")
     fig, ax = plt.subplots()
     ax.xaxis.set_minor_locator(MultipleLocator(5))
     plt.xlabel('Module Validation Time (s)')
@@ -125,7 +131,7 @@ def summarise_data(aggregate_data):
 
 def run(filenames):
     dataset = get_data(filenames)
-    #graph_blocks_vs_time(dataset)
+    graph_blocks_vs_time(dataset)
     #graph_funcs_vs_time(dataset)
     aggregate_data = get_aggregate_data(dataset)
     summarise_data(aggregate_data)
