@@ -141,8 +141,7 @@ pub fn run_worklist<T: AbstractAnalyzer<State>, State: VarState + Lattice + Clon
                     has_change
                     
                 } else {
-                    //TODO: pretty sure this is an unnecessary state clone
-                    statemap.insert(succ_addr, branch_state.clone());
+                    statemap.insert(succ_addr, branch_state);
                     true
                 };
 
