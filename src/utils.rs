@@ -37,7 +37,7 @@ fn get_function_starts(
     symbols: &std::vec::Vec<ELFSymbol>,
     imports: &std::vec::Vec<ELFImport>,
     exports: &std::vec::Vec<ELFExport>,
-    text_section_idx: usize,
+    _text_section_idx: usize,
 ) -> x86_64Data {
     let mut x86_64_data = x86_64Data::default();
 
@@ -65,6 +65,7 @@ fn get_function_starts(
 
     // and copy in names for imports
     for import in imports {
+        println!("Import = {:?}", import);
         x86_64_data.contexts.put(
             import.value as u64,
             BaseUpdate::DefineSymbol(Symbol(Library::Unknown, import.name.clone())),
@@ -116,7 +117,7 @@ fn resolve_cfg(
     orig_irmap: &IRMap,
     addr: u64,
 ) -> (VW_CFG, IRMap) {
-    let mut last_switches = -1;
+    // let mut last_switches = -1;
     let (mut cfg, mut irmap, mut resolved_switches, mut still_unresolved) =
         try_resolve_jumps(program, contexts, cfg, metadata, orig_irmap, addr);
     while still_unresolved != 0 {
@@ -197,18 +198,6 @@ pub fn get_data(
     (x86_64_data, addrs)
 }
 
-// pub fn get_resolved_cfgs(binpath : &str) -> Vec<(String, (VW_CFG,IRMap) )>{
-//     let program = load_program(binpath);
-//     let metadata = load_metadata(binpath);
-//     let (x86_64_data,func_addrs) = get_data(binpath, &program);
-//     let mut cfgs : Vec<(String, (VW_CFG,IRMap) )> = Vec::new();
-//     for (addr,symbol) in func_addrs{
-//         let (new_cfg,irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
-//         cfgs.push((symbol, (new_cfg,irmap) ));
-//     }
-//     cfgs
-// }
-
 pub fn get_one_resolved_cfg(binpath: &str, func: &str) -> (VW_CFG, IRMap) {
     let program = load_program(binpath);
     let metadata = load_metadata(binpath);
@@ -264,7 +253,7 @@ pub fn load_metadata(binpath: &str) -> LucetMetadata {
     let program = load_program(binpath);
 
     // grab some details from the binary and panic if it's not what we expected
-    let (_, sections, entrypoint, imports, exports, symbols) =
+    let (_, _sections, _entrypoint, _imports, _exports, symbols) =
         match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
             Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
                 (isa, sections, entry, imports, exports, symbols)
@@ -300,29 +289,21 @@ pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
         MemArgs::Mem1Arg(arg) => {
             if let MemArg::Reg(regnum, _) = arg {
                 if *regnum == 4 {
-                    Some(0)
-                } else {
-                    None
+                    return Some(0)
                 }
-            } else {
-                None
             }
+            None
         }
         MemArgs::Mem2Args(arg1, arg2) => {
-            if let MemArg::Reg(regnum, size) = arg1 {
+            if let MemArg::Reg(regnum, _) = arg1 {
                 if *regnum == 4 {
-                    if let MemArg::Imm(imm_sign, _, offset) = arg2 {
-                        Some(*offset)
-                    } else {
-                        None
+                    if let MemArg::Imm(_, _, offset) = arg2 {
+                        return Some(*offset)
+                        }
                     }
-                } else {
-                    None
                 }
-            } else {
                 None
             }
-        }
         _ => None,
     }
 }

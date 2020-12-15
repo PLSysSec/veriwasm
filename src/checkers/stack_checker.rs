@@ -44,7 +44,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
         &self,
         state: &StackGrowthLattice,
         ir_stmt: &Stmt,
-        loc_idx: &LocIdx,
+        _loc_idx: &LocIdx,
     ) -> bool {
         //1, stackgrowth is never Bottom or >= 0
         match state.v {
@@ -107,11 +107,11 @@ impl StackChecker<'_> {
     fn check_stack_read(&self, state: &StackGrowthLattice, src: &Value) -> bool {
         if let Value::Mem(_, memargs) = src {
             match memargs {
-                MemArgs::Mem1Arg(memarg) => {
+                MemArgs::Mem1Arg(_memarg) => {
                     return (-state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap())
                         && (state.get_stackgrowth().unwrap() < 8096)
                 }
-                MemArgs::Mem2Args(memarg1, memarg2) => {
+                MemArgs::Mem2Args(_memarg1, memarg2) => {
                     let offset = get_imm_mem_offset(memarg2);
                     // println!("Checking Stack Read: {:?} <= {:?} < {:?} offset = {:?}",-state.get_probestack().unwrap(), state.get_stackgrowth().unwrap() + offset, 8096, state.get_stackgrowth().unwrap());
                     return (-state.get_probestack().unwrap()
@@ -127,12 +127,12 @@ impl StackChecker<'_> {
     fn check_stack_write(&self, state: &StackGrowthLattice, dst: &Value) -> bool {
         if let Value::Mem(_, memargs) = dst {
             match memargs {
-                MemArgs::Mem1Arg(memarg) => {
+                MemArgs::Mem1Arg(_memarg) => {
                     // println!("{:?} {:?}", state.get_probestack().unwrap(), state.get_stackgrowth());
                     return (-state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap())
                         && (state.get_stackgrowth().unwrap() < 0);
                 }
-                MemArgs::Mem2Args(memarg1, memarg2) => {
+                MemArgs::Mem2Args(_memarg1, memarg2) => {
                     let offset = get_imm_mem_offset(memarg2);
                     // println!("Checking Stack Write: {:?} < {:?} < {:?} offset = {:?}",-state.get_probestack().unwrap(), state.get_stackgrowth().unwrap() + offset, 0, state.get_stackgrowth().unwrap());
                     return (-state.get_probestack().unwrap()

@@ -33,7 +33,7 @@ impl PartialOrd for DAV {
 }
 
 impl Lattice for DAV {
-    fn meet(&self, other: &Self, loc_idx: &LocIdx) -> Self {
+    fn meet(&self, other: &Self, _loc_idx: &LocIdx) -> Self {
         match (self, other) {
             (DAV::Unknown, _) => DAV::Unknown,
             (_, DAV::Unknown) => DAV::Unknown,

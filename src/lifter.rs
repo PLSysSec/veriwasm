@@ -294,7 +294,7 @@ fn binop(opcode: Binopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt
         (None, None) => panic!("Two Memory Args?"),
         (Some(x), None) => x,
         (None, Some(x)) => x,
-        (Some(x), Some(y)) => x,
+        (Some(x), Some(_y)) => x,
     };
     // if two operands than dst is src1
     if instr.operand_count() == 2 {
