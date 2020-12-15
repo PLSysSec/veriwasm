@@ -277,7 +277,7 @@ fn unop(opcode: Unopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
         (None, None) => panic!("Two Memory Args?"),
         (Some(x), None) => x,
         (None, Some(x)) => x,
-        (Some(x), Some(y)) => x,
+        (Some(x), Some(_y)) => x,
     };
     Stmt::Unop(
         opcode,
@@ -329,7 +329,7 @@ fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &LucetMetadata) 
 fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Stmt {
     let dst = instr.operand(0);
     let src1 = instr.operand(1);
-    if let Operand::RegDisp(reg, imm) = src1 {
+    if let Operand::RegDisp(reg, _imm) = src1 {
         if reg.bank == RegisterBank::RIP {
             //addr + instruction length + displacement
             let target = (*addr as i64) + (instr.length as i64) + (instr.disp as i64);

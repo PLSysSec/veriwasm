@@ -25,7 +25,7 @@ impl PartialOrd for DAV {
             }
             (DAV::Unchecked(_), DAV::Checked) => Some(Ordering::Less),
             (DAV::Checked, DAV::Checked) => Some(Ordering::Equal),
-            (DAV::Checked, DAV::Unchecked(y)) => Some(Ordering::Greater),
+            (DAV::Checked, DAV::Unchecked(_)) => Some(Ordering::Greater),
             (DAV::Unchecked(_), DAV::Unknown) => Some(Ordering::Greater),
             (DAV::Checked, DAV::Unknown) => Some(Ordering::Greater),
         }

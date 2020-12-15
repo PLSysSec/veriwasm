@@ -1,3 +1,4 @@
+use yaxpeax_core::arch::x86_64::x86_64Data;
 use crate::analyses::call_analyzer::CallAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
@@ -9,19 +10,22 @@ use crate::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
 pub struct CallChecker<'a> {
     irmap: &'a IRMap,
     analyzer: &'a CallAnalyzer,
-    funcs: &'a Vec<u64>,
+    // funcs: &'a Vec<u64>,
+    // x86_64_data: &'a x86_64Data,
 }
 
 pub fn check_calls(
     result: AnalysisResult<CallCheckLattice>,
     irmap: &IRMap,
     analyzer: &CallAnalyzer,
-    funcs: &Vec<u64>,
+    // funcs: &Vec<u64>,
+    // x86_64_data: &x86_64Data,
 ) -> bool {
     CallChecker {
         irmap,
         analyzer,
-        funcs,
+        // funcs,
+        // x86_64_data,
     }
     .check(result)
 }
@@ -63,7 +67,7 @@ impl CallChecker<'_> {
         &self,
         state: &CallCheckLattice,
         target: &Value,
-        loc_idx: &LocIdx,
+        _loc_idx: &LocIdx,
     ) -> bool {
         match target {
             Value::Reg(regnum, size) => {
@@ -72,11 +76,7 @@ impl CallChecker<'_> {
                 }
             }
             Value::Mem(_, _) => return false,
-            Value::Imm(_, _, imm) => return true,
-            // {
-            //     println!("Checking calls: imm = 0x{:x}", (*imm as u64 + loc_idx.addr + 5));
-            //     return self.funcs.contains( &(*imm as u64 + loc_idx.addr + 5))
-            // }, //TODO: check that this is in our set of target funcs
+            Value::Imm(_, _, _) => return true,
         }
         false
     }

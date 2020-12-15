@@ -65,7 +65,6 @@ fn get_function_starts(
 
     // and copy in names for imports
     for import in imports {
-        println!("Import = {:?}", import);
         x86_64_data.contexts.put(
             import.value as u64,
             BaseUpdate::DefineSymbol(Symbol(Library::Unknown, import.name.clone())),
@@ -88,7 +87,7 @@ fn try_resolve_jumps(
     cfg: &VW_CFG,
     metadata: &LucetMetadata,
     irmap: &IRMap,
-    addr: u64,
+    _addr: u64,
 ) -> (VW_CFG, IRMap, i32, u32) {
     // let irmap = lift_cfg(&program, cfg, &metadata);
     println!("Performing a reaching defs pass");
@@ -194,11 +193,10 @@ pub fn get_data(
             }
         }
     }
-
     (x86_64_data, addrs)
 }
 
-pub fn get_one_resolved_cfg(binpath: &str, func: &str) -> (VW_CFG, IRMap) {
+pub fn get_one_resolved_cfg(binpath: &str, func: &str) -> ((VW_CFG, IRMap),x86_64Data) {
     let program = load_program(binpath);
     let metadata = load_metadata(binpath);
 
@@ -229,7 +227,7 @@ pub fn get_one_resolved_cfg(binpath: &str, func: &str) -> (VW_CFG, IRMap) {
     );
     assert!(is_valid_func_name(&String::from(func)));
     println!("Generating CFG for: {:?}", func);
-    return fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
+    return (fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr),x86_64_data);
 }
 
 fn get_symbol_addr(symbols: &Vec<ELFSymbol>, name: &str) -> std::option::Option<u64> {

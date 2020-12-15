@@ -126,26 +126,25 @@ pub fn run_worklist<T: AbstractAnalyzer<State>, State: VarState + Lattice + Clon
         for (succ_addr, branch_state) in
             analyzer.process_branch(irmap, &new_state, &succ_addrs, &addr)
         {
-            let mut has_change = false;
-            if statemap.contains_key(&succ_addr) {
-                let old_state = statemap.get(&succ_addr).unwrap();
-                let merged_state = old_state.meet(&branch_state, &LocIdx { addr: addr, idx: 0 });
-                // if succ_addr == 0x001055bb{
-                //     println!(">>>Meet: 0x{:x} => 0x{:x} merging {:?} into {:?}", addr, succ_addr, branch_state, old_state);
-                //     println!("merged_state = {:?}", merged_state);
-                // }
-                if merged_state > *old_state {
-                    println!("{:?} {:?}", merged_state, old_state);
-                    panic!("Meet monoticity error");
-                }
-                //has_change = *old_state != branch_state;
-                has_change = *old_state != merged_state;
-                statemap.insert(succ_addr, merged_state);
-            } else {
-                //TODO: pretty sure this is an unnecessary state clone
-                statemap.insert(succ_addr, branch_state.clone());
-                has_change = true;
-            }
+            //let mut has_change = false;
+            let has_change = 
+                if statemap.contains_key(&succ_addr) {
+                    let old_state = statemap.get(&succ_addr).unwrap();
+                    let merged_state = old_state.meet(&branch_state, &LocIdx { addr: addr, idx: 0 });
+
+                    if merged_state > *old_state {
+                        println!("{:?} {:?}", merged_state, old_state);
+                        panic!("Meet monoticity error");
+                    }
+                    let has_change = *old_state != merged_state;
+                    statemap.insert(succ_addr, merged_state);
+                    has_change
+                    
+                } else {
+                    //TODO: pretty sure this is an unnecessary state clone
+                    statemap.insert(succ_addr, branch_state.clone());
+                    true
+                };
 
             if has_change && !worklist.contains(&succ_addr) {
                 worklist.push_back(succ_addr);

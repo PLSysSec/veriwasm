@@ -30,7 +30,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         in_state: &mut SwitchLattice,
         dst: &Value,
         src: &Value,
-        loc_idx: &LocIdx,
+        _loc_idx: &LocIdx,
     ) -> () {
         // println!("exec unop: dst = {:?} rcx = {:?}", dst, in_state.regs.rcx);
         in_state.set(dst, self.aeval_unop(in_state, src))
@@ -43,7 +43,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         dst: &Value,
         src1: &Value,
         src2: &Value,
-        loc_idx: &LocIdx,
+        _loc_idx: &LocIdx,
     ) -> () {
         if let Binopcode::Cmp = opcode {
             match (src1, src2) {
@@ -74,7 +74,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         succ_addrs: &Vec<u64>,
         addr: &u64,
     ) -> Vec<(u64, SwitchLattice)> {
-        let defs_state = self.reaching_defs.get(addr).unwrap();
+        // let defs_state = self.reaching_defs.get(addr).unwrap();
         // if *addr == 0x03455{
         //     // println!("Start of {:x}: r15={:?} rax={:?} r10={:?} zf={:?}", addr, in_state.regs.r15, in_state.regs.rax, in_state.regs.r10, in_state.regs.zf);
         //     println!("Defs: {:x}: rax={:?} r15={:?}", addr, defs_state.regs.rax, defs_state.regs.r15);

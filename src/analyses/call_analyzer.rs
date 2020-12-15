@@ -54,7 +54,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         addr: &u64,
     ) -> Vec<(u64, CallCheckLattice)> {
         if succ_addrs.len() == 2 {
-            let mut not_branch_state = in_state.clone();
+            let not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
             //if zf = CheckFlag(regnum) and and state.get(regnum) == PtrOffset
             //=> state.set(regnum, PtrOffset(Checked))
