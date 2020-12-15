@@ -113,7 +113,6 @@ impl StackChecker<'_> {
                 }
                 MemArgs::Mem2Args(_memarg1, memarg2) => {
                     let offset = get_imm_mem_offset(memarg2);
-                    // println!("Checking Stack Read: {:?} <= {:?} < {:?} offset = {:?}",-state.get_probestack().unwrap(), state.get_stackgrowth().unwrap() + offset, 8096, state.get_stackgrowth().unwrap());
                     return (-state.get_probestack().unwrap()
                         <= state.get_stackgrowth().unwrap() + offset)
                         && (state.get_stackgrowth().unwrap() + offset < 8096);
@@ -134,7 +133,6 @@ impl StackChecker<'_> {
                 }
                 MemArgs::Mem2Args(_memarg1, memarg2) => {
                     let offset = get_imm_mem_offset(memarg2);
-                    // println!("Checking Stack Write: {:?} < {:?} < {:?} offset = {:?}",-state.get_probestack().unwrap(), state.get_stackgrowth().unwrap() + offset, 0, state.get_stackgrowth().unwrap());
                     return (-state.get_probestack().unwrap()
                         <= state.get_stackgrowth().unwrap() + offset)
                         && (state.get_stackgrowth().unwrap() + offset < 0);

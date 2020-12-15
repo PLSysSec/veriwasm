@@ -36,13 +36,9 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
     }
 
     fn check_statement(&self, state: &HeapLattice, ir_stmt: &Stmt, _loc_idx: &LocIdx) -> bool {
-        // println!("rdi = {:?} r15 = {:?} stack = {:?}", state.regs.rdi,
-        // state.regs.r15, state.stack);
-        // println!("Checking statement for heap {:?} r13 = {:?} stack[0x58] = {:?}", ir_stmt, state.regs.r13, state.stack.get(0x10,ValSize::Size64.to_u32() / 8));
         match ir_stmt {
             //1. Check that at each call rdi = HeapBase
             Stmt::Call(_) => {
-                //  println!("=============== call rdi = {:?}", state.regs.rdi.v);
                 match state.regs.rdi.v {
                     Some(HeapValue::HeapBase) => (),
                     _ => {
@@ -53,47 +49,33 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
             }
             //2. Check that all load and store are safe
             Stmt::Unop(_, dst, src) => {
-                if is_mem_access(dst) {
-                    if !self.check_mem_access(state, dst) {
-                        return false;
-                    }
+                if is_mem_access(dst) && !self.check_mem_access(state, dst){
+                    return false;
                 }
                 //stack read: probestack <= stackgrowth + c < 8K
-                if is_mem_access(src) {
-                    if !self.check_mem_access(state, src) {
-                        return false;
-                    }
+                if is_mem_access(src) && !self.check_mem_access(state, src){
+                    return false;
                 }
             }
 
             Stmt::Binop(_, dst, src1, src2) => {
-                if is_mem_access(dst) {
-                    if !self.check_mem_access(state, dst) {
-                        return false;
-                    }
+                if is_mem_access(dst) && !self.check_mem_access(state, dst){
+                    return false;
                 }
-                if is_mem_access(src1) {
-                    if !self.check_mem_access(state, src1) {
-                        return false;
-                    }
+                if is_mem_access(src1) && !self.check_mem_access(state, src1){
+                    return false;
                 }
-                if is_mem_access(src2) {
-                    if !self.check_mem_access(state, src2) {
-                        return false;
-                    }
+                if is_mem_access(src2) && !self.check_mem_access(state, src2){
+                    return false;
                 }
             }
             Stmt::Clear(dst, srcs) => {
-                if is_mem_access(dst) {
-                    if !self.check_mem_access(state, dst) {
-                        return false;
-                    }
+                if is_mem_access(dst) && !self.check_mem_access(state, dst){
+                    return false;
                 }
                 for src in srcs {
-                    if is_mem_access(src) {
-                        if !self.check_mem_access(state, src) {
-                            return false;
-                        }
+                    if is_mem_access(src) && !self.check_mem_access(state, src){
+                        return false;
                     }
                 }
             }
