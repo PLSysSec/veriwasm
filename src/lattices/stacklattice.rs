@@ -65,15 +65,12 @@ impl<T: Lattice + Clone> StackLattice<T> {
     }
 
     pub fn get(&self, offset: i64, size: u32) -> T {
-        // println!(">>>>>>>>>> Loading Value from stack: {:?} {:?}",
-        // self.offset + offset, size);
         if !(size == 4 || size == 8) {
             panic!("Load wrong size! size = {:?}", size);
         }
 
         match self.map.get(&(self.offset + offset)) {
             Some(stack_slot) => {
-                // println!(">>>>>>>>>> Stage 2 Loading Value from stack: {:?} {:?}",  size, stack_slot.size);
                 if stack_slot.size == size {
                     stack_slot.value.clone()
                 } else {
