@@ -1,4 +1,3 @@
-use crate::analyses::analyze_block;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::analyses::AbstractAnalyzer;
 use crate::analyses::AnalysisResult;
@@ -20,6 +19,31 @@ pub struct CallAnalyzer {
 }
 
 impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
+
+    // fn analyze_block(
+    //     &self,
+    //     state:  &mut CallCheckLattice,
+    //     irblock: &IRBlock,
+    // ) -> State {
+    //     let mut new_state = state.clone();
+    //     for (addr, instruction) in irblock.iter() {
+    //         for (idx, ir_insn) in instruction.iter().enumerate() {
+    //             // if *addr== 0x111a || *addr == 0x01167{
+    //             //     println!(">>> {:x} {:?}", addr, state);
+    //             // }
+    //             analyzer.aexec(
+    //                 &mut new_state,
+    //                 ir_insn,
+    //                 &LocIdx {
+    //                     addr: *addr,
+    //                     idx: idx as u32,
+    //                 },
+    //             );
+    //         }
+    //     }
+    //     new_state
+    // }
+
     fn aexec_unop(
         &self,
         in_state: &mut CallCheckLattice,
@@ -39,6 +63,21 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         src2: &Value,
         _loc_idx: &LocIdx,
     ) -> () {
+        if let Binopcode::Cmp = opcode {
+            match (src1, src2) {
+                (Value::Reg(regnum, _), Value::Imm(_, _, imm))
+                | (Value::Imm(_, _, imm), Value::Reg(regnum, _)) => {
+                    in_state.regs.zf =
+                        CallCheckValueLattice::new(CallCheckValue::CheckFlag(*imm as u32, *regnum))
+                }
+                _ => (),
+            }
+        }
+
+        if let Binopcode::And = opcode {
+            in_state.regs.zf = Default::default();
+        }
+
         match opcode {
             Binopcode::Cmp => (),
             Binopcode::Test => (),
@@ -54,56 +93,59 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         addr: &u64,
     ) -> Vec<(u64, CallCheckLattice)> {
         if succ_addrs.len() == 2 {
-            let not_branch_state = in_state.clone();
+            let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
-            //if zf = CheckFlag(regnum) and and state.get(regnum) == PtrOffset
-            //=> state.set(regnum, PtrOffset(Checked))
-            //TODO: set zf to checkflag
-            // if let Some(SwitchValue::ZF(bound, regnum)) = not_branch_state.regs.zf.v{
-            //     not_branch_state.regs.set(&regnum, SwitchValueLattice{v: Some(SwitchValue::UpperBound(bound))})
-            // }
-
-            //1. propagate checked values
-            let defs_state = self.reaching_defs.get(addr).unwrap();
-            let ir_block = irmap.get(addr).unwrap();
-            let defs_state = analyze_block(&self.reaching_analyzer, defs_state, ir_block);
-            let checked_defs = defs_state.regs.zf.clone();
-            let new_val = CallCheckValueLattice {
-                v: Some(CallCheckValue::CheckedVal),
-            };
-            for idx in 0..15 {
-                let reg_def = defs_state.regs.get(&idx, &ValSize::Size64);
-                if (!reg_def.is_empty()) && (reg_def == checked_defs) {
-                    branch_state
-                        .regs
-                        .set(&idx, &ValSize::Size64, new_val.clone());
-                }
-            }
-            //2. resolve ptr thunks in registers
-            let checked_ptr = CallCheckValueLattice {
-                v: Some(CallCheckValue::PtrOffset(DAV::Checked)),
-            };
-            for idx in 0..15 {
-                let reg_val = branch_state.regs.get(&idx, &ValSize::Size64);
-                if let Some(CallCheckValue::PtrOffset(DAV::Unchecked(reg_def))) = reg_val.v {
-                    if reg_def == checked_defs {
+            if let Some(CallCheckValue::CheckFlag(bound, regnum)) = not_branch_state.regs.zf.v {
+                
+                let new_val = CallCheckValueLattice {
+                    v: Some(CallCheckValue::CheckedVal),
+                };
+                branch_state.regs.set(
+                    &regnum,
+                    &ValSize::Size64,
+                    new_val.clone(),
+                );
+                //1. propagate checked values
+                let defs_state = self.reaching_defs.get(addr).unwrap();
+                let ir_block = irmap.get(addr).unwrap();
+                let defs_state = self.reaching_analyzer.analyze_block(defs_state, ir_block);
+                let checked_defs = defs_state.regs.get(&regnum, &ValSize::Size64);
+                for idx in 0..15 {
+                        let reg_def = defs_state.regs.get(&idx, &ValSize::Size64);
+                    if (!reg_def.is_empty()) && (reg_def == checked_defs) {
                         branch_state
                             .regs
-                            .set(&idx, &ValSize::Size64, checked_ptr.clone());
+                            .set(&idx, &ValSize::Size64, new_val.clone());
+                    }
+                }
+                //2. resolve ptr thunks in registers
+                let checked_ptr = CallCheckValueLattice {
+                    v: Some(CallCheckValue::PtrOffset(DAV::Checked)),
+                };
+                for idx in 0..15 {
+                    let reg_val = branch_state.regs.get(&idx, &ValSize::Size64);
+                    if let Some(CallCheckValue::PtrOffset(DAV::Unchecked(reg_def))) = reg_val.v {
+                        if checked_defs.is_empty() && reg_def == checked_defs {
+                            branch_state
+                                .regs
+                                .set(&idx, &ValSize::Size64, checked_ptr.clone());
+                        }
+                    }
+                }
+
+                //3. resolve ptr thunks in stack slots --
+                for (stack_offset, stack_slot) in defs_state.stack.map.iter() {
+                    if !checked_defs.is_empty() && (stack_slot.value == checked_defs) {
+                        let v = StackSlot {
+                            size: stack_slot.size,
+                            value: checked_ptr.clone(),
+                        };
+                        branch_state.stack.map.insert(*stack_offset, v);
                     }
                 }
             }
-
-            //3. resolve ptr thunks in stack slots --
-            for (stack_offset, stack_slot) in defs_state.stack.map.iter() {
-                if !checked_defs.is_empty() && (stack_slot.value == checked_defs) {
-                    let v = StackSlot {
-                        size: stack_slot.size,
-                        value: checked_ptr.clone(),
-                    };
-                    branch_state.stack.map.insert(*stack_offset, v);
-                }
-            }
+            branch_state.regs.zf = Default::default();
+            not_branch_state.regs.zf = Default::default();
 
             vec![
                 (succ_addrs[0].clone(), not_branch_state),
@@ -210,6 +252,8 @@ impl CallAnalyzer {
                     let v = ReachingDefnLattice {
                         defs: BTreeSet::new(),
                     };
+                    // let defs_state = self.reaching_defs.get(addr).unwrap();
+                    // let reg_def = defs_state.regs.get(&idx, &ValSize::Size64);
                     return CallCheckValueLattice {
                         v: Some(CallCheckValue::PtrOffset(DAV::Unchecked(v))),
                     };

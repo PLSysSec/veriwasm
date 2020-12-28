@@ -46,7 +46,7 @@ impl Checker<CallCheckLattice> for CallChecker<'_> {
         //1. Check that all indirect calls use resolved function pointer
         if let Stmt::Call(v) = ir_stmt {
             if !self.check_indirect_call(state, v, loc_idx) {
-                println!("Failure Case: Indirect Call");
+                println!("0x{:x} Failure Case: Indirect Call {:?}", loc_idx.addr, v);
                 return false;
             }
         }
@@ -54,7 +54,8 @@ impl Checker<CallCheckLattice> for CallChecker<'_> {
         // 2. Check that lookup is using resolved DAV
         if let Stmt::Unop(_, _, Value::Mem(_, memargs)) = ir_stmt {
             if !self.check_calltable_lookup(state, memargs) {
-                println!("Failure Case: Lookup Call");
+                println!("0x{:x} Failure Case: Lookup Call: {:?}", loc_idx.addr, memargs);
+                print_mem_access(state, memargs);
                 return false;
             }
         }
@@ -73,6 +74,9 @@ impl CallChecker<'_> {
             Value::Reg(regnum, size) => {
                 if let Some(CallCheckValue::FnPtr) = state.regs.get(regnum, size).v {
                     return true;
+                }
+                else{
+                    println!("{:?}", state.regs.get(regnum, size).v)
                 }
             }
             Value::Mem(_, _) => return false,
@@ -106,5 +110,35 @@ impl CallChecker<'_> {
             },
             _ => return true, //not a calltable lookup?
         }
+    }
+}
+
+pub fn memarg_repr(state: &CallCheckLattice, memarg: &MemArg) -> String {
+    match memarg {
+        MemArg::Reg(regnum, size) => format!("r{:?}: {:?}", regnum, state.regs.get(regnum, size).v),
+        MemArg::Imm(_, _, x) => format!("{:?}", x),
+    }
+}
+
+pub fn print_mem_access(state: &CallCheckLattice, memargs: &MemArgs) {
+    match memargs {
+        MemArgs::Mem1Arg(x) => println!("mem[{:?}]", memarg_repr(state, x)),
+        MemArgs::Mem2Args(x, y) => println!(
+            "mem[{:?} + {:?}]",
+            memarg_repr(state, x),
+            memarg_repr(state, y)
+        ),
+        MemArgs::Mem3Args(x, y, z) => println!(
+            "mem[{:?} + {:?} + {:?}]",
+            memarg_repr(state, x),
+            memarg_repr(state, y),
+            memarg_repr(state, z)
+        ),
+        MemArgs::MemScale(x, y, z) => println!(
+            "mem[{:?} + {:?} * {:?}]",
+            memarg_repr(state, x),
+            memarg_repr(state, y),
+            memarg_repr(state, z)
+        ),
     }
 }

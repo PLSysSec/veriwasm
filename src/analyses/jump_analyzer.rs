@@ -1,5 +1,5 @@
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
-use crate::analyses::{analyze_block, run_worklist, AbstractAnalyzer, AnalysisResult};
+use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
 use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use crate::lattices::stacklattice::StackSlot;
 use crate::lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
@@ -94,7 +94,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                 );
                 let defs_state = self.reaching_defs.get(addr).unwrap();
                 let ir_block = irmap.get(addr).unwrap();
-                let defs_state = analyze_block(&self.reaching_analyzer, defs_state, ir_block);
+                let defs_state = self.reaching_analyzer.analyze_block(defs_state, ir_block);
                 // if *addr == 0x002938{
                 //     println!("propagating {:x}: rax={:?} rcx={:?} zf={:?}", addr, in_state.regs.rax, in_state.regs.rcx, in_state.regs.zf);
                 // }

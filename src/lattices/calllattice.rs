@@ -11,7 +11,7 @@ pub enum CallCheckValue {
     PtrOffset(DAV),
     FnPtr,
     CheckedVal,
-    CheckFlag(u32),
+    CheckFlag(u32, u8),
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
@@ -24,6 +24,14 @@ pub type CallCheckLattice = VariableState<CallCheckValueLattice>;
 impl Default for CallCheckValueLattice {
     fn default() -> Self {
         CallCheckValueLattice { v: None }
+    }
+}
+
+impl CallCheckValueLattice {
+    pub fn new(v: CallCheckValue) -> Self {
+        CallCheckValueLattice {
+            v: Some(v),
+        }
     }
 }
 
