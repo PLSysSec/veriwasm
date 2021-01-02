@@ -116,7 +116,7 @@ fn run(config: Config) {
             let call_analyzer = CallAnalyzer {
                 metadata: metadata.clone(),
                 reaching_defs: reaching_defs.clone(),
-                reaching_analyzer: ReachingDefnAnalyzer {},
+                reaching_analyzer: ReachingDefnAnalyzer {cfg: cfg.clone(), irmap: irmap.clone()},
             };
             let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
             let call_safe = check_calls(call_result, &irmap, &call_analyzer);
@@ -250,7 +250,7 @@ fn full_test_helper(path: &str) {
             let call_analyzer = CallAnalyzer {
                 metadata: metadata.clone(),
                 reaching_defs: reaching_defs.clone(),
-                reaching_analyzer: ReachingDefnAnalyzer {},
+                reaching_analyzer: ReachingDefnAnalyzer {cfg: cfg.clone(), irmap: irmap.clone()},
             };
             let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
             let call_safe = check_calls(call_result, &irmap, &call_analyzer);
@@ -286,7 +286,7 @@ fn negative_test_helper(path: &str, func_name: &str) {
         let call_analyzer = CallAnalyzer {
             metadata: metadata.clone(),
             reaching_defs: reaching_defs.clone(),
-            reaching_analyzer: ReachingDefnAnalyzer {},
+            reaching_analyzer: ReachingDefnAnalyzer {cfg: cfg.clone(), irmap: irmap.clone()},
         };
         let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
         let call_safe = check_calls(call_result, &irmap, &call_analyzer);

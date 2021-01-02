@@ -9,7 +9,7 @@ use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_x86::long_mode::Opcode::*;
 use yaxpeax_x86::long_mode::{Arch as AMD64, Opcode, Operand, RegisterBank};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ImmType {
     Signed,
     Unsigned,
@@ -49,19 +49,19 @@ pub fn mk_value_i64(num: i64) -> Value {
     Value::Imm(ImmType::Signed, ValSize::Size64, num)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MemArgs {
     Mem1Arg(MemArg),
     Mem2Args(MemArg, MemArg),
     Mem3Args(MemArg, MemArg, MemArg),
     MemScale(MemArg, MemArg, MemArg),
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MemArg {
     Reg(u8, ValSize),
     Imm(ImmType, ValSize, i64), //signed, size, const
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Mem(ValSize, MemArgs),
     Reg(u8, ValSize),
@@ -72,7 +72,7 @@ pub enum Value {
 //     Mem(MemArgs),
 //     Reg(u8, ValSize),
 // }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Stmt {
     Clear(Value, Vec<Value>),
     Unop(Unopcode, Value, Value),
@@ -89,11 +89,11 @@ impl Stmt {
         unimplemented!("Width not implemented")
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Unopcode {
     Mov,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Binopcode {
     Test,
     Rol,

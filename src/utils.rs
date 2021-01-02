@@ -96,7 +96,7 @@ fn try_resolve_jumps(
     let switch_analyzer = SwitchAnalyzer {
         metadata: metadata.clone(),
         reaching_defs: reaching_defs,
-        reaching_analyzer: ReachingDefnAnalyzer {},
+        reaching_analyzer: ReachingDefnAnalyzer {cfg: cfg.clone(), irmap: irmap.clone()},
     };
     let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
     let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);

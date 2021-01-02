@@ -3,7 +3,7 @@ use crate::lattices::reachingdefslattice::{singleton, LocIdx, ReachLattice};
 use crate::lattices::VarState;
 use crate::lifter::{Binopcode, IRMap, Stmt, Unopcode};
 use crate::utils::LucetMetadata;
-use yaxpeax_core::analyses::control_flow::VW_CFG;
+use yaxpeax_core::analyses::control_flow::{VW_CFG, VW_Block};
 
 //Top level function
 pub fn analyze_reaching_defs(
@@ -11,10 +11,45 @@ pub fn analyze_reaching_defs(
     irmap: &IRMap,
     _metadata: LucetMetadata,
 ) -> AnalysisResult<ReachLattice> {
-    run_worklist(cfg, irmap, &ReachingDefnAnalyzer {})
+    run_worklist(cfg, irmap, &ReachingDefnAnalyzer {cfg: cfg.clone(), irmap: irmap.clone()})
 }
 
-pub struct ReachingDefnAnalyzer {}
+pub struct ReachingDefnAnalyzer {
+    pub cfg: VW_CFG,
+    pub irmap: IRMap,
+}
+
+impl ReachingDefnAnalyzer{
+    //1. get enclosing block addr
+    //2. get result for that block start
+    //3. run reaching def up to that point
+    pub fn fetch_def(&self, result: &AnalysisResult<ReachLattice>, loc_idx: &LocIdx) -> ReachLattice{
+        // println!("fetch_def = {:x} {:?}", loc_idx.addr, self.cfg.blocks.contains_key(&loc_idx.addr) );
+        if self.cfg.blocks.contains_key(&loc_idx.addr){
+            return result.get(&loc_idx.addr).unwrap().clone();
+        }
+        let block_addr = self.cfg.prev_block(loc_idx.addr).unwrap().start;
+        let irblock = self.irmap.get(&block_addr).unwrap();
+        let mut def_state = result.get(&block_addr).unwrap().clone();
+        for (addr, instruction) in irblock.iter() {
+            for (idx, ir_insn) in instruction.iter().enumerate() {
+                if &loc_idx.addr == addr && (loc_idx.idx as usize) == idx{
+                    return def_state
+                }
+                self.aexec(
+                    &mut def_state,
+                    ir_insn,
+                    &LocIdx {
+                        addr: *addr,
+                        idx: idx as u32,
+                    },
+                );
+            }
+        }
+        unimplemented!()        
+        // result.get(&block_addr).unwrap().clone()
+    }
+}
 
 impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
     fn init_state(&self) -> ReachLattice {

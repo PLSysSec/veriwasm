@@ -1,3 +1,4 @@
+use crate::lifter::IRBlock;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::analyses::AbstractAnalyzer;
 use crate::analyses::AnalysisResult;
@@ -20,29 +21,29 @@ pub struct CallAnalyzer {
 
 impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 
-    // fn analyze_block(
-    //     &self,
-    //     state:  &mut CallCheckLattice,
-    //     irblock: &IRBlock,
-    // ) -> State {
-    //     let mut new_state = state.clone();
-    //     for (addr, instruction) in irblock.iter() {
-    //         for (idx, ir_insn) in instruction.iter().enumerate() {
-    //             // if *addr== 0x111a || *addr == 0x01167{
-    //             //     println!(">>> {:x} {:?}", addr, state);
-    //             // }
-    //             analyzer.aexec(
-    //                 &mut new_state,
-    //                 ir_insn,
-    //                 &LocIdx {
-    //                     addr: *addr,
-    //                     idx: idx as u32,
-    //                 },
-    //             );
-    //         }
-    //     }
-    //     new_state
-    // }
+    fn analyze_block(
+        &self,
+        state:  &CallCheckLattice,
+        irblock: &IRBlock,
+    ) -> CallCheckLattice {
+        let mut new_state = state.clone();
+        for (addr, instruction) in irblock.iter() {
+            for (idx, ir_insn) in instruction.iter().enumerate() {
+                // if *addr== 0x111a || *addr == 0x01167{
+                //     println!(">>> {:x} {:?}", addr, state);
+                // }
+                self.aexec(
+                    &mut new_state,
+                    ir_insn,
+                    &LocIdx {
+                        addr: *addr,
+                        idx: idx as u32,
+                    },
+                );
+            }
+        }
+        new_state
+    }
 
     fn aexec_unop(
         &self,
@@ -61,14 +62,22 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         dst: &Value,
         src1: &Value,
         src2: &Value,
-        _loc_idx: &LocIdx,
+        loc_idx: &LocIdx,
     ) -> () {
         if let Binopcode::Cmp = opcode {
+            println!("Cmp: 0x{:x} {:?} {:?}", loc_idx.addr, src1, src2);
             match (src1, src2) {
-                (Value::Reg(regnum, _), Value::Imm(_, _, imm))
-                | (Value::Imm(_, _, imm), Value::Reg(regnum, _)) => {
-                    in_state.regs.zf =
-                        CallCheckValueLattice::new(CallCheckValue::CheckFlag(*imm as u32, *regnum))
+                (Value::Reg(regnum1,size1), Value::Reg(regnum2, size2)) => {
+                    // println!("Setting zf 0x{:x} r{:?} zf = {:?}",
+                    // loc_idx.addr, regnum, imm);
+                    if let Some(CallCheckValue::TableSize) = in_state.regs.get(regnum2, size2).v{
+                        in_state.regs.zf =
+                            CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum1))
+                    }
+                    if let Some(CallCheckValue::TableSize) = in_state.regs.get(regnum1, size1).v{
+                        in_state.regs.zf =
+                            CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum2))
+                    }
                 }
                 _ => (),
             }
@@ -81,7 +90,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         match opcode {
             Binopcode::Cmp => (),
             Binopcode::Test => (),
-            _ => in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2)),
+            _ => in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2, loc_idx)),
         }
     }
 
@@ -95,8 +104,9 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         if succ_addrs.len() == 2 {
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
-            if let Some(CallCheckValue::CheckFlag(bound, regnum)) = not_branch_state.regs.zf.v {
-                
+            println!("Potential CheckedVal! 0x{:x}", addr);
+            if let Some(CallCheckValue::CheckFlag(_, regnum)) = not_branch_state.regs.zf.v {
+                println!("Setting CheckedVal! 0x{:x}", addr);
                 let new_val = CallCheckValueLattice {
                     v: Some(CallCheckValue::CheckedVal),
                 };
@@ -111,14 +121,27 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                 let defs_state = self.reaching_analyzer.analyze_block(defs_state, ir_block);
                 let checked_defs = defs_state.regs.get(&regnum, &ValSize::Size64);
                 for idx in 0..15 {
-                        let reg_def = defs_state.regs.get(&idx, &ValSize::Size64);
+                    let reg_def = defs_state.regs.get(&idx, &ValSize::Size64);
                     if (!reg_def.is_empty()) && (reg_def == checked_defs) {
                         branch_state
                             .regs
                             .set(&idx, &ValSize::Size64, new_val.clone());
                     }
                 }
-                //2. resolve ptr thunks in registers
+
+                 
+                for (stack_offset, stack_slot) in defs_state.stack.map.iter() {
+                    if !checked_defs.is_empty() && (stack_slot.value == checked_defs) {
+                        let vv = StackSlot {
+                            size: stack_slot.size,
+                            value: new_val.clone(),
+                        };
+                        branch_state.stack.map.insert(*stack_offset, vv);
+                    }
+                }
+                
+
+                //3. resolve ptr thunks in registers
                 let checked_ptr = CallCheckValueLattice {
                     v: Some(CallCheckValue::PtrOffset(DAV::Checked)),
                 };
@@ -133,16 +156,32 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     }
                 }
 
-                //3. resolve ptr thunks in stack slots --
-                for (stack_offset, stack_slot) in defs_state.stack.map.iter() {
-                    if !checked_defs.is_empty() && (stack_slot.value == checked_defs) {
+                //4. resolve ptr thunks in stack slots --
+                //TODO: is ordering important between these 4 propogations?
+                // is using not_branch_state here a problem?
+                for (stack_offset, stack_slot) in not_branch_state.stack.map.iter() {
+                    let stack_val = stack_slot.value.v.clone();
+                    if let Some(CallCheckValue::PtrOffset(DAV::Unchecked(stack_def))) = stack_val {
+                        if !checked_defs.is_empty() && (stack_def == checked_defs) {
                         let v = StackSlot {
                             size: stack_slot.size,
                             value: checked_ptr.clone(),
                         };
                         branch_state.stack.map.insert(*stack_offset, v);
+                        }
                     }
                 }
+
+                // for (stack_offset, stack_slot) in defs_state.stack.map.iter() {
+                //     if !checked_defs.is_empty() && (stack_slot.value == checked_defs) {
+                //         let v = StackSlot {
+                //             size: stack_slot.size,
+                //             value: checked_ptr.clone(),
+                //         };
+                //         branch_state.stack.map.insert(*stack_offset, v);
+                //     }
+                // }
+
             }
             branch_state.regs.zf = Default::default();
             not_branch_state.regs.zf = Default::default();
@@ -240,22 +279,25 @@ impl CallAnalyzer {
         opcode: &Binopcode,
         src1: &Value,
         src2: &Value,
+        loc_idx: &LocIdx,
     ) -> CallCheckValueLattice {
         if let Binopcode::Shl = opcode {
             if let (Value::Reg(regnum1, size1), Value::Imm(_, _, 4)) = (src1, src2) {
+                println!("Creating Pointer Offset! 0x{:x}    r{:?}    {:?}", loc_idx.addr, regnum1, in_state.regs.get(regnum1, size1).v);
                 if let Some(CallCheckValue::CheckedVal) = in_state.regs.get(regnum1, size1).v {
                     return CallCheckValueLattice {
                         v: Some(CallCheckValue::PtrOffset(DAV::Checked)),
                     };
                 } else {
-                    //TODO: use proper reaching def here / locidx here
-                    let v = ReachingDefnLattice {
-                        defs: BTreeSet::new(),
-                    };
+                    // let v = ReachingDefnLattice {
+                    //     defs: BTreeSet::new(),
+                    // };
+                    let def_state = self.reaching_analyzer.fetch_def(&self.reaching_defs, loc_idx);
+                    let reg_def = def_state.regs.get(regnum1, size1);
                     // let defs_state = self.reaching_defs.get(addr).unwrap();
                     // let reg_def = defs_state.regs.get(&idx, &ValSize::Size64);
                     return CallCheckValueLattice {
-                        v: Some(CallCheckValue::PtrOffset(DAV::Unchecked(v))),
+                        v: Some(CallCheckValue::PtrOffset(DAV::Unchecked(reg_def))),
                     };
                 }
             }

@@ -7,10 +7,10 @@ use std::collections::HashMap;
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_core::memory::MemoryRepr;
 
-pub struct JumpResolver<'a> {
-    _irmap: &'a IRMap,
-    _analyzer: &'a SwitchAnalyzer,
-}
+// pub struct JumpResolver<'a> {
+//     _irmap: &'a IRMap,
+//     _analyzer: &'a SwitchAnalyzer,
+// }
 
 fn load_target(program: &ModuleData, addr: u64) -> i64 {
     let b0 = program.read(addr).unwrap() as u32;
