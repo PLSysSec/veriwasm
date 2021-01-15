@@ -61,14 +61,14 @@ impl Default for BooleanLattice {
 
 pub type Constu32Lattice = ConstLattice<u32>;
 
-#[derive(Eq, Clone, Copy, Debug)]
-pub struct ConstLattice<T: Eq + Copy + Debug> {
+#[derive(Eq, Clone, Debug)]
+pub struct ConstLattice<T: Eq + Clone + Debug> {
     pub v: Option<T>,
 }
 
-impl<T: Eq + Copy + Debug> PartialOrd for ConstLattice<T> {
+impl<T: Eq + Clone + Debug> PartialOrd for ConstLattice<T> {
     fn partial_cmp(&self, other: &ConstLattice<T>) -> Option<Ordering> {
-        match (self.v, other.v) {
+        match (self.v.as_ref(), other.v.as_ref()) {
             (None, None) => Some(Ordering::Equal),
             (None, _) => Some(Ordering::Less),
             (_, None) => Some(Ordering::Greater),
@@ -83,29 +83,29 @@ impl<T: Eq + Copy + Debug> PartialOrd for ConstLattice<T> {
     }
 }
 
-impl<T: Eq + Copy + Debug> PartialEq for ConstLattice<T> {
+impl<T: Eq + Clone + Debug> PartialEq for ConstLattice<T> {
     fn eq(&self, other: &ConstLattice<T>) -> bool {
         self.v == other.v
     }
 }
 
-impl<T: Eq + Copy + Debug> Lattice for ConstLattice<T> {
+impl<T: Eq + Clone + Debug> Lattice for ConstLattice<T> {
     fn meet(&self, other: &Self, _loc_idx: &LocIdx) -> Self {
         if self.v == other.v {
-            ConstLattice { v: self.v }
+            ConstLattice { v: self.v.clone() }
         } else {
             ConstLattice { v: None }
         }
     }
 }
 
-impl<T: Eq + Copy + Debug> Default for ConstLattice<T> {
+impl<T: Eq + Clone + Debug> Default for ConstLattice<T> {
     fn default() -> Self {
         ConstLattice { v: None }
     }
 }
 
-impl<T: Eq + Copy + Debug> ConstLattice<T> {
+impl<T: Eq + Clone + Debug> ConstLattice<T> {
     pub fn new(v: T) -> Self {
         ConstLattice { v: Some(v) }
     }

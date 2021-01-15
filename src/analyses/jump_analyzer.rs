@@ -43,14 +43,16 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         dst: &Value,
         src1: &Value,
         src2: &Value,
-        _loc_idx: &LocIdx,
+        loc_idx: &LocIdx,
     ) -> () {
         if let Binopcode::Cmp = opcode {
             match (src1, src2) {
                 (Value::Reg(regnum, _), Value::Imm(_, _, imm))
                 | (Value::Imm(_, _, imm), Value::Reg(regnum, _)) => {
+                    let reg_def = self.reaching_analyzer.fetch_def(&self.reaching_defs, loc_idx);
+                    let src_loc = reg_def.regs.get(regnum, &ValSize::Size64);
                     in_state.regs.zf =
-                        SwitchValueLattice::new(SwitchValue::ZF(*imm as u32, *regnum))
+                        SwitchValueLattice::new(SwitchValue::ZF(*imm as u32, *regnum, src_loc));
                 }
                 _ => (),
             }
@@ -84,12 +86,12 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         if succ_addrs.len() == 2 {
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
-            if let Some(SwitchValue::ZF(bound, regnum)) = not_branch_state.regs.zf.v {
+            if let Some(SwitchValue::ZF(bound, regnum, checked_defs)) = &in_state.regs.zf.v {
                 not_branch_state.regs.set(
                     &regnum,
                     &ValSize::Size64,
                     SwitchValueLattice {
-                        v: Some(SwitchValue::UpperBound(bound)),
+                        v: Some(SwitchValue::UpperBound(*bound)),
                     },
                 );
                 let defs_state = self.reaching_defs.get(addr).unwrap();
@@ -99,17 +101,17 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                 //     println!("propagating {:x}: rax={:?} rcx={:?} zf={:?}", addr, in_state.regs.rax, in_state.regs.rcx, in_state.regs.zf);
                 // }
 
-                let checked_defs = defs_state.regs.get(&regnum, &ValSize::Size64);
+                // let checked_defs = defs_state.regs.get(&regnum, &ValSize::Size64);
                 //propagate bound across registers with the same reaching def
                 for idx in 0..15 {
-                    if idx != regnum {
+                    if idx != *regnum {
                         let reg_def = defs_state.regs.get(&idx, &ValSize::Size64);
-                        if (!reg_def.is_empty()) && (reg_def == checked_defs) {
+                        if (!reg_def.is_empty()) && (&reg_def == checked_defs) {
                             not_branch_state.regs.set(
                                 &idx,
                                 &ValSize::Size64,
                                 SwitchValueLattice {
-                                    v: Some(SwitchValue::UpperBound(bound)),
+                                    v: Some(SwitchValue::UpperBound(*bound)),
                                 },
                             );
                         }
@@ -117,9 +119,9 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                 }
                 //propagate bound across stack slots with the same upper bound
                 for (stack_offset, stack_slot) in defs_state.stack.map.iter() {
-                    if !checked_defs.is_empty() && (stack_slot.value == checked_defs) {
+                    if !checked_defs.is_empty() && (&stack_slot.value == checked_defs) {
                         let v = SwitchValueLattice {
-                            v: Some(SwitchValue::UpperBound(bound)),
+                            v: Some(SwitchValue::UpperBound(*bound)),
                         };
                         let vv = StackSlot {
                             size: stack_slot.size,
