@@ -66,9 +66,9 @@ pub fn resolve_jumps(
         // println!("{:x}: rcx = {:?}", block_addr, state.regs.rcx);
         for (addr, ir_stmts) in irmap.get(&block_addr).unwrap() {
             for (idx, ir_stmt) in ir_stmts.iter().enumerate() {
-                if(*addr >= 0x0002218 && *addr <= 0x000222d){
-                    println!("------------\n{:x} {:?} rdi = {:?} rdx = {:?} r14 = {:?}", addr, ir_stmt,state.regs.rdi, state.regs.rdx, state.regs.r14);
-                }
+                // if(*addr >= 0x0002d8d && *addr <= 0x0002d9a){
+                //     println!("------------\n{:x} {:?} r14 = {:?} rcx = {:?} r15 = {:?}", addr, ir_stmt,state.regs.r14, state.regs.rcx, state.regs.r15);
+                // }
                 match ir_stmt {
                     Stmt::Branch(_, Value::Reg(regnum, regsize)) => {
                         let aval = state.regs.get(regnum, regsize);

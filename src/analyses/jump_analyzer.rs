@@ -64,7 +64,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
 
         match opcode {
             Binopcode::Cmp => (),
-            Binopcode::Test => (),
+            Binopcode::Test =>  {in_state.regs.zf = Default::default();},
             _ => in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2)),
         }
     }
