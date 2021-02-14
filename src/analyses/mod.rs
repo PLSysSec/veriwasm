@@ -67,9 +67,6 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
         let mut new_state = state.clone();
         for (addr, instruction) in irblock.iter() {
             for (idx, ir_insn) in instruction.iter().enumerate() {
-                // if *addr== 0x111a || *addr == 0x01167{
-                //     println!(">>> {:x} {:?}", addr, state);
-                // }
                 self.aexec(
                     &mut new_state,
                     ir_insn,
@@ -128,7 +125,6 @@ pub fn run_worklist<T: AbstractAnalyzer<State>, State: VarState + Lattice + Clon
         for (succ_addr, branch_state) in
             analyzer.process_branch(irmap, &new_state, &succ_addrs, &addr)
         {
-            //let mut has_change = false;
             let has_change = 
                 if statemap.contains_key(&succ_addr) {
                     let old_state = statemap.get(&succ_addr).unwrap();

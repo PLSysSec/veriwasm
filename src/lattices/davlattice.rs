@@ -58,6 +58,3 @@ impl Default for DAV {
         DAV::Unknown
     }
 }
-
-#[test]
-fn dav_lattice_test() {}

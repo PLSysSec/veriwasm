@@ -189,8 +189,7 @@ impl HeapChecker<'_> {
                         return true
                     }
                 },
-                MemArgs::Mem3Args(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,8))
-                /*| MemArgs::MemScale(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,4))*/ => {
+                MemArgs::Mem3Args(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,8)) => {
                     match (state.regs.get(regnum1,&ValSize::Size64).v,state.regs.get(regnum2,&ValSize::Size64).v){
                         (Some(HeapValue::GuestTable0),_) => return true,
                         (_,Some(HeapValue::GuestTable0)) => return true,

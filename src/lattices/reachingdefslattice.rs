@@ -62,36 +62,9 @@ pub fn singleton(loc_idx: LocIdx) -> ReachingDefnLattice {
     ReachingDefnLattice { defs: bset }
 }
 
-// #[test]
-// fn heap_reaching_defs_test() {
-//     let d1 = LocIdx{addr: 1, idx : 1};
-//     let d2 = LocIdx{addr: 2, idx : 2};
-//     let d3 = LocIdx{addr: 3, idx : 3};
-//     let d4 = LocIdx{addr: 4, idx : 4};
-
-//     let mut bset1 = BTreeSet::new();
-//     bset1.insert(d1);
-//     bset1.insert(d2);
-//     let x1  = ReachingDefnLattice {defs : bset1};
-
-//     let mut bset2 = BTreeSet::new();
-//     bset2.insert(d3);
-//     bset2.insert(d4);
-//     let x2  = ReachingDefnLattice {defs : bset2};
-
-//     let mut bset3 = BTreeSet::new();
-//     bset3.insert(LocIdx{addr: 1, idx : 1});
-//     let x3  = ReachingDefnLattice {defs : bset3};
-
-//     assert_eq!(x1 == x2, false);
-//     assert_eq!(x1 == x3, false);
-//     assert_eq!(x1 > x2, false);
-//     assert_eq!(x1 < x2, false);
-//     assert_eq!(x1 > x3, true);
-//     assert_eq!(x1 >= x2, false);
-//     assert_eq!(x1 <= x2, false);
-//     assert_eq!(x1.meet(&x2) == Default::default(), true);
-//     assert_eq!(x1.meet(&x1) == x1, true);
-//     assert_eq!(x1.meet(&x3) == x3, true);
-
-// }
+pub fn loc(addr: u64, idx: u32) -> ReachingDefnLattice{
+    singleton(LocIdx {
+        addr: addr,
+        idx: idx,
+    })
+}

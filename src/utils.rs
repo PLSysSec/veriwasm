@@ -220,11 +220,6 @@ pub fn get_one_resolved_cfg(binpath: &str, func: &str) -> ((VW_CFG, IRMap),x86_6
     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
     let x86_64_data = get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
     let addr = get_symbol_addr(symbols, func).unwrap();
-    println!(
-        "Found maybe function: {:?} valid = {:?}",
-        func,
-        is_valid_func_name(&String::from(func))
-    );
     assert!(is_valid_func_name(&String::from(func)));
     println!("Generating CFG for: {:?}", func);
     return (fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr),x86_64_data);

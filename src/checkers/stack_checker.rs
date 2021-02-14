@@ -25,10 +25,6 @@ pub fn check_stack(
 
 impl Checker<StackGrowthLattice> for StackChecker<'_> {
     fn check(&self, result: AnalysisResult<StackGrowthLattice>) -> bool {
-        //println!("{:?}", result);
-        // for (k,v) in result.iter(){
-        //     println!("{:x} {:?}", k, v);
-        // }
         self.check_state_at_statements(result)
     }
 
@@ -127,7 +123,6 @@ impl StackChecker<'_> {
         if let Value::Mem(_, memargs) = dst {
             match memargs {
                 MemArgs::Mem1Arg(_memarg) => {
-                    // println!("{:?} {:?}", state.get_probestack().unwrap(), state.get_stackgrowth());
                     return (-state.get_probestack().unwrap() <= state.get_stackgrowth().unwrap())
                         && (state.get_stackgrowth().unwrap() < 0);
                 }

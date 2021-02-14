@@ -10,22 +10,16 @@ use crate::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
 pub struct CallChecker<'a> {
     irmap: &'a IRMap,
     analyzer: &'a CallAnalyzer,
-    // funcs: &'a Vec<u64>,
-    // x86_64_data: &'a x86_64Data,
 }
 
 pub fn check_calls(
     result: AnalysisResult<CallCheckLattice>,
     irmap: &IRMap,
     analyzer: &CallAnalyzer,
-    // funcs: &Vec<u64>,
-    // x86_64_data: &x86_64Data,
 ) -> bool {
     CallChecker {
         irmap,
         analyzer,
-        // funcs,
-        // x86_64_data,
     }
     .check(result)
 }

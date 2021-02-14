@@ -68,10 +68,6 @@ pub enum Value {
     Imm(ImmType, ValSize, i64), //signed, size, const
 }
 
-// pub enum DstValue {
-//     Mem(MemArgs),
-//     Reg(u8, ValSize),
-// }
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Clear(Value, Vec<Value>),
@@ -235,13 +231,13 @@ fn get_sources(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Value> {
 
 fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
-    let dsts: Vec<&Location> = uses_vec
-        .iter()
-        .filter_map(|(loc, dir)| match (loc, dir) {
-            (Some(loc), Direction::Write) => Some(loc),
-            _ => None,
-        })
-        .collect();
+    // let dsts: Vec<&Location> = uses_vec
+    //     .iter()
+    //     .filter_map(|(loc, dir)| match (loc, dir) {
+    //         (Some(loc), Direction::Write) => Some(loc),
+    //         _ => None,
+    //     })
+    //     .collect();
     // println!("dsts: {:?}", dsts);
     let srcs: Vec<Value> = get_sources(instr);
     Stmt::Clear(convert_operand(instr.operand(0), ValSize::Size8), srcs)
@@ -358,8 +354,6 @@ pub fn lift(
     metadata: &LucetMetadata,
 ) -> Vec<Stmt> {
     let mut instrs = Vec::new();
-    //println!("{:?} {:?} instr", addr, instr);
-
     match instr.opcode {
         Opcode::MOV => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::MOVSX => instrs.push(unop(Unopcode::Mov, instr)),
@@ -721,7 +715,6 @@ pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &LucetMetadata) ->
             if is_probestack(instr, &addr, &metadata) {
                 match x {
                     Some(v) => {
-                        // println!("Found Probestack: {:?} {:?} {:?}", v, v / 4096, ((v / 4096) + 1) * 4096);
                         let ir = (addr, vec![Stmt::ProbeStack(v)]);
                         block_ir.push(ir);
                         probestack_suffix = true;
@@ -733,7 +726,6 @@ pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &LucetMetadata) ->
             let ir = (addr, lift(instr, &addr, metadata));
             block_ir.push(ir);
             x = extract_probestack_arg(instr);
-            // last_instr = Some(*instr);
         }
         irmap.insert(block_addr, block_ir);
     }

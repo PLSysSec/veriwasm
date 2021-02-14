@@ -12,7 +12,6 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
     }
 
     fn aexec(&self, in_state: &mut StackGrowthLattice, ir_instr: &Stmt, _loc_idx: &LocIdx) -> () {
-        // println!("Stack aexec: {:x} : {:?} rsp = {:?}", loc_idx.addr, ir_instr, in_state.v);
         match ir_instr {
             Stmt::Clear(dst, _) => {
                 if is_rsp(dst) {
@@ -33,13 +32,11 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
                         if let Some((x, probestack)) = in_state.v {
                             match opcode {
                                 Binopcode::Add => {
-                                    /*println!("{:?} += {:?}",x, offset);*/
                                     *in_state = StackGrowthLattice {
                                         v: Some((x + offset, probestack)),
                                     }
                                 }
                                 Binopcode::Sub => {
-                                    /*println!("{:?} -= {:?}",x, offset);*/
                                     if (offset - x) > probestack + 4096 {
                                         panic!("Probestack violation")
                                     } else if (offset - x) > probestack {

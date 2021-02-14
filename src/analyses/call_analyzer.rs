@@ -29,9 +29,6 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         let mut new_state = state.clone();
         for (addr, instruction) in irblock.iter() {
             for (idx, ir_insn) in instruction.iter().enumerate() {
-                // if *addr== 0x111a || *addr == 0x01167{
-                //     println!(">>> {:x} {:?}", addr, state);
-                // }
                 self.aexec(
                     &mut new_state,
                     ir_insn,
@@ -68,8 +65,6 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
             println!("Cmp: 0x{:x} {:?} {:?}", loc_idx.addr, src1, src2);
             match (src1, src2) {
                 (Value::Reg(regnum1,size1), Value::Reg(regnum2, size2)) => {
-                    // println!("Setting zf 0x{:x} r{:?} zf = {:?}",
-                    // loc_idx.addr, regnum, imm);
                     if let Some(CallCheckValue::TableSize) = in_state.regs.get(regnum2, size2).v{
                         in_state.regs.zf =
                             CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum1))
@@ -129,7 +124,6 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     }
                 }
 
-                 
                 for (stack_offset, stack_slot) in defs_state.stack.map.iter() {
                     if !checked_defs.is_empty() && (stack_slot.value == checked_defs) {
                         let vv = StackSlot {
@@ -140,7 +134,6 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     }
                 }
                 
-
                 //3. resolve ptr thunks in registers
                 let checked_ptr = CallCheckValueLattice {
                     v: Some(CallCheckValue::PtrOffset(DAV::Checked)),
@@ -171,17 +164,6 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                         }
                     }
                 }
-
-                // for (stack_offset, stack_slot) in defs_state.stack.map.iter() {
-                //     if !checked_defs.is_empty() && (stack_slot.value == checked_defs) {
-                //         let v = StackSlot {
-                //             size: stack_slot.size,
-                //             value: checked_ptr.clone(),
-                //         };
-                //         branch_state.stack.map.insert(*stack_offset, v);
-                //     }
-                // }
-
             }
             branch_state.regs.zf = Default::default();
             not_branch_state.regs.zf = Default::default();
@@ -283,19 +265,13 @@ impl CallAnalyzer {
     ) -> CallCheckValueLattice {
         if let Binopcode::Shl = opcode {
             if let (Value::Reg(regnum1, size1), Value::Imm(_, _, 4)) = (src1, src2) {
-                println!("Creating Pointer Offset! 0x{:x}    r{:?}    {:?}", loc_idx.addr, regnum1, in_state.regs.get(regnum1, size1).v);
                 if let Some(CallCheckValue::CheckedVal) = in_state.regs.get(regnum1, size1).v {
                     return CallCheckValueLattice {
                         v: Some(CallCheckValue::PtrOffset(DAV::Checked)),
                     };
                 } else {
-                    // let v = ReachingDefnLattice {
-                    //     defs: BTreeSet::new(),
-                    // };
                     let def_state = self.reaching_analyzer.fetch_def(&self.reaching_defs, loc_idx);
                     let reg_def = def_state.regs.get(regnum1, size1);
-                    // let defs_state = self.reaching_defs.get(addr).unwrap();
-                    // let reg_def = defs_state.regs.get(&idx, &ValSize::Size64);
                     return CallCheckValueLattice {
                         v: Some(CallCheckValue::PtrOffset(DAV::Unchecked(reg_def))),
                     };

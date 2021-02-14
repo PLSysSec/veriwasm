@@ -67,15 +67,6 @@ fn run(config: Config) {
     let program = load_program(&config.module_path);
     println!("Loading Metadata");
     let metadata = load_metadata(&config.module_path);
-
-    // let (x86_64_data,func_addrs) = get_data(binpath, &program);
-    // for (addr,symbol) in func_addrs{
-    //     let (new_cfg,irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
-    // }
-
-    // for (func_name,cfg) in get_cfgs(&config.module_path).iter(){
-    // for (func_name,(cfg,irmap)) in
-    // get_resolved_cfgs(&config.module_path).iter(){
     let (x86_64_data, func_addrs) = get_data(&config.module_path, &program);
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     for (addr, func_name) in func_addrs {
@@ -86,7 +77,6 @@ fn run(config: Config) {
         println!("Analyzing: {:?}", func_name);
         //let irmap = lift_cfg(&program, &cfg, &metadata);
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
-        // assert_eq!(cfg.blocks.keys(), ir);
 
         let stack_start = Instant::now();
         let stack_analyzer = StackAnalyzer {};
@@ -95,8 +85,7 @@ fn run(config: Config) {
         if !stack_safe {
             panic!("Not Stack Safe");
         }
-        // assert!(stack_safe);
-        // println!("stack_safe = {:?}", stack_safe);
+
         println!("Checking Heap Safety");
         let heap_start = Instant::now();
         let heap_analyzer = HeapAnalyzer {
@@ -107,8 +96,7 @@ fn run(config: Config) {
         if !heap_safe {
             panic!("Not Heap Safe");
         }
-        // assert!(heap_safe);
-        // println!("heap_safe = {:?}", heap_safe);
+
         let call_start = Instant::now();
         println!("Checking Call Safety");
         if has_indirect_calls(&irmap) {
@@ -123,8 +111,7 @@ fn run(config: Config) {
             if !call_safe {
                 panic!("Not Call Safe");
             }
-            // println!("call_safe = {:?}", call_safe);
-            // assert!(call_safe);
+
         }
         let end = Instant::now();
         info.push((

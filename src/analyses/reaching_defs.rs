@@ -1,9 +1,10 @@
+use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
-use crate::lattices::reachingdefslattice::{singleton, LocIdx, ReachLattice};
+use crate::lattices::reachingdefslattice::{singleton, LocIdx, ReachLattice, loc};
 use crate::lattices::VarState;
 use crate::lifter::{Binopcode, IRMap, Stmt, Unopcode};
 use crate::utils::LucetMetadata;
-use yaxpeax_core::analyses::control_flow::{VW_CFG, VW_Block};
+use yaxpeax_core::analyses::control_flow::VW_CFG;
 
 //Top level function
 pub fn analyze_reaching_defs(
@@ -47,7 +48,6 @@ impl ReachingDefnAnalyzer{
             }
         }
         unimplemented!()        
-        // result.get(&block_addr).unwrap().clone()
     }
 }
 
@@ -55,106 +55,45 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
     fn init_state(&self) -> ReachLattice {
         let mut s: ReachLattice = Default::default();
 
-        s.regs.rax = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 0,
-        });
-        s.regs.rcx = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 1,
-        });
-        s.regs.rdx = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 2,
-        });
-        s.regs.rbx = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 3,
-        });
-        s.regs.rbp = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 4,
-        });
-        s.regs.rsi = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 5,
-        });
-        s.regs.rdi = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 6,
-        });
-
-        s.regs.r8 = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 7,
-        });
-        s.regs.r9 = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 8,
-        });
-        s.regs.r10 = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 9,
-        });
-        s.regs.r11 = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 10,
-        });
-        s.regs.r12 = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 11,
-        });
-        s.regs.r13 = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 12,
-        });
-        s.regs.r14 = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 13,
-        });
-        s.regs.r15 = singleton(LocIdx {
-            addr: 0xdeadbeef,
-            idx: 14,
-        });
+        s.regs.rax = loc(0xdeadbeef, 0);
+        s.regs.rcx = loc(0xdeadbeef, 1);
+        s.regs.rdx = loc(0xdeadbeef, 2);
+        s.regs.rbx = loc(0xdeadbeef, 3);
+        s.regs.rbp = loc(0xdeadbeef, 4);
+        s.regs.rsi = loc(0xdeadbeef, 5);
+        s.regs.rdi = loc(0xdeadbeef, 6);
+        s.regs.r8 =  loc(0xdeadbeef, 7);
+        s.regs.r9 =  loc(0xdeadbeef, 8);
+        s.regs.r10 = loc(0xdeadbeef, 9);
+        s.regs.r11 = loc(0xdeadbeef, 10);
+        s.regs.r12 = loc(0xdeadbeef, 11);
+        s.regs.r13 = loc(0xdeadbeef, 12);
+        s.regs.r14 = loc(0xdeadbeef, 13);
+        s.regs.r15 = loc(0xdeadbeef, 14);
 
         s.stack.update(
-            0x8,
-            singleton(LocIdx {
-                addr: 0xdeadbeef,
-                idx: 15,
-            }),
+            0x8, 
+            loc(0xdeadbeef, 15),
             4,
         );
         s.stack.update(
             0x10,
-            singleton(LocIdx {
-                addr: 0xdeadbeef,
-                idx: 16,
-            }),
+            loc(0xdeadbeef, 16),
             4,
         );
         s.stack.update(
             0x18,
-            singleton(LocIdx {
-                addr: 0xdeadbeef,
-                idx: 17,
-            }),
+            loc(0xdeadbeef, 17),
             4,
         );
         s.stack.update(
             0x20,
-            singleton(LocIdx {
-                addr: 0xdeadbeef,
-                idx: 18,
-            }),
+            loc(0xdeadbeef, 18),
             4,
         );
         s.stack.update(
             0x28,
-            singleton(LocIdx {
-                addr: 0xdeadbeef,
-                idx: 19,
-            }),
+            loc(0xdeadbeef, 18),
             4,
         );
 
@@ -189,67 +128,21 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
             Stmt::Call(_) =>
             //in_state.regs.clear_regs(),
             {
-                in_state.regs.rax = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 0,
-                });
-                in_state.regs.rcx = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 1,
-                });
-                in_state.regs.rdx = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 2,
-                });
-                in_state.regs.rbx = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 3,
-                });
-                in_state.regs.rbp = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 4,
-                });
-                in_state.regs.rsi = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 5,
-                });
-                in_state.regs.rdi = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 6,
-                });
-
-                in_state.regs.r8 = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 7,
-                });
-                in_state.regs.r9 = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 8,
-                });
-                in_state.regs.r10 = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 9,
-                });
-                in_state.regs.r11 = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 10,
-                });
-                in_state.regs.r12 = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 11,
-                });
-                in_state.regs.r13 = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 12,
-                });
-                in_state.regs.r14 = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 13,
-                });
-                in_state.regs.r15 = singleton(LocIdx {
-                    addr: loc_idx.addr,
-                    idx: 14,
-                });
+                in_state.regs.rax = loc(loc_idx.addr, 0);
+                in_state.regs.rcx = loc(loc_idx.addr, 1);
+                in_state.regs.rdx = loc(loc_idx.addr, 2);
+                in_state.regs.rbx = loc(loc_idx.addr, 3);
+                in_state.regs.rbp = loc(loc_idx.addr, 4);
+                in_state.regs.rsi = loc(loc_idx.addr, 5);
+                in_state.regs.rdi = loc(loc_idx.addr, 6);
+                in_state.regs.r8 =  loc(loc_idx.addr, 7);
+                in_state.regs.r9 =  loc(loc_idx.addr, 8);
+                in_state.regs.r10 = loc(loc_idx.addr, 9);
+                in_state.regs.r11 = loc(loc_idx.addr, 10);
+                in_state.regs.r12 = loc(loc_idx.addr, 11);
+                in_state.regs.r13 = loc(loc_idx.addr, 12);
+                in_state.regs.r14 = loc(loc_idx.addr, 13);
+                in_state.regs.r15 = loc(loc_idx.addr, 14);
             }
             _ => (),
         }

@@ -26,7 +26,6 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         _loc_idx: &LocIdx,
     ) -> () {
         let v = self.aeval_unop(in_state, src);
-        // println!("dst = {:?} = {:?}, rax = {:?}", dst, v, in_state.regs.rax);
         in_state.set(dst, v)
     }
 }
@@ -53,11 +52,9 @@ impl HeapAnalyzer {
                 if is_globalbase_access(in_state, memargs) {
                     return HeapValueLattice::new(HeapValue::GlobalsBase);
                 }
-                // put stack access here?
                 if is_stack_access(value) {
                     let offset = extract_stack_offset(memargs);
                     let v = in_state.stack.get(offset, memsize.to_u32() / 8);
-                    // println!("stack load({:?},{:?}) = {:?}", offset, memsize.to_u32(), v);
                     return v;
                 }
             }

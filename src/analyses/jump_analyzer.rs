@@ -32,7 +32,6 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         src: &Value,
         _loc_idx: &LocIdx,
     ) -> () {
-        // println!("exec unop: dst = {:?} rcx = {:?}", dst, in_state.regs.rcx);
         in_state.set(dst, self.aeval_unop(in_state, src))
     }
 
@@ -76,13 +75,6 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         succ_addrs: &Vec<u64>,
         addr: &u64,
     ) -> Vec<(u64, SwitchLattice)> {
-        // let defs_state = self.reaching_defs.get(addr).unwrap();
-        // if *addr == 0x03455{
-        //     // println!("Start of {:x}: r15={:?} rax={:?} r10={:?} zf={:?}", addr, in_state.regs.r15, in_state.regs.rax, in_state.regs.r10, in_state.regs.zf);
-        //     println!("Defs: {:x}: rax={:?} r15={:?}", addr, defs_state.regs.rax, defs_state.regs.r15);
-        // }
-        //}// println!("{:x}: Analysis: stack = {:?}", addr, defs_state.stack);
-
         if succ_addrs.len() == 2 {
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
@@ -97,11 +89,6 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                 let defs_state = self.reaching_defs.get(addr).unwrap();
                 let ir_block = irmap.get(addr).unwrap();
                 let defs_state = self.reaching_analyzer.analyze_block(defs_state, ir_block);
-                // if *addr == 0x002938{
-                //     println!("propagating {:x}: rax={:?} rcx={:?} zf={:?}", addr, in_state.regs.rax, in_state.regs.rcx, in_state.regs.zf);
-                // }
-
-                // let checked_defs = defs_state.regs.get(&regnum, &ValSize::Size64);
                 //propagate bound across registers with the same reaching def
                 for idx in 0..15 {
                     if idx != *regnum {
