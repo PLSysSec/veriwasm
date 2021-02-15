@@ -57,9 +57,9 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
             }
         }
 
-        if let Binopcode::And = opcode {
-            in_state.regs.zf = Default::default();
-        }
+        // if let Binopcode::And = opcode {
+        //     in_state.regs.zf = Default::default();
+        // }
 
         match opcode {
             Binopcode::Cmp => (),
