@@ -229,18 +229,22 @@ fn get_sources(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Value> {
     }
 }
 
-fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
+fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
-    // let dsts: Vec<&Location> = uses_vec
-    //     .iter()
-    //     .filter_map(|(loc, dir)| match (loc, dir) {
-    //         (Some(loc), Direction::Write) => Some(loc),
-    //         _ => None,
-    //     })
-    //     .collect();
-    // println!("dsts: {:?}", dsts);
+     let writes_to_zf = uses_vec
+        .iter()
+        .any(|(loc, dir)| match (loc, dir) {
+            (Some(Location::ZF), Direction::Write) => true,
+            _ => false,
+        });
     let srcs: Vec<Value> = get_sources(instr);
-    Stmt::Clear(convert_operand(instr.operand(0), ValSize::Size8), srcs)
+    let mut stmts : Vec<Stmt> = Vec::new();
+
+    stmts.push(Stmt::Clear(convert_operand(instr.operand(0), ValSize::Size8), srcs.clone()));
+    if writes_to_zf {
+        stmts.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), srcs));
+    };
+    stmts
 }
 
 fn get_operand_size(op: yaxpeax_x86::long_mode::Operand) -> Option<ValSize> {
@@ -322,24 +326,24 @@ fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &LucetMetadata) 
     Stmt::Call(dst)
 }
 
-fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Stmt {
+fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Vec<Stmt> {
     let dst = instr.operand(0);
     let src1 = instr.operand(1);
     if let Operand::RegDisp(reg, _imm) = src1 {
         if reg.bank == RegisterBank::RIP {
             //addr + instruction length + displacement
             let target = (*addr as i64) + (instr.length as i64) + (instr.disp as i64);
-            return Stmt::Unop(
+            return vec![Stmt::Unop(
                 Unopcode::Mov,
                 convert_operand(dst, ValSize::SizeOther),
                 Value::Imm(ImmType::Signed, ValSize::Size64, target),
-            );
+            )];
         }
     }
     match convert_operand(src1, get_operand_size(dst).unwrap()) {
         Value::Mem(_, memargs) => match memargs {
             MemArgs::Mem1Arg(arg) => match arg {
-                MemArg::Imm(_, _, _val) => unop(Unopcode::Mov, instr),
+                MemArg::Imm(_, _, _val) => vec![unop(Unopcode::Mov, instr)],
                 _ => clear_dst(instr),
             },
             _ => clear_dst(instr),
@@ -365,16 +369,15 @@ pub fn lift(
         Opcode::MOVSX_b => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::MOVZX_w => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::MOVSX_w => instrs.push(unop(Unopcode::Mov, instr)),
-        Opcode::LEA => instrs.push(lea(instr, addr)),
+        Opcode::LEA => instrs.extend( lea(instr, addr) ),
 
         Opcode::TEST => instrs.push(binop(Binopcode::Test, instr)),
         Opcode::CMP => instrs.push(binop(Binopcode::Cmp, instr)),
-        // Opcode::CMP => instrs.push(cmp(instr)),
-        //instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), vec![]))
-        Opcode::AND => instrs.push(binop(Binopcode::And, instr)),
-        Opcode::ADD => instrs.push(binop(Binopcode::Add, instr)),
-        Opcode::SUB => instrs.push(binop(Binopcode::Sub, instr)),
-        Opcode::SHL => instrs.push(binop(Binopcode::Shl, instr)),
+        
+        Opcode::AND => {instrs.push(binop(Binopcode::And, instr)); instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), get_sources(instr)))} ,
+        Opcode::ADD => {instrs.push(binop(Binopcode::Add, instr)); instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), get_sources(instr)))} ,
+        Opcode::SUB => {instrs.push(binop(Binopcode::Sub, instr)); instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), get_sources(instr)))} ,
+        Opcode::SHL => {instrs.push(binop(Binopcode::Shl, instr)); instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), get_sources(instr)))} ,
 
         Opcode::UD2 => instrs.push(Stmt::Undefined),
 
@@ -442,6 +445,7 @@ pub fn lift(
             // instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), vec![]));
             instrs.push(Stmt::Clear(Value::Reg(0, ValSize::Size64), vec![])); // clear RAX
             instrs.push(Stmt::Clear(Value::Reg(2, ValSize::Size64), vec![])); // clear RDX
+            instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), get_sources(instr)));
         }
 
         Opcode::XOR => {
@@ -452,8 +456,9 @@ pub fn lift(
                     convert_operand(instr.operand(0), ValSize::Size64),
                     Value::Imm(ImmType::Signed, ValSize::Size64, 0),
                 ));
+                instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), get_sources(instr)));
             } else {
-                instrs.push(clear_dst(instr))
+                instrs.extend(clear_dst(instr))
             }
         }
 
@@ -632,7 +637,7 @@ pub fn lift(
         | Opcode::TZCNT
         | Opcode::SBB
         | Opcode::BSR
-        | Opcode::BSF => instrs.push(clear_dst(instr)),
+        | Opcode::BSF => instrs.extend(clear_dst(instr)),
         _ => unimplemented!(),
     };
     instrs
