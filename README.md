@@ -7,9 +7,37 @@ WebAssembly (Wasm) is a platform-independent bytecode that offers both good perf
 
 ## Reproducing Evaluation Results
 
+
+First, install prequisites:
+
+### VeriWasm Build Prequisites
+
+- git
+- GNU coreutils
+- Rust
+
 To Setup:  
 `git submodule update --init --recursive`  
 `cargo build --release  `
+
+```
+VeriWasm 0.1.0
+Validates safety of native Wasm module
+
+USAGE:
+    veriwasm [FLAGS] [OPTIONS] -i <module path>
+
+FLAGS:
+    -h, --help       Prints help information
+    -q, --quiet      
+    -V, --version    Prints version information
+
+OPTIONS:
+    -j, --jobs <jobs>                   Number of parallel threads (default 1)
+    -i <module path>                    path to native Wasm module to validate
+    -o, --output <stats output path>    Path to output stats file
+
+```
 
 To Run:  
 `cargo run --release -- -i <input path> -o <output path for statistics> `
@@ -18,6 +46,14 @@ To Test:
 `git clone git@github.com:PLSysSec/veriwasm_data.git`  
 `cd veriwasm_data && sh setup.sh && sh build_negative_tests.sh && cd ..`  
 `cargo test --release`  
+
+### VeriWasm Fuzzing Prequisites
+
+- python3 (for scripts)
+- csmith (to produce random C files)
+- clang (to compile csmith-generated files to Wasm)
+- binaryen (to produce random Wasm files)
+- lucet compiler (To compile Wasm to native code)
 
 ## Repos
 
