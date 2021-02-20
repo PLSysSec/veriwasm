@@ -15,6 +15,8 @@ First, install prequisites:
 - git
 - GNU coreutils
 - Rust
+- nasm (to compile test cases)
+- gcc (to compile test cases)
 
 To Setup:  
 `git submodule update --init --recursive`  
