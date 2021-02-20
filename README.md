@@ -60,6 +60,7 @@ To Test:
 ## Repos
 
 ### Binaries Used for Evaluation
+[data](https://github.com/PLSysSec/veriwasm_public_data.git)
 
 ### Fuzzing Scripts
 
