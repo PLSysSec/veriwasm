@@ -12,7 +12,6 @@ First, install prequisites:
 ### VeriWasm Build Prequisites
 
 - git
-- GNU coreutils
 - Rust
 - nasm (to compile test cases)
 - gcc (to compile test cases)
