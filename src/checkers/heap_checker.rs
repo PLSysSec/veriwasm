@@ -167,7 +167,7 @@ impl HeapChecker<'_> {
     }
 
     fn check_metadata_access(&self, state: &HeapLattice, access: &Value) -> bool {
-        if let Value::Mem(size, memargs) = access {
+        if let Value::Mem(_size, memargs) = access {
             match memargs{
                 //Case 1: mem[globals_base]
                 MemArgs::Mem1Arg(MemArg::Reg(regnum,ValSize::Size64)) => {
@@ -202,9 +202,8 @@ impl HeapChecker<'_> {
         false
     }
 
-    //TODO: properly check jump table memory reads --- wire in jump analysis data
-    fn check_jump_table_access(&self, state: &HeapLattice, access: &Value) -> bool {
-        if let Value::Mem(size, memargs) = access {
+    fn check_jump_table_access(&self, _state: &HeapLattice, access: &Value) -> bool {
+        if let Value::Mem(_size, memargs) = access {
             match memargs {
                 MemArgs::MemScale(_, _, MemArg::Imm(_, _, 4)) => return true,
                 _ => return false,
@@ -214,7 +213,6 @@ impl HeapChecker<'_> {
     }
 
     fn check_mem_access(&self, state: &HeapLattice, access: &Value) -> bool {
-        //println!("Memory Access: {:?} {:?}", access, state.regs);
         // Case 1: its a stack access
         if is_stack_access(access) {
             return true;

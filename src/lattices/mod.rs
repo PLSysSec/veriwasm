@@ -25,7 +25,6 @@ pub trait VarState {
     fn set_to_bot(&mut self, index: &Value) -> ();
     fn on_call(&mut self) -> ();
     fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value, src1: &Value, src2: &Value);
-    // fn get_reg(&self, index : &Value) -> Self::Var;
 }
 
 #[derive(Eq, Clone, Copy, Debug)]

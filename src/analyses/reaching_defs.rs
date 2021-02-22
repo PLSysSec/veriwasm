@@ -1,4 +1,3 @@
-use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
 use crate::lattices::reachingdefslattice::{singleton, LocIdx, ReachLattice, loc};
 use crate::lattices::VarState;
@@ -25,7 +24,6 @@ impl ReachingDefnAnalyzer{
     //2. get result for that block start
     //3. run reaching def up to that point
     pub fn fetch_def(&self, result: &AnalysisResult<ReachLattice>, loc_idx: &LocIdx) -> ReachLattice{
-        // println!("fetch_def = {:x} {:?}", loc_idx.addr, self.cfg.blocks.contains_key(&loc_idx.addr) );
         if self.cfg.blocks.contains_key(&loc_idx.addr){
             return result.get(&loc_idx.addr).unwrap().clone();
         }
@@ -126,7 +124,6 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
                 in_state.set(dst, singleton(loc_idx.clone()))
             }
             Stmt::Call(_) =>
-            //in_state.regs.clear_regs(),
             {
                 in_state.regs.rax = loc(loc_idx.addr, 0);
                 in_state.regs.rcx = loc(loc_idx.addr, 1);

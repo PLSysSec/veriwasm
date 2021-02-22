@@ -87,7 +87,6 @@ fn try_resolve_jumps(
     irmap: &IRMap,
     _addr: u64,
 ) -> (VW_CFG, IRMap, i32, u32) {
-    // let irmap = lift_cfg(&program, cfg, &metadata);
     println!("Performing a reaching defs pass");
     let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
     println!("Performing a jump resolution pass");
@@ -114,11 +113,9 @@ fn resolve_cfg(
     orig_irmap: &IRMap,
     addr: u64,
 ) -> (VW_CFG, IRMap) {
-    // let mut last_switches = -1;
     let (mut cfg, mut irmap, mut resolved_switches, mut still_unresolved) =
         try_resolve_jumps(program, contexts, cfg, metadata, orig_irmap, addr);
     while still_unresolved != 0 {
-        // last_switches = resolved_switches;
         let (new_cfg, new_irmap, new_resolved_switches, new_still_unresolved) =
             try_resolve_jumps(program, contexts, &cfg, metadata, &irmap, addr);
         cfg = new_cfg;
@@ -129,12 +126,6 @@ fn resolve_cfg(
         resolved_switches = new_resolved_switches;
         still_unresolved = new_still_unresolved;
     }
-    // println!("======> Resolved CFG");
-    // for block_addr in cfg.graph.nodes(){
-    //     let dests: Vec<u64> = cfg.graph.neighbors(block_addr).collect();
-    //     let out_addrs: Vec<std::string::String> = dests.clone().into_iter().map(|x| format!("{:x}", x)).rev().collect();
-    //     println!("{:x} {:?}", block_addr, out_addrs);
-    // }
     assert_eq!(cfg.graph.node_count(), irmap.keys().len());
     assert_eq!(still_unresolved, 0);
     (cfg, irmap)
@@ -182,15 +173,6 @@ pub fn get_data(
     else{
         (0,0)
     };
-    
-    // println!("Section: {:?}", section);
-    // println!("example symbols: {:?}", symbols);
-    // symbols.get("__wasi_fd_prestat_get");    
-    // for symbol in symbols{
-    //     if (symbol.addr >= section.start) && (symbol.addr < section.start + section.size){
-    //         println!("plt section => {:?}", symbol);
-    //     }
-    // }
 
     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
     let text_section = sections.get(text_section_idx).unwrap();
@@ -279,7 +261,6 @@ pub fn load_metadata(binpath: &str) -> LucetMetadata {
             }
         };
 
-    // let mut x86_64_data = get_function_starts(entrypoint, symbols, imports, exports);
     let guest_table_0 = get_symbol_addr(symbols, "guest_table_0").unwrap();
     let lucet_tables = get_symbol_addr(symbols, "lucet_tables").unwrap();
     let lucet_probestack = get_symbol_addr(symbols, "lucet_probestack").unwrap();
@@ -322,13 +303,6 @@ pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
 // 1. starts with guest_func_
 // 2. ends in _# (where # is some number)
 pub fn is_valid_func_name(name: &String) -> bool {
-    // if name.starts_with("guest_func_") {
-    //     return true;
-    // };
-    // let split_name: Vec<&str> = name.split("_").collect();
-    // if split_name.len() > 1 && split_name[split_name.len() - 1].parse::<u64>().is_ok() {
-    //     return true;
-    // };
     if name == "lucet_probestack"{
         return false;
     }

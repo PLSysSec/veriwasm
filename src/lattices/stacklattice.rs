@@ -29,7 +29,6 @@ pub struct StackLattice<T: Lattice + Clone> {
 
 impl<T: Lattice + Clone> StackLattice<T> {
     pub fn update(&mut self, offset: i64, value: T, size: u32) -> () {
-        // println!(">>>>>>>>>> Storing Value to stack: {:?} {:?}", self.offset + offset, size);
         //Check if 4 aligned
         if (offset & 3) != 0 {
             panic!("Unsafe: Attempt to store value on the stack on not 4-byte aligned address.");
@@ -218,7 +217,6 @@ fn stack_lattice_test_ord() {
     let mut x2: StackLattice<BooleanLattice> = Default::default();
     let y1 = BooleanLattice { v: true };
     let y2 = BooleanLattice { v: true };
-    // let y3 = BooleanLattice { v: true };
 
     //check 1 entry vs 0
     x1.update(4, y1, 4);

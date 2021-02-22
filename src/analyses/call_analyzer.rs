@@ -5,12 +5,11 @@ use crate::analyses::AnalysisResult;
 use crate::utils::ir_utils::{extract_stack_offset, is_stack_access};
 use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
 use crate::lattices::davlattice::DAV;
-use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice, ReachingDefnLattice};
+use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use crate::lattices::stacklattice::StackSlot;
 use crate::lattices::VarState;
 use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, ValSize, Value};
 use crate::utils::utils::LucetMetadata;
-use std::collections::BTreeSet;
 use std::default::Default;
 
 pub struct CallAnalyzer {
@@ -143,8 +142,6 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                 }
 
                 //4. resolve ptr thunks in stack slots --
-                //TODO: is ordering important between these 4 propogations?
-                // is using not_branch_state here a problem?
                 for (stack_offset, stack_slot) in not_branch_state.stack.map.iter() {
                     let stack_val = stack_slot.value.v.clone();
                     if let Some(CallCheckValue::PtrOffset(DAV::Unchecked(stack_def))) = stack_val {

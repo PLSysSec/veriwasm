@@ -32,7 +32,6 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
         self.irmap
     }
     fn aexec(&self, state: &mut StackGrowthLattice, ir_stmt: &Stmt, loc: &LocIdx) {
-        //println!("stack aexec: {:x} {:?}", loc.addr, state.v);
         self.analyzer.aexec(state, ir_stmt, loc)
     }
 
@@ -50,13 +49,12 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
             }
             Some((stackgrowth, _)) => {
                 if stackgrowth > 0 {
-                    //println!("Failure Case: Stackgrowth is positive = {:?}",stackgrowth);
                     return false;
                 }
             }
         }
 
-        // //2. Reads and writes are in bounds
+        // 2. Reads and writes are in bounds
         match ir_stmt {
             //encapsulates both load and store
             Stmt::Unop(_, dst, src) =>

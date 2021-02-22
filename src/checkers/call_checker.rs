@@ -1,4 +1,3 @@
-use yaxpeax_core::arch::x86_64::x86_64Data;
 use crate::analyses::call_analyzer::CallAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
@@ -83,12 +82,10 @@ impl CallChecker<'_> {
                 }
             }
             Value::Mem(_, _) => return false,
-            Value::Imm(_, _, imm) => //return true,
+            Value::Imm(_, _, imm) => 
             {
-                // return true
                 let target = (*imm + (loc_idx.addr as i64) + 5) as u64;
                 let (plt_start, plt_end) = self.plt;
-                println!("Checking calls: imm = 0x{:x}", target); 
                 return self.funcs.contains(&target) || 
                 ((target >= *plt_start) && (target < *plt_end)) ; 
             }, 
