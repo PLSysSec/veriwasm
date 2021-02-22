@@ -1,5 +1,4 @@
-# Довер яй, но провер яй: 
-# SFI safety for native-compiled Wasm
+# VeriWasm
 This repository contains all the code and data necessary for building VeriWasm and reproducing the results presented in [our paper](http://cseweb.ucsd.edu/~dstefan/pubs/johnson:2021:veriwasm.pdf).  
   
 ## Abstract  
