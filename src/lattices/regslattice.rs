@@ -1,6 +1,6 @@
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::Lattice;
-use crate::lifter::ValSize;
+use crate::utils::lifter::ValSize;
 
 #[derive(Default, PartialEq, Eq, Clone, PartialOrd, Debug)]
 pub struct X86RegsLattice<T: Lattice + Clone> {

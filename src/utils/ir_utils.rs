@@ -1,4 +1,4 @@
-use crate::lifter::{MemArg, MemArgs, ValSize, Value};
+use crate::utils::lifter::{MemArg, MemArgs, ValSize, Value, Stmt, IRMap};
 
 pub fn is_rsp(v: &Value) -> bool {
     match v {
@@ -88,4 +88,34 @@ pub fn get_imm_mem_offset(v: &MemArg) -> i64 {
     } else {
         panic!("get_imm_offset called on something that is not an imm offset")
     }
+}
+
+pub fn has_indirect_calls(irmap: &IRMap) -> bool {
+    for (_block_addr, ir_block) in irmap {
+        for (_addr, ir_stmts) in ir_block {
+            for (_idx, ir_stmt) in ir_stmts.iter().enumerate() {
+                match ir_stmt {
+                    Stmt::Call(Value::Reg(_, _)) | Stmt::Call(Value::Mem(_, _)) => return true,
+                    _ => (),
+                }
+            }
+        }
+    }
+    false
+}
+
+pub fn has_indirect_jumps(irmap: &IRMap) -> bool {
+    for (_block_addr, ir_block) in irmap {
+        for (_addr, ir_stmts) in ir_block {
+            for (_idx, ir_stmt) in ir_stmts.iter().enumerate() {
+                match ir_stmt {
+                    Stmt::Branch(_, Value::Reg(_, _)) | Stmt::Branch(_, Value::Mem(_, _)) => {
+                        return true
+                    }
+                    _ => (),
+                }
+            }
+        }
+    }
+    false
 }

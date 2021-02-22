@@ -1,8 +1,8 @@
 use crate::analyses::AnalysisResult;
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::Lattice;
-use crate::lifter::IRMap;
-use crate::lifter::Stmt;
+use crate::utils::lifter::IRMap;
+use crate::utils::lifter::Stmt;
 
 pub mod call_checker;
 pub mod heap_checker;

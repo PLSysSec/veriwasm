@@ -3,10 +3,8 @@ use crate::analyses::jump_analyzer::SwitchAnalyzer;
 use crate::analyses::reaching_defs::analyze_reaching_defs;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::checkers::jump_resolver::resolve_jumps;
-use crate::has_indirect_jumps;
-use crate::lifter::lift_cfg;
-use crate::lifter::IRMap;
-use crate::lifter::{MemArg, MemArgs};
+use crate::utils::ir_utils::has_indirect_jumps;
+use crate::utils::lifter::{MemArg, MemArgs, IRMap, lift_cfg};
 use std::path::Path;
 use yaxpeax_arch::Arch;
 use yaxpeax_core::analyses::control_flow::{get_cfg, VW_CFG};
@@ -159,7 +157,7 @@ pub fn fully_resolved_cfg(
 pub fn get_data(
     binpath: &str,
     program: &ModuleData,
-) -> (x86_64Data, Vec<(u64, std::string::String)>) {
+) -> (x86_64Data, Vec<(u64, std::string::String)>, (u64,u64)) {
     let (_, sections, entrypoint, imports, exports, symbols) =
         match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
             Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
@@ -175,6 +173,24 @@ pub fn get_data(
                 );
             }
         };
+    // println!("Sections: {:?}", sections);
+    let plt_bounds = 
+    if let Some(plt_idx) = sections.iter().position(|x| x.name == ".plt"){
+        let plt = sections.get(plt_idx).unwrap();
+        (plt.start, plt.start + plt.size)
+        }
+    else{
+        (0,0)
+    };
+    
+    // println!("Section: {:?}", section);
+    // println!("example symbols: {:?}", symbols);
+    // symbols.get("__wasi_fd_prestat_get");    
+    // for symbol in symbols{
+    //     if (symbol.addr >= section.start) && (symbol.addr < section.start + section.size){
+    //         println!("plt section => {:?}", symbol);
+    //     }
+    // }
 
     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
     let text_section = sections.get(text_section_idx).unwrap();
@@ -191,9 +207,10 @@ pub fn get_data(
             if is_valid_func_name(&symbol.1) {
                 addrs.push((addr, symbol.1.clone()));
             }
+            else{println!("Symbol = 0x{:x} {:?}", addr, symbol.1);}
         }
     }
-    (x86_64_data, addrs)
+    (x86_64_data, addrs, plt_bounds)
 }
 
 pub fn get_one_resolved_cfg(binpath: &str, func: &str) -> ((VW_CFG, IRMap),x86_64Data) {
@@ -305,12 +322,15 @@ pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
 // 1. starts with guest_func_
 // 2. ends in _# (where # is some number)
 pub fn is_valid_func_name(name: &String) -> bool {
-    if name.starts_with("guest_func_") {
-        return true;
-    };
-    let split_name: Vec<&str> = name.split("_").collect();
-    if split_name.len() > 1 && split_name[split_name.len() - 1].parse::<u64>().is_ok() {
-        return true;
-    };
-    false
+    // if name.starts_with("guest_func_") {
+    //     return true;
+    // };
+    // let split_name: Vec<&str> = name.split("_").collect();
+    // if split_name.len() > 1 && split_name[split_name.len() - 1].parse::<u64>().is_ok() {
+    //     return true;
+    // };
+    if name == "lucet_probestack"{
+        return false;
+    }
+    true
 }

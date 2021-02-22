@@ -5,12 +5,13 @@ use crate::checkers::Checker;
 use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue};
 use crate::lattices::davlattice::DAV;
 use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
+use crate::utils::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
 
 pub struct CallChecker<'a> {
     irmap: &'a IRMap,
     analyzer: &'a CallAnalyzer,
-    // funcs: &Vec<u64>,
+    funcs: &'a Vec<u64>,
+    plt: &'a (u64,u64),
     // x86_64_data: &x86_64Data,
 }
 
@@ -18,13 +19,15 @@ pub fn check_calls(
     result: AnalysisResult<CallCheckLattice>,
     irmap: &IRMap,
     analyzer: &CallAnalyzer,
-    // funcs: &Vec<u64>,
+    funcs: &Vec<u64>,
+    plt: &(u64,u64),
     // x86_64_data: &x86_64Data,
 ) -> bool {
     CallChecker {
         irmap,
         analyzer,
-        // funcs,
+        funcs,
+        plt
         // x86_64_data,
     }
     .check(result)
@@ -68,7 +71,7 @@ impl CallChecker<'_> {
         &self,
         state: &CallCheckLattice,
         target: &Value,
-        _loc_idx: &LocIdx,
+        loc_idx: &LocIdx,
     ) -> bool {
         match target {
             Value::Reg(regnum, size) => {
@@ -80,11 +83,14 @@ impl CallChecker<'_> {
                 }
             }
             Value::Mem(_, _) => return false,
-            Value::Imm(_, _, _) => //return true,
+            Value::Imm(_, _, imm) => //return true,
             {
-                return true
-            //     println!("Checking calls: imm = 0x{:x}", (*imm as u64 + loc_idx.addr + 5)); 
-            //     return self.funcs.contains( &(*imm as u64 + loc_idx.addr + 5)) 
+                // return true
+                let target = (*imm + (loc_idx.addr as i64) + 5) as u64;
+                let (plt_start, plt_end) = self.plt;
+                println!("Checking calls: imm = 0x{:x}", target); 
+                return self.funcs.contains(&target) || 
+                ((target >= *plt_start) && (target < *plt_end)) ; 
             }, 
         }
         false

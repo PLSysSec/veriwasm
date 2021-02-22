@@ -5,7 +5,7 @@ pub mod reaching_defs;
 pub mod stack_analyzer;
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarState};
-use crate::lifter::{Binopcode, IRBlock, IRMap, Stmt, Value};
+use crate::utils::lifter::{Binopcode, IRBlock, IRMap, Stmt, Value};
 use std::collections::{HashMap, VecDeque};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 

@@ -1,8 +1,8 @@
 use crate::analyses::AbstractAnalyzer;
-use crate::ir_utils::{get_imm_offset, is_rsp};
+use crate::utils::ir_utils::{get_imm_offset, is_rsp};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::stackgrowthlattice::StackGrowthLattice;
-use crate::lifter::{Binopcode, Stmt};
+use crate::utils::lifter::{Binopcode, Stmt};
 
 pub struct StackAnalyzer {}
 

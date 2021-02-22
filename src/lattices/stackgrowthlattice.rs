@@ -1,5 +1,5 @@
 use crate::lattices::{ConstLattice, VarState};
-use crate::lifter::{Binopcode, Value};
+use crate::utils::lifter::{Binopcode, Value};
 
 pub type StackGrowthLattice = ConstLattice<(i64, i64)>;
 

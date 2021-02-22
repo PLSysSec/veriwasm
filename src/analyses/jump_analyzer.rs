@@ -4,8 +4,8 @@ use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use crate::lattices::stacklattice::StackSlot;
 use crate::lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
 use crate::lattices::VarState;
-use crate::lifter::{Binopcode, IRMap, MemArg, MemArgs, ValSize, Value};
-use crate::utils::{get_rsp_offset, LucetMetadata};
+use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, ValSize, Value};
+use crate::utils::utils::{get_rsp_offset, LucetMetadata};
 use std::default::Default;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 

@@ -1,10 +1,10 @@
 use crate::analyses::heap_analyzer::HeapAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
-use crate::ir_utils::{is_mem_access, is_stack_access};
+use crate::utils::ir_utils::{is_mem_access, is_stack_access};
 use crate::lattices::heaplattice::{HeapLattice, HeapValue};
 use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
+use crate::utils::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
 
 pub struct HeapChecker<'a> {
     irmap: &'a IRMap,

@@ -1,15 +1,15 @@
-use crate::lifter::IRBlock;
+use crate::utils::lifter::IRBlock;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::analyses::AbstractAnalyzer;
 use crate::analyses::AnalysisResult;
-use crate::ir_utils::{extract_stack_offset, is_stack_access};
+use crate::utils::ir_utils::{extract_stack_offset, is_stack_access};
 use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
 use crate::lattices::davlattice::DAV;
 use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice, ReachingDefnLattice};
 use crate::lattices::stacklattice::StackSlot;
 use crate::lattices::VarState;
-use crate::lifter::{Binopcode, IRMap, MemArg, MemArgs, ValSize, Value};
-use crate::utils::LucetMetadata;
+use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, ValSize, Value};
+use crate::utils::utils::LucetMetadata;
 use std::collections::BTreeSet;
 use std::default::Default;
 
@@ -62,7 +62,6 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         loc_idx: &LocIdx,
     ) -> () {
         if let Binopcode::Cmp = opcode {
-            println!("Cmp: 0x{:x} {:?} {:?}", loc_idx.addr, src1, src2);
             match (src1, src2) {
                 (Value::Reg(regnum1,size1), Value::Reg(regnum2, size2)) => {
                     if let Some(CallCheckValue::TableSize) = in_state.regs.get(regnum2, size2).v{
@@ -95,9 +94,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         if succ_addrs.len() == 2 {
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
-            println!("Potential CheckedVal! 0x{:x}", addr);
             if let Some(CallCheckValue::CheckFlag(_, regnum)) = not_branch_state.regs.zf.v {
-                println!("Setting CheckedVal! 0x{:x}", addr);
                 let new_val = CallCheckValueLattice {
                     v: Some(CallCheckValue::CheckedVal),
                 };

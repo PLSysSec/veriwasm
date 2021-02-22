@@ -6,11 +6,11 @@ pub mod regslattice;
 pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod switchlattice;
-use crate::ir_utils::{get_imm_offset, is_rsp};
+use crate::utils::ir_utils::{get_imm_offset, is_rsp};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::regslattice::X86RegsLattice;
 use crate::lattices::stacklattice::StackLattice;
-use crate::lifter::{Binopcode, MemArg, MemArgs, ValSize, Value};
+use crate::utils::lifter::{Binopcode, MemArg, MemArgs, ValSize, Value};
 use std::cmp::Ordering;
 use std::fmt::Debug;
 

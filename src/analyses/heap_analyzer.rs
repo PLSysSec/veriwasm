@@ -1,10 +1,10 @@
 use crate::analyses::AbstractAnalyzer;
-use crate::ir_utils::{extract_stack_offset, is_stack_access};
+use crate::utils::ir_utils::{extract_stack_offset, is_stack_access};
 use crate::lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::VarState;
-use crate::lifter::{MemArg, MemArgs, ValSize, Value};
-use crate::utils::LucetMetadata;
+use crate::utils::lifter::{MemArg, MemArgs, ValSize, Value};
+use crate::utils::utils::LucetMetadata;
 use std::default::Default;
 
 pub struct HeapAnalyzer {
