@@ -24,7 +24,7 @@ To Setup:
 
 ```
 VeriWasm 0.1.0
-Validates safety of native Wasm module
+Validates safety of native Wasm code
 
 USAGE:
     veriwasm [FLAGS] [OPTIONS] -i <module path>
