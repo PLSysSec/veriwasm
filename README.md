@@ -1,5 +1,4 @@
-# Довер яй, но провер яй: 
-# SFI safety for native-compiled Wasm
+# VeriWasm
 This repository contains all the code and data necessary for building VeriWasm and reproducing the results presented in [our paper](http://cseweb.ucsd.edu/~dstefan/pubs/johnson:2021:veriwasm.pdf).  
   
 ## Abstract  
@@ -22,9 +21,14 @@ To Setup:
 `git submodule update --init --recursive`  
 `cargo build --release  `
 
+To Run:  
+`cargo run --release -- -i <input path> `
+
+Usage:  
+
 ```
 VeriWasm 0.1.0
-Validates safety of native Wasm module
+Validates safety of native Wasm code
 
 USAGE:
     veriwasm [FLAGS] [OPTIONS] -i <module path>
@@ -41,12 +45,9 @@ OPTIONS:
 
 ```
 
-To Run:  
-`cargo run --release -- -i <input path> -o <output path for statistics> `
-
 To Test:  
-`git clone git@github.com:PLSysSec/veriwasm_data.git`  
-`cd veriwasm_data && sh setup.sh && sh build_negative_tests.sh && cd ..`  
+`git clone git@github.com:PLSysSec/veriwasm_public_data.git`  
+`cd veriwasm_public_data && sh setup.sh && sh build_negative_tests.sh && cd ..`  
 `cargo test --release`  
 
 ### VeriWasm Fuzzing Prequisites
@@ -60,9 +61,9 @@ To Test:
 ## Repos
 
 ### Binaries Used for Evaluation
-[data](https://github.com/PLSysSec/veriwasm_public_data.git)
+The binaries we verified as part of our evaluation our in a seperate repo, located [here](https://github.com/PLSysSec/veriwasm_public_data.git).
 
 ### Fuzzing Scripts
 
 ### Mechanized Proofs
-[veriwasm-verification](https://github.com/PLSysSec/veriwasm-verification)
+The proofs from our paper are in a seperate repo, located [here](https://github.com/PLSysSec/veriwasm-verification).
