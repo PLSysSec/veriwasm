@@ -84,10 +84,10 @@ fn negative_test_helper(path: &str, func_name: &str) {
     println!("Done! ");
 }
 
-#[test]
-fn full_test_unit_tests() {
-    full_test_helper("./veriwasm_public_data/regression/stack_check_unit_tests.so")
-}
+// #[test]
+// fn full_test_unit_tests() {
+//     full_test_helper("./veriwasm_public_data/regression/stack_check_unit_tests.so")
+// }
 
 #[test]
 fn full_test_libgraphite() {
