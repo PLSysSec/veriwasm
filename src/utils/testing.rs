@@ -72,7 +72,6 @@ fn negative_test_helper(path: &str, func_name: &str) {
     println!("Checking Call Safety");
     if has_indirect_calls(&irmap) {
         let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
-        // let valid_funcs = vec![];
         let call_analyzer = CallAnalyzer {
             metadata: metadata.clone(),
             reaching_defs: reaching_defs.clone(),
@@ -82,22 +81,22 @@ fn negative_test_helper(path: &str, func_name: &str) {
         let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs, &plt);
         assert!(call_safe);
     }
-    println!("Done!");
+    println!("Done! ");
 }
 
 #[test]
 fn full_test_unit_tests() {
-    full_test_helper("./veriwasm_data/regression/stack_check_unit_tests.so")
+    full_test_helper("./veriwasm_public_data/regression/stack_check_unit_tests.so")
 }
 
 #[test]
 fn full_test_libgraphite() {
-    full_test_helper("./veriwasm_data/firefox_libs/libgraphitewasm.so")
+    full_test_helper("./veriwasm_public_data/firefox_libs/libgraphitewasm.so")
 }
 
 #[test]
 fn full_test_libogg() {
-    full_test_helper("./veriwasm_data/firefox_libs/liboggwasm.so")
+    full_test_helper("./veriwasm_public_data/firefox_libs/liboggwasm.so")
 }
 
 // #[test]
@@ -105,111 +104,111 @@ fn full_test_libogg() {
 //     full_test_helper("./veriwasm_data/shootout/shootout.so")
 // }
 
-#[test]
-fn full_test_astar() {
-    full_test_helper("./veriwasm_data/spec/astar_base.wasm_lucet")
-}
+// #[test]
+// fn full_test_astar() {
+//     full_test_helper("./veriwasm_data/spec/astar_base.wasm_lucet")
+// }
+
+// #[test]
+// fn full_test_gobmk() {
+//     full_test_helper("./veriwasm_data/spec/gobmk_base.wasm_lucet")
+// }
+
+// #[test]
+// fn full_test_lbm() {
+//     full_test_helper("./veriwasm_data/spec/lbm_base.wasm_lucet")
+// }
+
+// #[test]
+// fn full_test_mcf() {
+//     full_test_helper("./veriwasm_data/spec/mcf_base.wasm_lucet")
+// }
+
+// #[test]
+// fn full_test_namd() {
+//     full_test_helper("./veriwasm_data/spec/namd_base.wasm_lucet")
+// }
+
+// #[test]
+// fn full_test_sjeng() {
+//     full_test_helper("./veriwasm_data/spec/sjeng_base.wasm_lucet")
+// }
+
+// #[test]
+// fn full_test_sphinx_livepretend() {
+//     full_test_helper("./veriwasm_data/spec/sphinx_livepretend_base.wasm_lucet")
+// }
+
+// #[test]
+// fn full_test_bzip2() {
+//     full_test_helper("./veriwasm_data/spec/bzip2_base.wasm_lucet")
+// }
+
+// #[test]
+// fn full_test_h264ref() {
+//     full_test_helper("./veriwasm_data/spec/h264ref_base.wasm_lucet")
+// }
+
+// #[test]
+// fn full_test_libquantum() {
+//     full_test_helper("./veriwasm_data/spec/libquantum_base.wasm_lucet")
+// }
+
+// #[test]
+// fn full_test_milc() {
+//     full_test_helper("./veriwasm_data/spec/milc_base.wasm_lucet")
+// }
+
+// #[test]
+// fn full_test_povray() {
+//     full_test_helper("./veriwasm_data/spec/povray_base.wasm_lucet")
+// }
+
+// #[test]
+// fn full_test_soplex() {
+//     full_test_helper("./veriwasm_data/spec/soplex_base.wasm_lucet")
+// }
 
 #[test]
-fn full_test_gobmk() {
-    full_test_helper("./veriwasm_data/spec/gobmk_base.wasm_lucet")
-}
+// fn full_test_rust_regression_1() {
+//     full_test_helper("./veriwasm_data/regression/rust_regression_1")
+// }
 
-#[test]
-fn full_test_lbm() {
-    full_test_helper("./veriwasm_data/spec/lbm_base.wasm_lucet")
-}
+// #[test]
+// fn full_test_csmith_regression_1() {
+//     full_test_helper("./veriwasm_data/regression/csmith_regression_1")
+// }
 
-#[test]
-fn full_test_mcf() {
-    full_test_helper("./veriwasm_data/spec/mcf_base.wasm_lucet")
-}
+// #[test]
+// fn full_test_csmith_regression_2() {
+//     full_test_helper("./veriwasm_data/regression/csmith_regression_2")
+// }
 
-#[test]
-fn full_test_namd() {
-    full_test_helper("./veriwasm_data/spec/namd_base.wasm_lucet")
-}
+// #[test]
+// fn full_test_csmith_regression_3() {
+//     full_test_helper("./veriwasm_data/regression/csmith_regression_3")
+// }
 
-#[test]
-fn full_test_sjeng() {
-    full_test_helper("./veriwasm_data/spec/sjeng_base.wasm_lucet")
-}
+// #[test]
+// fn full_test_csmith_regression_4() {
+//     full_test_helper("./veriwasm_data/regression/csmith_regression_4")
+// }
 
-#[test]
-fn full_test_sphinx_livepretend() {
-    full_test_helper("./veriwasm_data/spec/sphinx_livepretend_base.wasm_lucet")
-}
+// #[test]
+// fn full_test_csmith_regression_5() {
+//     full_test_helper("./veriwasm_data/regression/csmith_regression_5")
+// }
 
-#[test]
-fn full_test_bzip2() {
-    full_test_helper("./veriwasm_data/spec/bzip2_base.wasm_lucet")
-}
-
-#[test]
-fn full_test_h264ref() {
-    full_test_helper("./veriwasm_data/spec/h264ref_base.wasm_lucet")
-}
-
-#[test]
-fn full_test_libquantum() {
-    full_test_helper("./veriwasm_data/spec/libquantum_base.wasm_lucet")
-}
-
-#[test]
-fn full_test_milc() {
-    full_test_helper("./veriwasm_data/spec/milc_base.wasm_lucet")
-}
-
-#[test]
-fn full_test_povray() {
-    full_test_helper("./veriwasm_data/spec/povray_base.wasm_lucet")
-}
-
-#[test]
-fn full_test_soplex() {
-    full_test_helper("./veriwasm_data/spec/soplex_base.wasm_lucet")
-}
-
-#[test]
-fn full_test_rust_regression_1() {
-    full_test_helper("./veriwasm_data/regression/rust_regression_1")
-}
-
-#[test]
-fn full_test_csmith_regression_1() {
-    full_test_helper("./veriwasm_data/regression/csmith_regression_1")
-}
-
-#[test]
-fn full_test_csmith_regression_2() {
-    full_test_helper("./veriwasm_data/regression/csmith_regression_2")
-}
-
-#[test]
-fn full_test_csmith_regression_3() {
-    full_test_helper("./veriwasm_data/regression/csmith_regression_3")
-}
-
-#[test]
-fn full_test_csmith_regression_4() {
-    full_test_helper("./veriwasm_data/regression/csmith_regression_4")
-}
-
-#[test]
-fn full_test_csmith_regression_5() {
-    full_test_helper("./veriwasm_data/regression/csmith_regression_5")
-}
-
-#[test]
-fn full_test_rust_lucet() {
-    full_test_helper("./veriwasm_data/regression/rust_lucet_recent.so")
-}
+// #[test]
+// fn full_test_rust_lucet() {
+//     full_test_helper("./veriwasm_data/regression/rust_lucet_recent.so")
+// }
 
 #[test]
 #[should_panic(expected = "assertion failed: stack_safe")]
 fn negative_test_1() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_1_testfail",
     );
 }
@@ -218,7 +217,7 @@ fn negative_test_1() {
 #[should_panic(expected = "assertion failed: stack_safe")]
 fn negative_test_2() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_2_testfail",
     );
 }
@@ -227,7 +226,7 @@ fn negative_test_2() {
 #[should_panic(expected = "assertion failed: stack_safe")]
 fn negative_test_3() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_3_testfail",
     );
 }
@@ -236,7 +235,7 @@ fn negative_test_3() {
 #[should_panic(expected = "Jump Targets Broken, target = None")]
 fn negative_test_4() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_4_testfail",
     );
 }
@@ -245,7 +244,7 @@ fn negative_test_4() {
 #[should_panic(expected = "assertion failed: call_safe")]
 fn negative_test_5() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_5_testfail",
     );
 }
@@ -254,7 +253,7 @@ fn negative_test_5() {
 #[should_panic(expected = "Jump Targets Broken, target = None")]
 fn negative_test_6() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_6_testfail",
     );
 }
@@ -263,7 +262,7 @@ fn negative_test_6() {
 #[should_panic(expected = "assertion failed: heap_safe")]
 fn negative_test_7() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_7_testfail",
     );
 }
@@ -272,7 +271,7 @@ fn negative_test_7() {
 #[should_panic(expected = "assertion failed: heap_safe")]
 fn negative_test_8() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_8_testfail",
     );
 }
@@ -281,7 +280,7 @@ fn negative_test_8() {
 #[should_panic(expected = "assertion failed: heap_safe")]
 fn negative_test_9() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_9_testfail",
     );
 }
@@ -290,7 +289,7 @@ fn negative_test_9() {
 #[should_panic(expected = "assertion failed: heap_safe")]
 fn negative_test_10() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_10_testfail",
     );
 }
@@ -299,7 +298,7 @@ fn negative_test_10() {
 #[should_panic(expected = "assertion failed: heap_safe")]
 fn negative_test_11() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_11_testfail",
     );
 }
@@ -308,7 +307,7 @@ fn negative_test_11() {
 #[should_panic(expected = "not implemented")]
 fn negative_test_12() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_12_testfail",
     );
 }
@@ -317,7 +316,7 @@ fn negative_test_12() {
 #[should_panic(expected = "not implemented")]
 fn negative_test_13() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_13_testfail",
     );
 }
@@ -326,7 +325,7 @@ fn negative_test_13() {
 #[should_panic(expected = "assertion failed: heap_safe")]
 fn negative_test_14() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_14_testfail",
     );
 }
@@ -336,7 +335,7 @@ fn negative_test_14() {
 #[should_panic(expected = "assertion failed: call_safe")]
 fn negative_test_nacl_23() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_23",
     );
 }
@@ -345,7 +344,7 @@ fn negative_test_nacl_23() {
 #[should_panic(expected = "not implemented")]
 fn negative_test_nacl_323_1() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_323_1",
     );
 }
@@ -354,7 +353,7 @@ fn negative_test_nacl_323_1() {
 #[should_panic(expected = "not implemented")]
 fn negative_test_nacl_323_2() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_323_2",
     );
 }
@@ -363,7 +362,7 @@ fn negative_test_nacl_323_2() {
 #[should_panic(expected = "not implemented")]
 fn negative_test_nacl_323_3() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_323_3",
     );
 }
@@ -372,7 +371,7 @@ fn negative_test_nacl_323_3() {
 #[should_panic(expected = "assertion failed: stack_safe")]
 fn negative_test_nacl_323_4() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_323_4",
     );
 }
@@ -381,7 +380,7 @@ fn negative_test_nacl_323_4() {
 #[should_panic(expected = "not implemented")]
 fn negative_test_nacl_390() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_390",
     );
 }
@@ -390,7 +389,7 @@ fn negative_test_nacl_390() {
 #[should_panic(expected = "Illegal RSP access")]
 fn negative_test_nacl_1585() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_1585",
     );
 }
@@ -399,7 +398,7 @@ fn negative_test_nacl_1585() {
 #[should_panic(expected = "not implemented")]
 fn negative_test_nacl_2532() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_2532",
     );
 }
@@ -408,7 +407,7 @@ fn negative_test_nacl_2532() {
 #[should_panic]
 fn negative_test_bakersfield_1() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_bakersfield_1",
     );
 }
@@ -417,7 +416,7 @@ fn negative_test_bakersfield_1() {
 #[should_panic(expected = "assertion failed: stack_safe")]
 fn negative_test_misfit_1() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_misfit_1",
     );
 }
@@ -426,7 +425,7 @@ fn negative_test_misfit_1() {
 #[should_panic(expected = "Jump Targets Broken, target = None")]
 fn negative_test_cranelift_805() {
     negative_test_helper(
-        "veriwasm_data/negative_tests/negative_tests.so",
+        "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_cranelift_805",
     );
 }
