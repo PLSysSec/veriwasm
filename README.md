@@ -5,11 +5,11 @@ This repository contains all the code and data necessary for building VeriWasm a
 WebAssembly (Wasm) is a platform-independent bytecode that offers both good performance and runtime isolation. To implement isolation, the compiler inserts safety checks when it compiles Wasm to native machine code. While this approach is cheap, it also requires trust in the compiler's correctness---trust that the compiler has inserted each necessary check, correctly formed, in each proper place. Unfortunately, subtle bugs in the Wasm compiler can break---and have broken---isolation guarantees. To address this problem, we propose verifying memory isolation of Wasm binaries post-compilation. We implement this approach in VeriWasm, a static offline verifier for native x86-64 binaries compiled from Wasm; we prove the verifier's soundness, and find that it can detect bugs with no false positives. Finally, we describe our deployment of VeriWasm at Fastly.
 
 ## Reproducing Evaluation Results
-
+We provide the infrastructure to reproduce the results in the paper here. 
 
 First, install prequisites:
 
-### VeriWasm Build Prequisites
+### VeriWasm build prequisites
 
 - git
 - Rust
@@ -20,7 +20,17 @@ To Setup:
 `git submodule update --init --recursive`  
 `cargo build --release  `
 
-To Run:  
+### Running the evaluation suite
+This verifies all binaries used in the paper, with the exception on the Spec2006 binaries (Spec2006 is proprietary) and the Fastly production binaries.
+
+To test:  
+`git clone git@github.com:PLSysSec/veriwasm_public_data.git`  
+`cd veriwasm_public_data && sh setup.sh && sh build_negative_tests.sh && cd ..`  
+`cargo test --release`  
+
+### Running VeriWasm on your own binaries
+
+To run:  
 `cargo run --release -- -i <input path> `
 
 Usage:  
@@ -44,34 +54,29 @@ OPTIONS:
 
 ```
 
-To Test:  
-`git clone git@github.com:PLSysSec/veriwasm_public_data.git`  
-`cd veriwasm_public_data && sh setup.sh && sh build_negative_tests.sh && cd ..`  
-`cargo test --release`  
-
-### VeriWasm Fuzzing Prequisites
+### VeriWasm fuzzing prequisites
 
 - python3 (for scripts)
 - cmake  
 
-To Build:  
+To build:  
   `make build_fuzzers`  
 
-To Run Csmith Fuzzer:  
+To run Csmith fuzzer:  
   `cd veriwasm_fuzzing`  
   `make csmith_fuzz`
   
-To Run Wasm Fuzzer:  
+To run Wasm fuzzer:  
   `cd veriwasm_fuzzing`  
   `make wasm_fuzz`  
 
-## Repos
+## Related repos
 
-### Binaries Used for Evaluation
+### Binaries used for evaluation
 The binaries we verified as part of our evaluation our in a seperate repo, located [here](https://github.com/PLSysSec/veriwasm_public_data.git).
 
-### Fuzzing Scripts
+### Fuzzing scripts
 The scripts we used to fuzz VeriWasm are located [here](https://github.com/PLSysSec/veriwasm_fuzzing).
 
-### Mechanized Proofs
+### Mechanized proofs
 The proofs from our paper are in a seperate repo, located [here](https://github.com/PLSysSec/veriwasm-verification).
