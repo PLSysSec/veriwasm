@@ -90,7 +90,6 @@ or the Wasm-based fuzzer:
 
 ```bash
 cd veriwasm_fuzzing
-
 make wasm_fuzz
 ```
 
