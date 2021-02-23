@@ -54,13 +54,18 @@ OPTIONS:
 
 ```
 
-### VeriWasm fuzzing prequisites
+### Fuzzing VeriWasm
+First, install prequisites:
 
 - python3 (for scripts)
 - cmake  
 
+Then, build the fuzzers (and the tooling they rely on).
+
 To build:  
   `make build_fuzzers`  
+
+Then, either run the Csmith-based fuzzer or the Wasm-based fuzzer. The make command used 4 cores by default.
 
 To run Csmith fuzzer:  
   `cd veriwasm_fuzzing`  
