@@ -126,17 +126,17 @@ def summarise_data(aggregate_data):
     plt.ylabel('# of Modules')  
     plt.hist(times, bins= math.ceil((max(times) - min(times))/5) )
     print("Histogram Created")
-    plt.savefig('fastly_times.pdf')  
+    plt.savefig("performance.pdf")  
     print("Histogram Saved")
 
 def run(filenames):
     dataset = get_data(filenames)
-    graph_blocks_vs_time(dataset)
+    #graph_blocks_vs_time(dataset)
     #graph_funcs_vs_time(dataset)
     aggregate_data = get_aggregate_data(dataset)
     summarise_data(aggregate_data)
-    table = generate_summary_table(aggregate_data)
-    print(table)
+    #table = generate_summary_table(aggregate_data)
+    #print(table)
 
 def main():
     filename = sys.argv[1]
