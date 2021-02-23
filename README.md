@@ -24,7 +24,7 @@ To Setup:
 This verifies all binaries used in the paper, with the exception on the Spec2006 binaries (Spec2006 is proprietary) and the Fastly production binaries.
 
 To test:  
-`git clone git@github.com:PLSysSec/veriwasm_public_data.git`  
+`git clone https://github.com/PLSysSec/veriwasm_public_data.git`  
 `cd veriwasm_public_data && sh setup.sh && sh build_negative_tests.sh && cd ..`  
 `cargo test --release`  
 
