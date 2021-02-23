@@ -12,7 +12,6 @@ First, install prequisites:
 ### VeriWasm Build Prequisites
 
 - git
-- GNU coreutils
 - Rust
 - nasm (to compile test cases)
 - gcc (to compile test cases)
@@ -64,6 +63,7 @@ To Test:
 The binaries we verified as part of our evaluation our in a seperate repo, located [here](https://github.com/PLSysSec/veriwasm_public_data.git).
 
 ### Fuzzing Scripts
+The scripts we used to fuzz VeriWasm are located [here](https://github.com/PLSysSec/veriwasm_fuzzing).
 
 ### Mechanized Proofs
 The proofs from our paper are in a seperate repo, located [here](https://github.com/PLSysSec/veriwasm-verification).
