@@ -74,14 +74,13 @@ Then, build the fuzzers (and the tooling they rely on).
 To build:  
   `make build_fuzzers`  
 
-Then, either run the Csmith-based fuzzer or the Wasm-based fuzzer. The make command used 4 cores by default.
+Then, either run the Csmith-based fuzzer or the Wasm-based fuzzer. The make command used 4 cores by default.  
+Both of these commands should be run from the `veriwasm_fuzzing` directory.  
 
 To run Csmith fuzzer:  
-  `cd veriwasm_fuzzing`  
   `make csmith_fuzz`
   
-To run Wasm fuzzer:  
-  `cd veriwasm_fuzzing`  
+To run Wasm fuzzer:    
   `make wasm_fuzz`  
 
 ## Related repos
