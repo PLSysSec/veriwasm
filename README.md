@@ -79,14 +79,14 @@ To fuzz VeriWasm, you'll need to install `cmake` and then build the fuzzers (and
 make build_fuzzers
 ```
 
-Then, either run the  [Csmith](https://embed.cs.utah.edu/csmith/) fuzzer:
+Then, either run the  [Csmith](https://embed.cs.utah.edu/csmith/)-based fuzzer:
 
 ```bash
 cd veriwasm_fuzzing
 make csmith_fuzz
 ```
 
-or the Wasm fuzzer:    
+or the Wasm-based fuzzer:    
 
 ```bash
 cd veriwasm_fuzzing
