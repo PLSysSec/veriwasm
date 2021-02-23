@@ -28,6 +28,15 @@ To test:
 `cd veriwasm_public_data && sh setup.sh && sh build_negative_tests.sh && cd ..`  
 `cargo test --release`  
 
+### Getting Performance statistics
+These commands get the performance statistics for the binaries (besides Spec2006 and the Fastly production binaries). 
+
+To get stats:  
+  `make compute_stats`  
+  `python3 graph_stats.py stats/*`  
+
+
+
 ### Running VeriWasm on your own binaries
 
 To run:  
