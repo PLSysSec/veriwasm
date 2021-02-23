@@ -52,10 +52,18 @@ To Test:
 ### VeriWasm Fuzzing Prequisites
 
 - python3 (for scripts)
-- csmith (to produce random C files)
-- clang (to compile csmith-generated files to Wasm)
-- binaryen (to produce random Wasm files)
-- lucet compiler (To compile Wasm to native code)
+- cmake  
+
+To Build:  
+  `make build_fuzzers`  
+
+To Run Csmith Fuzzer:  
+  `cd veriwasm_fuzzing`  
+  `make csmith_fuzz`
+  
+To Run Wasm Fuzzer:  
+  `cd veriwasm_fuzzing`  
+  `make wasm_fuzz`  
 
 ## Repos
 
