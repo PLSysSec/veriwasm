@@ -15,6 +15,7 @@ First, install prequisites:
 - Rust
 - nasm (to compile test cases)
 - gcc (to compile test cases)
+- python3 (for scripts)
 
 To Setup:  
 `git submodule update --init --recursive`  
@@ -66,7 +67,6 @@ OPTIONS:
 ### Fuzzing VeriWasm
 First, install prequisites:
 
-- python3 (for scripts)
 - cmake  
 
 Then, build the fuzzers (and the tooling they rely on).
