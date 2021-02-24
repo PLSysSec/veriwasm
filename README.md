@@ -50,7 +50,7 @@ OPTIONS:
     -o, --output <stats output path>    Path to output stats file
 ```
 
-## Reproducing Evaluation Results
+## Reproducing evaluation results
 
 This repo contains all the infrastructure necessary for reproducing the results described in the paper. Once you build VeriWasm you can run our tests and and performance benchmarks.
 
