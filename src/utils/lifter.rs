@@ -49,35 +49,36 @@ pub fn mk_value_i64(num: i64) -> Value {
     Value::Imm(ImmType::Signed, ValSize::Size64, num)
 }
 
+
 #[derive(Debug, Clone)]
 pub enum MemArgs {
-    Mem1Arg(MemArg),
-    Mem2Args(MemArg, MemArg),
-    Mem3Args(MemArg, MemArg, MemArg),
-    MemScale(MemArg, MemArg, MemArg),
+    Mem1Arg(MemArg), // [arg]
+    Mem2Args(MemArg, MemArg), // [arg1 + arg2]
+    Mem3Args(MemArg, MemArg, MemArg), // [arg1 + arg2 + arg3]
+    MemScale(MemArg, MemArg, MemArg), // [arg1 + arg2 * arg3]
 }
 #[derive(Debug, Clone)]
 pub enum MemArg {
-    Reg(u8, ValSize),
-    Imm(ImmType, ValSize, i64), //signed, size, const
+    Reg(u8, ValSize), // register mappings captured in `crate::lattices::regslattice`
+    Imm(ImmType, ValSize, i64), // signed, size, const
 }
 #[derive(Debug, Clone)]
 pub enum Value {
-    Mem(ValSize, MemArgs),
-    Reg(u8, ValSize),
-    Imm(ImmType, ValSize, i64), //signed, size, const
+    Mem(ValSize, MemArgs), // mem[memargs]
+    Reg(u8, ValSize), // register mappings captured in `crate::lattices::regslattice`
+    Imm(ImmType, ValSize, i64), // signed, size, const
 }
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
-    Clear(Value, Vec<Value>),
-    Unop(Unopcode, Value, Value),
-    Binop(Binopcode, Value, Value, Value),
-    Undefined,
-    Ret,
-    Branch(yaxpeax_x86::long_mode::Opcode, Value),
-    Call(Value),
-    ProbeStack(u64),
+    Clear(Value, Vec<Value>), // clear v <- vs
+    Unop(Unopcode, Value, Value), // v1 <- uop v2
+    Binop(Binopcode, Value, Value, Value), // v1 <- bop v2 v3
+    Undefined, // undefined
+    Ret, // return
+    Branch(yaxpeax_x86::long_mode::Opcode, Value), // br branch-type v
+    Call(Value), // call v
+    ProbeStack(u64), // probestack
 }
 
 impl Stmt {
@@ -85,6 +86,7 @@ impl Stmt {
         unimplemented!("Width not implemented")
     }
 }
+
 #[derive(Debug, Clone)]
 pub enum Unopcode {
     Mov,
@@ -373,7 +375,7 @@ pub fn lift(
 
         Opcode::TEST => instrs.push(binop(Binopcode::Test, instr)),
         Opcode::CMP => instrs.push(binop(Binopcode::Cmp, instr)),
-        
+
         Opcode::AND => {instrs.push(binop(Binopcode::And, instr)); instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), get_sources(instr)))} ,
         Opcode::ADD => {instrs.push(binop(Binopcode::Add, instr)); instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), get_sources(instr)))} ,
         Opcode::SUB => {instrs.push(binop(Binopcode::Sub, instr)); instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), get_sources(instr)))} ,
