@@ -123,7 +123,7 @@ fn convert_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> Value {
 
 fn convert_memarg_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> MemArg {
     let size = match reg.bank {
-        RegisterBank::Q => ValSize::Size64,
+        RegisterBank::Q | RegisterBank::RIP => ValSize::Size64,
         RegisterBank::D => ValSize::Size32,
         RegisterBank::W => ValSize::Size16,
         RegisterBank::B => ValSize::Size8,
