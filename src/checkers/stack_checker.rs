@@ -44,7 +44,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
         //1, stackgrowth is never Bottom or >= 0
         match state.v {
             None => {
-                println!("Failure Case: Stackgrowth = None");
+                println!("Failure Case at {:?}: Stackgrowth = None", ir_stmt);
                 return false;
             }
             Some((stackgrowth, _)) => {
