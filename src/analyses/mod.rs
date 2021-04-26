@@ -63,6 +63,7 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
         let mut new_state = state.clone();
         for (addr, instruction) in irblock.iter() {
             for (idx, ir_insn) in instruction.iter().enumerate() {
+                log::debug!("Analyzing insn @ 0x{:x}: {:?}: state = {:?}", addr, ir_insn, new_state);
                 self.aexec(
                     &mut new_state,
                     ir_insn,
@@ -71,7 +72,6 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
                         idx: idx as u32,
                     },
                 );
-                println!("after insn {:?}: state = {:?}", ir_insn, new_state);
             }
         }
         new_state
@@ -116,7 +116,7 @@ pub fn run_worklist<T: AbstractAnalyzer<State>, State: VarState + Lattice + Clon
         let new_state = analyzer.analyze_block(state, irblock);
         let succ_addrs_unaligned: Vec<u64> = cfg.graph.neighbors(addr).collect();
         let succ_addrs: Vec<u64> = align_succ_addrs(addr, succ_addrs_unaligned);
-        println!("Processing Block: 0x{:x} -> {:?}", addr, succ_addrs);
+        log::debug!("Processing Block: 0x{:x} -> {:?}", addr, succ_addrs);
         for (succ_addr, branch_state) in
             analyzer.process_branch(irmap, &new_state, &succ_addrs, &addr)
         {
@@ -125,18 +125,18 @@ pub fn run_worklist<T: AbstractAnalyzer<State>, State: VarState + Lattice + Clon
                 let merged_state = old_state.meet(&branch_state, &LocIdx { addr: addr, idx: 0 });
 
                 if merged_state > *old_state {
-                    println!("{:?} {:?}", merged_state, old_state);
+                    log::debug!("{:?} {:?}", merged_state, old_state);
                     panic!("Meet monoticity error");
                 }
                 let has_change = *old_state != merged_state;
-                println!(
+                log::debug!(
                     "At block 0x{:x}: merged input {:?}",
                     succ_addr, merged_state
                 );
                 statemap.insert(succ_addr, merged_state);
                 has_change
             } else {
-                println!("At block 0x{:x}: new input {:?}", succ_addr, branch_state);
+                log::debug!("At block 0x{:x}: new input {:?}", succ_addr, branch_state);
                 statemap.insert(succ_addr, branch_state);
                 true
             };

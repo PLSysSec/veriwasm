@@ -42,7 +42,7 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
                 match state.regs.rdi.v {
                     Some(HeapValue::HeapBase) => (),
                     _ => {
-                        println!("Call failure {:?}", state.stack.get(0, 8));
+                        log::debug!("Call failure {:?}", state.stack.get(0, 8));
                         return false;
                     }
                 }
@@ -244,7 +244,7 @@ impl HeapChecker<'_> {
             return true;
         };
         // Case 6: its unknown
-        println!("None of the memory accesses!");
+        log::debug!("None of the memory accesses!");
         print_mem_access(state, access);
         return false;
     }
@@ -260,19 +260,19 @@ pub fn memarg_repr(state: &HeapLattice, memarg: &MemArg) -> String {
 pub fn print_mem_access(state: &HeapLattice, access: &Value) {
     if let Value::Mem(_, memargs) = access {
         match memargs {
-            MemArgs::Mem1Arg(x) => println!("mem[{:?}]", memarg_repr(state, x)),
-            MemArgs::Mem2Args(x, y) => println!(
+            MemArgs::Mem1Arg(x) => log::debug!("mem[{:?}]", memarg_repr(state, x)),
+            MemArgs::Mem2Args(x, y) => log::debug!(
                 "mem[{:?} + {:?}]",
                 memarg_repr(state, x),
                 memarg_repr(state, y)
             ),
-            MemArgs::Mem3Args(x, y, z) => println!(
+            MemArgs::Mem3Args(x, y, z) => log::debug!(
                 "mem[{:?} + {:?} + {:?}]",
                 memarg_repr(state, x),
                 memarg_repr(state, y),
                 memarg_repr(state, z)
             ),
-            MemArgs::MemScale(x, y, z) => println!(
+            MemArgs::MemScale(x, y, z) => log::debug!(
                 "mem[{:?} + {:?} * {:?}]",
                 memarg_repr(state, x),
                 memarg_repr(state, y),

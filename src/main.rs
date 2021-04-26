@@ -131,6 +131,7 @@ fn run(config: Config) {
 }
 
 fn main() {
+    let _ = env_logger::try_init();
     let matches = App::new("VeriWasm")
         .version("0.1.0")
         .about("Validates safety of native Wasm code")

@@ -8,9 +8,10 @@ use crate::lattices::stacklattice::StackSlot;
 use crate::lattices::VarState;
 use crate::utils::ir_utils::{extract_stack_offset, is_stack_access};
 use crate::utils::lifter::IRBlock;
-use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, ValSize, Value};
+use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
 use crate::utils::utils::LucetMetadata;
 use std::default::Default;
+use yaxpeax_x86::long_mode::Opcode;
 
 pub struct CallAnalyzer {
     pub metadata: LucetMetadata,
@@ -24,6 +25,10 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         let mut new_state = state.clone();
         for (addr, instruction) in irblock.iter() {
             for (idx, ir_insn) in instruction.iter().enumerate() {
+                log::debug!(
+                    "Call analyzer: stmt at 0x{:x}: {:?} with state {:?}",
+                    addr, ir_insn, new_state
+                );
                 self.aexec(
                     &mut new_state,
                     ir_insn,
@@ -86,10 +91,22 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         succ_addrs: &Vec<u64>,
         addr: &u64,
     ) -> Vec<(u64, CallCheckLattice)> {
-        if succ_addrs.len() == 2 {
+        let br_stmt = irmap.get(addr).unwrap().last().unwrap().1.last().unwrap();
+        let br_opcode = match br_stmt {
+            Stmt::Branch(op, _) => Some(op),
+            _ => None,
+        };
+        let (is_unsigned_cmp, flip) = match br_opcode {
+            Some(Opcode::JB) => (true, false),
+            Some(Opcode::JNB) => (true, true),
+            _ => (false, false),
+        };
+
+        if succ_addrs.len() == 2 && is_unsigned_cmp {
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
             if let Some(CallCheckValue::CheckFlag(_, regnum)) = not_branch_state.regs.zf.v {
+                log::debug!("branch at 0x{:x}: CheckFlag for reg {}", addr, regnum);
                 let new_val = CallCheckValueLattice {
                     v: Some(CallCheckValue::CheckedVal),
                 };
@@ -152,10 +169,26 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
             branch_state.regs.zf = Default::default();
             not_branch_state.regs.zf = Default::default();
 
-            vec![
-                (succ_addrs[0].clone(), not_branch_state),
-                (succ_addrs[1].clone(), branch_state),
-            ]
+            log::debug!(
+                " ->     branch_state @ 0x{:x} = {:?}",
+                succ_addrs[1], branch_state
+            );
+            log::debug!(
+                " -> not_branch_state @ 0x{:x} = {:?}",
+                succ_addrs[0], not_branch_state
+            );
+
+            if flip {
+                vec![
+                    (succ_addrs[0].clone(), branch_state),
+                    (succ_addrs[1].clone(), not_branch_state),
+                ]
+            } else {
+                vec![
+                    (succ_addrs[0].clone(), not_branch_state),
+                    (succ_addrs[1].clone(), branch_state),
+                ]
+            }
         } else {
             succ_addrs
                 .into_iter()

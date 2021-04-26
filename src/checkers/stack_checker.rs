@@ -62,7 +62,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
             {
                 if is_stack_access(dst) {
                     if !self.check_stack_write(state, dst) {
-                        println!(
+                        log::debug!(
                             "check_stack_write failed: access = {:?} state = {:?}",
                             dst, state
                         );
@@ -72,7 +72,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
                 //stack read: probestack <= stackgrowth + c < 8K
                 else if is_stack_access(src) {
                     if !self.check_stack_read(state, src) {
-                        println!(
+                        log::debug!(
                             "check_stack_read failed: access = {:?} state = {:?}",
                             src, state
                         );
@@ -87,7 +87,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
         if let Stmt::Ret = ir_stmt {
             if let Some((stackgrowth, _, _)) = state.v {
                 if stackgrowth != 0 {
-                    println!("stackgrowth != 0 at ret: stackgrowth = {:?}", stackgrowth);
+                    log::debug!("stackgrowth != 0 at ret: stackgrowth = {:?}", stackgrowth);
                     return false;
                 }
             }

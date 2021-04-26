@@ -677,8 +677,10 @@ pub fn lift(
         | Opcode::TZCNT
         | Opcode::SBB
         | Opcode::BSR
-        | Opcode::BSF => instrs.extend(clear_dst(instr)),
-        _ => unimplemented!(),
+        | Opcode::BSF
+        | Opcode::ANDPD
+        | Opcode::ORPD => instrs.extend(clear_dst(instr)),
+        _ => unimplemented!("Bad opcode: {:?} at 0x{:x}", instr.opcode, addr),
     };
     instrs
 }

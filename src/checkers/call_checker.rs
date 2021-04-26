@@ -79,7 +79,7 @@ impl CallChecker<'_> {
                 if let Some(CallCheckValue::FnPtr) = state.regs.get(regnum, size).v {
                     return true;
                 } else {
-                    println!("{:?}", state.regs.get(regnum, size).v)
+                    log::debug!("{:?}", state.regs.get(regnum, size).v)
                 }
             }
             Value::Mem(_, _) => return false,
@@ -97,7 +97,7 @@ impl CallChecker<'_> {
     }
 
     fn check_calltable_lookup(&self, state: &CallCheckLattice, memargs: &MemArgs) -> bool {
-        // println!("Call Table Lookup: {:?}", memargs);
+        log::debug!("Call Table Lookup: {:?}", memargs);
         match memargs {
             MemArgs::Mem3Args(
                 MemArg::Reg(regnum1, ValSize::Size64),
@@ -133,19 +133,19 @@ pub fn memarg_repr(state: &CallCheckLattice, memarg: &MemArg) -> String {
 
 pub fn print_mem_access(state: &CallCheckLattice, memargs: &MemArgs) {
     match memargs {
-        MemArgs::Mem1Arg(x) => println!("mem[{:?}]", memarg_repr(state, x)),
-        MemArgs::Mem2Args(x, y) => println!(
+        MemArgs::Mem1Arg(x) => log::debug!("mem[{:?}]", memarg_repr(state, x)),
+        MemArgs::Mem2Args(x, y) => log::debug!(
             "mem[{:?} + {:?}]",
             memarg_repr(state, x),
             memarg_repr(state, y)
         ),
-        MemArgs::Mem3Args(x, y, z) => println!(
+        MemArgs::Mem3Args(x, y, z) => log::debug!(
             "mem[{:?} + {:?} + {:?}]",
             memarg_repr(state, x),
             memarg_repr(state, y),
             memarg_repr(state, z)
         ),
-        MemArgs::MemScale(x, y, z) => println!(
+        MemArgs::MemScale(x, y, z) => log::debug!(
             "mem[{:?} + {:?} * {:?}]",
             memarg_repr(state, x),
             memarg_repr(state, y),
