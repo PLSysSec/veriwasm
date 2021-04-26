@@ -66,6 +66,7 @@ pub enum Value {
     Mem(ValSize, MemArgs),      // mem[memargs]
     Reg(u8, ValSize),           // register mappings captured in `crate::lattices::regslattice`
     Imm(ImmType, ValSize, i64), // signed, size, const
+    RIPConst,
 }
 
 #[derive(Debug, Clone)]
@@ -120,20 +121,19 @@ fn convert_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> Value {
     Value::Reg(reg.num, size)
 }
 
-fn convert_memarg_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> Option<MemArg> {
+fn convert_memarg_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> MemArg {
     let size = match reg.bank {
-        RegisterBank::Q => Some(ValSize::Size64),
-        RegisterBank::D => Some(ValSize::Size32),
-        RegisterBank::W => Some(ValSize::Size16),
-        RegisterBank::B => Some(ValSize::Size8),
-        RegisterBank::RIP => None,
+        RegisterBank::Q => ValSize::Size64,
+        RegisterBank::D => ValSize::Size32,
+        RegisterBank::W => ValSize::Size16,
+        RegisterBank::B => ValSize::Size8,
         _ => panic!("Unknown register bank: {:?}", reg.bank),
-    }?;
-    Some(MemArg::Reg(reg.num, size))
+    };
+    MemArg::Reg(reg.num, size)
 }
 
-fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Option<Value> {
-    Some(match op {
+fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Value {
+    match op {
         Operand::ImmediateI8(imm) => Value::Imm(ImmType::Signed, ValSize::Size8, imm as i64),
         Operand::ImmediateU8(imm) => Value::Imm(ImmType::Unsigned, ValSize::Size8, imm as i64),
         Operand::ImmediateI16(imm) => Value::Imm(ImmType::Signed, ValSize::Size16, imm as i64),
@@ -152,23 +152,24 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Opt
             memsize,
             MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size64, imm as i64)),
         ), //mem[c]
-        Operand::RegDeref(reg) => Value::Mem(memsize, MemArgs::Mem1Arg(convert_memarg_reg(reg)?)), // mem[reg]
+        Operand::RegDeref(reg) => Value::Mem(memsize, MemArgs::Mem1Arg(convert_memarg_reg(reg))), // mem[reg]
+        Operand::RegDisp(reg, _) if reg.bank == RegisterBank::RIP => Value::RIPConst,
         Operand::RegDisp(reg, imm) => Value::Mem(
             memsize,
             MemArgs::Mem2Args(
-                convert_memarg_reg(reg)?,
+                convert_memarg_reg(reg),
                 MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64),
             ),
         ), //mem[reg + c]
         Operand::RegIndexBase(reg1, reg2) => Value::Mem(
             memsize,
-            MemArgs::Mem2Args(convert_memarg_reg(reg1)?, convert_memarg_reg(reg2)?),
+            MemArgs::Mem2Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2)),
         ), // mem[reg1 + reg2]
         Operand::RegIndexBaseDisp(reg1, reg2, imm) => Value::Mem(
             memsize,
             MemArgs::Mem3Args(
-                convert_memarg_reg(reg1)?,
-                convert_memarg_reg(reg2)?,
+                convert_memarg_reg(reg1),
+                convert_memarg_reg(reg2),
                 MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64),
             ),
         ), //mem[reg1 + reg2 + c]
@@ -180,14 +181,14 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Opt
             if scale == 1 {
                 Value::Mem(
                     memsize,
-                    MemArgs::Mem2Args(convert_memarg_reg(reg1)?, convert_memarg_reg(reg2)?),
+                    MemArgs::Mem2Args(convert_memarg_reg(reg1), convert_memarg_reg(reg2)),
                 )
             } else {
                 Value::Mem(
                     memsize,
                     MemArgs::MemScale(
-                        convert_memarg_reg(reg1)?,
-                        convert_memarg_reg(reg2)?,
+                        convert_memarg_reg(reg1),
+                        convert_memarg_reg(reg2),
                         MemArg::Imm(ImmType::Signed, ValSize::Size32, scale as i64),
                     ),
                 )
@@ -198,37 +199,37 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Opt
             Value::Mem(
                 memsize,
                 MemArgs::Mem3Args(
-                    convert_memarg_reg(reg1)?,
-                    convert_memarg_reg(reg2)?,
+                    convert_memarg_reg(reg1),
+                    convert_memarg_reg(reg2),
                     MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64),
                 ),
             )
         } //mem[reg1 + reg2*c1 + c2]
         Operand::Nothing => panic!("Nothing Operand?"),
-    })
+    }
 }
 
-fn get_sources(instr: &yaxpeax_x86::long_mode::Instruction) -> Option<Vec<Value>> {
-    Some(match instr.operand_count() {
+fn get_sources(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Value> {
+    match instr.operand_count() {
         0 => vec![],
-        1 => vec![convert_operand(instr.operand(0), ValSize::Size32)?],
+        1 => vec![convert_operand(instr.operand(0), ValSize::Size32)],
         2 => vec![
-            convert_operand(instr.operand(0), ValSize::Size32)?,
-            convert_operand(instr.operand(1), ValSize::Size32)?,
+            convert_operand(instr.operand(0), ValSize::Size32),
+            convert_operand(instr.operand(1), ValSize::Size32),
         ],
         3 => vec![
-            convert_operand(instr.operand(0), ValSize::Size32)?,
-            convert_operand(instr.operand(1), ValSize::Size32)?,
-            convert_operand(instr.operand(2), ValSize::Size32)?,
+            convert_operand(instr.operand(0), ValSize::Size32),
+            convert_operand(instr.operand(1), ValSize::Size32),
+            convert_operand(instr.operand(2), ValSize::Size32),
         ],
         4 => vec![
-            convert_operand(instr.operand(0), ValSize::Size32)?,
-            convert_operand(instr.operand(1), ValSize::Size32)?,
-            convert_operand(instr.operand(2), ValSize::Size32)?,
-            convert_operand(instr.operand(3), ValSize::Size32)?,
+            convert_operand(instr.operand(0), ValSize::Size32),
+            convert_operand(instr.operand(1), ValSize::Size32),
+            convert_operand(instr.operand(2), ValSize::Size32),
+            convert_operand(instr.operand(3), ValSize::Size32),
         ],
         _ => panic!("Too many arguments?"),
-    })
+    }
 }
 
 fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
@@ -237,11 +238,11 @@ fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
         (Some(Location::ZF), Direction::Write) => true,
         _ => false,
     });
-    let srcs: Vec<Value> = get_sources(instr).unwrap();
+    let srcs: Vec<Value> = get_sources(instr);
     let mut stmts: Vec<Stmt> = Vec::new();
 
     stmts.push(Stmt::Clear(
-        convert_operand(instr.operand(0), ValSize::Size8).unwrap(),
+        convert_operand(instr.operand(0), ValSize::Size8),
         srcs.clone(),
     ));
     if writes_to_zf {
@@ -272,7 +273,7 @@ fn get_operand_size(op: yaxpeax_x86::long_mode::Operand) -> Option<ValSize> {
     }
 }
 
-fn unop(opcode: Unopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Option<Stmt> {
+fn unop(opcode: Unopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     let memsize = match (
         get_operand_size(instr.operand(0)),
         get_operand_size(instr.operand(1)),
@@ -282,14 +283,14 @@ fn unop(opcode: Unopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Option
         (None, Some(x)) => x,
         (Some(x), Some(_y)) => x,
     };
-    Some(Stmt::Unop(
+    Stmt::Unop(
         opcode,
-        convert_operand(instr.operand(0), memsize)?,
-        convert_operand(instr.operand(1), memsize)?,
-    ))
+        convert_operand(instr.operand(0), memsize),
+        convert_operand(instr.operand(1), memsize),
+    )
 }
 
-fn binop(opcode: Binopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Option<Stmt> {
+fn binop(opcode: Binopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     let memsize = match (
         get_operand_size(instr.operand(0)),
         get_operand_size(instr.operand(1)),
@@ -300,111 +301,109 @@ fn binop(opcode: Binopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Opti
         (Some(x), Some(_y)) => x,
     };
     // if two operands than dst is src1
-    Some(if instr.operand_count() == 2 {
+    if instr.operand_count() == 2 {
         Stmt::Binop(
             opcode,
-            convert_operand(instr.operand(0), memsize)?,
-            convert_operand(instr.operand(0), memsize)?,
-            convert_operand(instr.operand(1), memsize)?,
+            convert_operand(instr.operand(0), memsize),
+            convert_operand(instr.operand(0), memsize),
+            convert_operand(instr.operand(1), memsize),
         )
     } else {
         Stmt::Binop(
             opcode,
-            convert_operand(instr.operand(0), memsize)?,
-            convert_operand(instr.operand(1), memsize)?,
-            convert_operand(instr.operand(2), memsize)?,
+            convert_operand(instr.operand(0), memsize),
+            convert_operand(instr.operand(1), memsize),
+            convert_operand(instr.operand(2), memsize),
         )
-    })
+    }
 }
 
-fn branch(instr: &yaxpeax_x86::long_mode::Instruction) -> Option<Stmt> {
-    Some(Stmt::Branch(
+fn branch(instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
+    Stmt::Branch(
         instr.opcode,
-        convert_operand(instr.operand(0), ValSize::Size64)?,
-    ))
+        convert_operand(instr.operand(0), ValSize::Size64),
+    )
 }
 
-fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &LucetMetadata) -> Option<Stmt> {
-    let dst = convert_operand(instr.operand(0), ValSize::Size64)?;
-    Some(Stmt::Call(dst))
+fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &LucetMetadata) -> Stmt {
+    let dst = convert_operand(instr.operand(0), ValSize::Size64);
+    Stmt::Call(dst)
 }
 
-fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Option<Vec<Stmt>> {
+fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Vec<Stmt> {
     let dst = instr.operand(0);
     let src1 = instr.operand(1);
     if let Operand::RegDisp(reg, _imm) = src1 {
         if reg.bank == RegisterBank::RIP {
             //addr + instruction length + displacement
             let target = (*addr as i64) + (instr.length as i64) + (instr.disp as i64);
-            return Some(vec![Stmt::Unop(
+            return vec![Stmt::Unop(
                 Unopcode::Mov,
-                convert_operand(dst, ValSize::SizeOther)?,
+                convert_operand(dst, ValSize::SizeOther),
                 Value::Imm(ImmType::Signed, ValSize::Size64, target),
-            )]);
+            )];
         }
     }
-    Some(
-        match convert_operand(src1, get_operand_size(dst).unwrap())? {
-            Value::Mem(_, memargs) => match memargs {
-                MemArgs::Mem1Arg(arg) => match arg {
-                    MemArg::Imm(_, _, _val) => vec![unop(Unopcode::Mov, instr)?],
-                    _ => clear_dst(instr),
-                },
+    match convert_operand(src1, get_operand_size(dst).unwrap()) {
+        Value::Mem(_, memargs) => match memargs {
+            MemArgs::Mem1Arg(arg) => match arg {
+                MemArg::Imm(_, _, _val) => vec![unop(Unopcode::Mov, instr)],
                 _ => clear_dst(instr),
             },
-            _ => panic!("Illegal lea"),
+            _ => clear_dst(instr),
         },
-    )
+        _ => panic!("Illegal lea"),
+    }
 }
 
 pub fn lift(
     instr: &yaxpeax_x86::long_mode::Instruction,
     addr: &u64,
     metadata: &LucetMetadata,
-) -> Option<Vec<Stmt>> {
+) -> Vec<Stmt> {
     let mut instrs = Vec::new();
     match instr.opcode {
-        Opcode::MOV => instrs.push(unop(Unopcode::Mov, instr)?),
-        Opcode::MOVSX => instrs.push(unop(Unopcode::Mov, instr)?),
-        Opcode::MOVSXD => instrs.push(unop(Unopcode::Mov, instr)?),
-        Opcode::MOVSD => instrs.push(unop(Unopcode::Mov, instr)?),
-        Opcode::MOVD => instrs.push(unop(Unopcode::Mov, instr)?),
-        Opcode::MOVQ => instrs.push(unop(Unopcode::Mov, instr)?),
-        Opcode::MOVZX_b => instrs.push(unop(Unopcode::Mov, instr)?),
-        Opcode::MOVSX_b => instrs.push(unop(Unopcode::Mov, instr)?),
-        Opcode::MOVZX_w => instrs.push(unop(Unopcode::Mov, instr)?),
-        Opcode::MOVSX_w => instrs.push(unop(Unopcode::Mov, instr)?),
-        Opcode::LEA => instrs.extend(lea(instr, addr)?),
+        Opcode::MOV => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVSX => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVSXD => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVSD => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVD => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVQ => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVZX_b => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVSX_b => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVZX_w => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVSX_w => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::LEA => instrs.extend(lea(instr, addr)),
 
-        Opcode::TEST => instrs.push(binop(Binopcode::Test, instr)?),
-        Opcode::CMP => instrs.push(binop(Binopcode::Cmp, instr)?),
+        Opcode::TEST => instrs.push(binop(Binopcode::Test, instr)),
+        Opcode::CMP => instrs.push(binop(Binopcode::Cmp, instr)),
 
         Opcode::AND => {
-            instrs.push(binop(Binopcode::And, instr)?);
+            instrs.push(binop(Binopcode::And, instr));
             instrs.push(Stmt::Clear(
                 Value::Reg(16, ValSize::Size8),
-                get_sources(instr)?,
+                get_sources(instr),
             ))
         }
         Opcode::ADD => {
-            instrs.push(binop(Binopcode::Add, instr)?);
+            instrs.push(binop(Binopcode::Add, instr));
             instrs.push(Stmt::Clear(
                 Value::Reg(16, ValSize::Size8),
-                get_sources(instr)?,
+                get_sources(instr),
             ))
         }
         Opcode::SUB => {
-            instrs.push(binop(Binopcode::Sub, instr)?);
+            instrs.push(binop(Binopcode::Sub, instr));
             instrs.push(Stmt::Clear(
                 Value::Reg(16, ValSize::Size8),
-                get_sources(instr)?,
+                get_sources(instr),
             ))
         }
         Opcode::SHL => {
-            instrs.push(binop(Binopcode::Shl, instr)?);
+            instrs.push(binop(Binopcode::Shl, instr));
             instrs.push(Stmt::Clear(
                 Value::Reg(16, ValSize::Size8),
-                get_sources(instr)?,
+                get_sources(instr),
             ))
         }
 
@@ -418,7 +417,7 @@ pub fn lift(
 
         Opcode::RETURN => instrs.push(Stmt::Ret),
 
-        Opcode::JMP => instrs.push(branch(instr)?),
+        Opcode::JMP => instrs.push(branch(instr)),
         Opcode::JO
         | Opcode::JNO
         | Opcode::JB
@@ -434,9 +433,9 @@ pub fn lift(
         | Opcode::JL
         | Opcode::JGE
         | Opcode::JLE
-        | Opcode::JG => instrs.push(branch(instr)?),
+        | Opcode::JG => instrs.push(branch(instr)),
 
-        Opcode::CALL => instrs.push(call(instr, metadata)?),
+        Opcode::CALL => instrs.push(call(instr, metadata)),
 
         Opcode::PUSH => {
             let width = instr.operand(0).width();
@@ -453,7 +452,7 @@ pub fn lift(
                     valsize((width * 8) as u32),
                     MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)),
                 ),
-                convert_operand(instr.operand(0), ValSize::SizeOther)?,
+                convert_operand(instr.operand(0), ValSize::SizeOther),
             ))
         }
         Opcode::POP => {
@@ -461,7 +460,7 @@ pub fn lift(
             assert_eq!(width, 8); //8 bytes
             instrs.push(Stmt::Unop(
                 Unopcode::Mov,
-                convert_operand(instr.operand(0), ValSize::SizeOther)?,
+                convert_operand(instr.operand(0), ValSize::SizeOther),
                 Value::Mem(
                     valsize((width * 8) as u32),
                     MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)),
@@ -482,7 +481,7 @@ pub fn lift(
             instrs.push(Stmt::Clear(Value::Reg(2, ValSize::Size64), vec![])); // clear RDX
             instrs.push(Stmt::Clear(
                 Value::Reg(16, ValSize::Size8),
-                get_sources(instr)?,
+                get_sources(instr),
             ));
         }
 
@@ -491,12 +490,12 @@ pub fn lift(
             if instr.operand_count() == 2 && instr.operand(0) == instr.operand(1) {
                 instrs.push(Stmt::Unop(
                     Unopcode::Mov,
-                    convert_operand(instr.operand(0), ValSize::Size64)?,
+                    convert_operand(instr.operand(0), ValSize::Size64),
                     Value::Imm(ImmType::Signed, ValSize::Size64, 0),
                 ));
                 instrs.push(Stmt::Clear(
                     Value::Reg(16, ValSize::Size8),
-                    get_sources(instr)?,
+                    get_sources(instr),
                 ));
             } else {
                 instrs.extend(clear_dst(instr))
@@ -516,7 +515,7 @@ pub fn lift(
         | Opcode::CMOVL
         | Opcode::CMOVLE
         | Opcode::CMOVNA
-        | Opcode::CMOVNB
+        /* | Opcode::CMOVNB -- see above */
         | Opcode::CMOVNO
         | Opcode::CMOVNP
         | Opcode::CMOVNS
@@ -681,7 +680,7 @@ pub fn lift(
         | Opcode::BSF => instrs.extend(clear_dst(instr)),
         _ => unimplemented!(),
     };
-    Some(instrs)
+    instrs
 }
 
 pub type IRBlock = Vec<(u64, Vec<Stmt>)>;
@@ -693,10 +692,7 @@ fn is_probestack(
     metadata: &LucetMetadata,
 ) -> bool {
     if let Opcode::CALL = instr.opcode {
-        let op = match convert_operand(instr.operand(0), ValSize::SizeOther) {
-            Some(op) => op,
-            None => return false,
-        };
+        let op = convert_operand(instr.operand(0), ValSize::SizeOther);
         if let Value::Imm(_, _, offset) = op {
             // 5 = size of call instruction
             if 5 + offset + (*addr as i64) == metadata.lucet_probestack as i64 {
@@ -710,10 +706,10 @@ fn is_probestack(
 fn extract_probestack_arg(instr: &yaxpeax_x86::long_mode::Instruction) -> Option<u64> {
     if let Opcode::MOV = instr.opcode {
         if let Value::Reg(0, ValSize::Size32) =
-            convert_operand(instr.operand(0), ValSize::SizeOther).unwrap()
+            convert_operand(instr.operand(0), ValSize::SizeOther)
         {
             if let Value::Imm(_, _, x) =
-                convert_operand(instr.operand(1), ValSize::SizeOther).unwrap()
+                convert_operand(instr.operand(1), ValSize::SizeOther)
             {
                 if instr.operand_count() == 2 {
                     return Some(x as u64);
@@ -726,17 +722,12 @@ fn extract_probestack_arg(instr: &yaxpeax_x86::long_mode::Instruction) -> Option
 
 fn check_probestack_suffix(instr: &yaxpeax_x86::long_mode::Instruction) -> bool {
     if let Opcode::SUB = instr.opcode {
-        if convert_operand(instr.operand(0), ValSize::SizeOther).is_none()
-            || convert_operand(instr.operand(1), ValSize::SizeOther).is_none()
-        {
-            return false;
-        }
         if let Value::Reg(4, ValSize::Size64) =
-            convert_operand(instr.operand(0), ValSize::SizeOther).unwrap()
+            convert_operand(instr.operand(0), ValSize::SizeOther)
         {
             //size is dummy
             if let Value::Reg(0, ValSize::Size64) =
-                convert_operand(instr.operand(1), ValSize::SizeOther).unwrap()
+                convert_operand(instr.operand(1), ValSize::SizeOther)
             {
                 if instr.operand_count() == 2 {
                     return true;
@@ -780,15 +771,7 @@ pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &LucetMetadata) ->
                     None => panic!("probestack broken"),
                 }
             }
-            let lifted = match lift(instr, &addr, metadata) {
-                Some(lifted) => lifted,
-                None => {
-                    // Skip this instruction: it has something that we ignore (e.g. reference to
-                    // RIP-relative data).
-                    continue;
-                }
-            };
-            let ir = (addr, lifted);
+            let ir = (addr, lift(instr, &addr, metadata));
             block_ir.push(ir);
             x = extract_probestack_arg(instr);
         }

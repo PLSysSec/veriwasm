@@ -175,6 +175,7 @@ impl SwitchAnalyzer {
                     SwitchValueLattice::new(SwitchValue::SwitchBase(*immval as u32))
                 }
             }
+            Value::RIPConst => Default::default(),
         }
     }
 

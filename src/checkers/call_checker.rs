@@ -89,6 +89,9 @@ impl CallChecker<'_> {
                 return self.funcs.contains(&target)
                     || ((target >= *plt_start) && (target < *plt_end));
             }
+            Value::RIPConst => {
+                return true;
+            }
         }
         false
     }

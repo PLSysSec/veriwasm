@@ -75,6 +75,7 @@ fn run(config: Config) {
                     cfg: cfg.clone(),
                     irmap: irmap.clone(),
                 },
+                funcs: valid_funcs.clone(),
             };
             let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
             let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs, &plt);

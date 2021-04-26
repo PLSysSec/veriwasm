@@ -117,6 +117,8 @@ impl HeapAnalyzer {
                     return HeapValueLattice::new(HeapValue::Bounded4GB);
                 }
             }
+
+            Value::RIPConst => Default::default(),
         }
         Default::default()
     }

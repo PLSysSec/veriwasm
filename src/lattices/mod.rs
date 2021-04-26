@@ -155,6 +155,7 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
                 }
             }
             Value::Imm(_, _, _) => panic!("Trying to write to an immediate value"),
+            Value::RIPConst => panic!("Trying to write to a RIP constant"),
         }
     }
 
@@ -183,6 +184,7 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
             },
             Value::Reg(regnum, s2) => Some(self.regs.get(regnum, s2)),
             Value::Imm(_, _, _) => None,
+            Value::RIPConst => None,
         }
     }
 

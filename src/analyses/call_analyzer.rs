@@ -16,6 +16,7 @@ pub struct CallAnalyzer {
     pub metadata: LucetMetadata,
     pub reaching_defs: AnalysisResult<ReachLattice>,
     pub reaching_analyzer: ReachingDefnAnalyzer,
+    pub funcs: Vec<u64>,
 }
 
 impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
@@ -203,6 +204,10 @@ pub fn is_fn_ptr(in_state: &CallCheckLattice, memargs: &MemArgs) -> bool {
 }
 
 impl CallAnalyzer {
+    fn is_func_start(&self, addr: u64) -> bool {
+        self.funcs.contains(&addr)
+    }
+
     pub fn aeval_unop(&self, in_state: &CallCheckLattice, value: &Value) -> CallCheckValueLattice {
         match value {
             Value::Mem(memsize, memargs) => {
@@ -231,7 +236,18 @@ impl CallAnalyzer {
                     return CallCheckValueLattice {
                         v: Some(CallCheckValue::LucetTablesBase),
                     };
+                } else if self.is_func_start(*immval as u64) {
+                    return CallCheckValueLattice {
+                        v: Some(CallCheckValue::FnPtr),
+                    };
                 }
+            }
+
+            Value::RIPConst => {
+                // The backend uses rip-relative data to embed constant function pointers.
+                return CallCheckValueLattice {
+                    v: Some(CallCheckValue::FnPtr),
+                };
             }
         }
         Default::default()

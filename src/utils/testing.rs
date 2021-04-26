@@ -42,6 +42,7 @@ fn full_test_helper(path: &str) {
                     cfg: cfg.clone(),
                     irmap: irmap.clone(),
                 },
+                funcs: vec![],
             };
             let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
             let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs, &plt);
@@ -82,6 +83,7 @@ fn negative_test_helper(path: &str, func_name: &str) {
                 cfg: cfg.clone(),
                 irmap: irmap.clone(),
             },
+            funcs: vec![],
         };
         let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
         let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs, &plt);
