@@ -408,6 +408,12 @@ pub fn lift(
             ))
         }
 
+        Opcode::CMOVNB => {
+            // Part of Spectre mitigation. Assume CMOV never happens (if it does, we just trap).
+
+            /* nothing */
+        }
+
         Opcode::UD2 => instrs.push(Stmt::Undefined),
 
         Opcode::RETURN => instrs.push(Stmt::Ret),
