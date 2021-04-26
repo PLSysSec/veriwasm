@@ -26,6 +26,7 @@ pub struct Config {
     output_path: String,
     has_output: bool,
     _quiet: bool,
+    only_func: Option<String>,
 }
 
 fn run(config: Config) {
@@ -37,6 +38,9 @@ fn run(config: Config) {
     let (x86_64_data, func_addrs, plt) = get_data(&config.module_path, &program);
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     for (addr, func_name) in func_addrs {
+        if config.only_func.is_some() && &func_name != &*config.only_func.as_ref().unwrap() {
+            continue;
+        }
         println!("Generating CFG for {:?}", func_name);
         let start = Instant::now();
         let (cfg, irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
@@ -156,6 +160,13 @@ fn main() {
                 .takes_value(true)
                 .help("Path to output stats file"),
         )
+        .arg(
+            Arg::with_name("one function")
+                .short("f")
+                .long("func")
+                .takes_value(true)
+                .help("Single function to process (rather than whole module"),
+        )
         .arg(Arg::with_name("quiet").short("q").long("quiet"))
         .get_matches();
 
@@ -166,6 +177,7 @@ fn main() {
         .map(|s| s.parse::<u32>().unwrap_or(1))
         .unwrap_or(1);
     let quiet = matches.is_present("quiet");
+    let only_func = matches.value_of("one function").map(|s| s.to_owned());
 
     let has_output = if output_path == "" { false } else { true };
 
@@ -175,6 +187,7 @@ fn main() {
         output_path: output_path.to_string(),
         has_output: has_output,
         _quiet: quiet,
+        only_func,
     };
 
     run(config);

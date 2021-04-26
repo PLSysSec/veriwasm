@@ -361,6 +361,7 @@ pub fn lift(
     addr: &u64,
     metadata: &LucetMetadata,
 ) -> Vec<Stmt> {
+    log::debug!("lift: instr {:?}", instr);
     let mut instrs = Vec::new();
     match instr.opcode {
         Opcode::MOV => instrs.push(unop(Unopcode::Mov, instr)),
@@ -500,6 +501,13 @@ pub fn lift(
             } else {
                 instrs.extend(clear_dst(instr))
             }
+        }
+
+        Opcode::CDQ | Opcode::CDQE => {
+            // clear rax
+            instrs.push(Stmt::Clear(Value::Reg(0, ValSize::Size64), vec![]));
+            // clear rdx
+            instrs.push(Stmt::Clear(Value::Reg(2, ValSize::Size64), vec![]));
         }
 
         Opcode::OR
