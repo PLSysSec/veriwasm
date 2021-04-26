@@ -10,6 +10,16 @@ pub fn is_rsp(v: &Value) -> bool {
     }
 }
 
+pub fn is_rbp(v: &Value) -> bool {
+    match v {
+        Value::Reg(5, ValSize::Size64) => return true,
+        Value::Reg(5, ValSize::Size32)
+        | Value::Reg(5, ValSize::Size16)
+        | Value::Reg(5, ValSize::Size8) => panic!("Illegal RBP access"),
+        _ => return false,
+    }
+}
+
 pub fn is_zf(v: &Value) -> bool {
     match v {
         Value::Reg(16, _) => return true,

@@ -1,7 +1,8 @@
 use crate::lattices::{ConstLattice, VarState};
 use crate::utils::lifter::{Binopcode, Value};
 
-pub type StackGrowthLattice = ConstLattice<(i64, i64)>;
+/// Fields are: (stackgrowth, probestack, rbp_stackgrowth)
+pub type StackGrowthLattice = ConstLattice<(i64, i64, i64)>;
 
 impl VarState for StackGrowthLattice {
     type Var = i64;
@@ -31,14 +32,21 @@ impl VarState for StackGrowthLattice {
 impl StackGrowthLattice {
     pub fn get_stackgrowth(&self) -> Option<i64> {
         match self.v {
-            Some((stackgrowth, _)) => Some(stackgrowth),
+            Some((stackgrowth, _, _)) => Some(stackgrowth),
             None => None,
         }
     }
 
     pub fn get_probestack(&self) -> Option<i64> {
         match self.v {
-            Some((_, probestack)) => Some(probestack),
+            Some((_, probestack, _)) => Some(probestack),
+            None => None,
+        }
+    }
+
+    pub fn get_rbp(&self) -> Option<i64> {
+        match self.v {
+            Some((_, _, rbp)) => Some(rbp),
             None => None,
         }
     }
@@ -50,9 +58,9 @@ fn stack_growth_lattice_test() {
     use crate::lattices::Lattice;
 
     let x1 = StackGrowthLattice { v: None };
-    let x2 = StackGrowthLattice { v: Some((1, 4096)) };
-    let x3 = StackGrowthLattice { v: Some((1, 4096)) };
-    let x4 = StackGrowthLattice { v: Some((2, 4096)) };
+    let x2 = StackGrowthLattice { v: Some((1, 4096, 0)) };
+    let x3 = StackGrowthLattice { v: Some((1, 4096, 0)) };
+    let x4 = StackGrowthLattice { v: Some((2, 4096, 0)) };
 
     assert_eq!(x1 == x2, false);
     assert_eq!(x2 == x3, true);
@@ -75,7 +83,7 @@ fn stack_growth_lattice_test() {
         true
     );
     assert_eq!(
-        x2.meet(&x3, &LocIdx { addr: 0, idx: 0 }) == StackGrowthLattice { v: Some((1, 4096)) },
+        x2.meet(&x3, &LocIdx { addr: 0, idx: 0 }) == StackGrowthLattice { v: Some((1, 4096, 0)) },
         true
     );
     assert_eq!(

@@ -47,7 +47,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
                 println!("Failure Case at {:?}: Stackgrowth = None", ir_stmt);
                 return false;
             }
-            Some((stackgrowth, _)) => {
+            Some((stackgrowth, _, _)) => {
                 if stackgrowth > 0 {
                     return false;
                 }
@@ -85,7 +85,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
 
         // 3. For all rets stackgrowth = 0
         if let Stmt::Ret = ir_stmt {
-            if let Some((stackgrowth, _)) = state.v {
+            if let Some((stackgrowth, _, _)) = state.v {
                 if stackgrowth != 0 {
                     println!("stackgrowth != 0 at ret: stackgrowth = {:?}", stackgrowth);
                     return false;
