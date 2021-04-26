@@ -1,9 +1,9 @@
 use crate::analyses::stack_analyzer::StackAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
-use crate::utils::ir_utils::{get_imm_mem_offset, is_stack_access};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::stackgrowthlattice::StackGrowthLattice;
+use crate::utils::ir_utils::{get_imm_mem_offset, is_stack_access};
 use crate::utils::lifter::{IRMap, MemArgs, Stmt, Value};
 
 pub struct StackChecker<'a> {

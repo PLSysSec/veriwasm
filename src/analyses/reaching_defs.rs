@@ -1,5 +1,5 @@
 use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
-use crate::lattices::reachingdefslattice::{singleton, LocIdx, ReachLattice, loc};
+use crate::lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
 use crate::lattices::VarState;
 use crate::utils::lifter::{Binopcode, IRMap, Stmt, Unopcode};
 use crate::utils::utils::LucetMetadata;
@@ -11,7 +11,14 @@ pub fn analyze_reaching_defs(
     irmap: &IRMap,
     _metadata: LucetMetadata,
 ) -> AnalysisResult<ReachLattice> {
-    run_worklist(cfg, irmap, &ReachingDefnAnalyzer {cfg: cfg.clone(), irmap: irmap.clone()})
+    run_worklist(
+        cfg,
+        irmap,
+        &ReachingDefnAnalyzer {
+            cfg: cfg.clone(),
+            irmap: irmap.clone(),
+        },
+    )
 }
 
 pub struct ReachingDefnAnalyzer {
@@ -19,12 +26,16 @@ pub struct ReachingDefnAnalyzer {
     pub irmap: IRMap,
 }
 
-impl ReachingDefnAnalyzer{
+impl ReachingDefnAnalyzer {
     //1. get enclosing block addr
     //2. get result for that block start
     //3. run reaching def up to that point
-    pub fn fetch_def(&self, result: &AnalysisResult<ReachLattice>, loc_idx: &LocIdx) -> ReachLattice{
-        if self.cfg.blocks.contains_key(&loc_idx.addr){
+    pub fn fetch_def(
+        &self,
+        result: &AnalysisResult<ReachLattice>,
+        loc_idx: &LocIdx,
+    ) -> ReachLattice {
+        if self.cfg.blocks.contains_key(&loc_idx.addr) {
             return result.get(&loc_idx.addr).unwrap().clone();
         }
         let block_addr = self.cfg.prev_block(loc_idx.addr).unwrap().start;
@@ -32,8 +43,8 @@ impl ReachingDefnAnalyzer{
         let mut def_state = result.get(&block_addr).unwrap().clone();
         for (addr, instruction) in irblock.iter() {
             for (idx, ir_insn) in instruction.iter().enumerate() {
-                if &loc_idx.addr == addr && (loc_idx.idx as usize) == idx{
-                    return def_state
+                if &loc_idx.addr == addr && (loc_idx.idx as usize) == idx {
+                    return def_state;
                 }
                 self.aexec(
                     &mut def_state,
@@ -45,7 +56,7 @@ impl ReachingDefnAnalyzer{
                 );
             }
         }
-        unimplemented!()        
+        unimplemented!()
     }
 }
 
@@ -60,8 +71,8 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
         s.regs.rbp = loc(0xdeadbeef, 4);
         s.regs.rsi = loc(0xdeadbeef, 5);
         s.regs.rdi = loc(0xdeadbeef, 6);
-        s.regs.r8 =  loc(0xdeadbeef, 7);
-        s.regs.r9 =  loc(0xdeadbeef, 8);
+        s.regs.r8 = loc(0xdeadbeef, 7);
+        s.regs.r9 = loc(0xdeadbeef, 8);
         s.regs.r10 = loc(0xdeadbeef, 9);
         s.regs.r11 = loc(0xdeadbeef, 10);
         s.regs.r12 = loc(0xdeadbeef, 11);
@@ -69,31 +80,11 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
         s.regs.r14 = loc(0xdeadbeef, 13);
         s.regs.r15 = loc(0xdeadbeef, 14);
 
-        s.stack.update(
-            0x8, 
-            loc(0xdeadbeef, 15),
-            4,
-        );
-        s.stack.update(
-            0x10,
-            loc(0xdeadbeef, 16),
-            4,
-        );
-        s.stack.update(
-            0x18,
-            loc(0xdeadbeef, 17),
-            4,
-        );
-        s.stack.update(
-            0x20,
-            loc(0xdeadbeef, 18),
-            4,
-        );
-        s.stack.update(
-            0x28,
-            loc(0xdeadbeef, 18),
-            4,
-        );
+        s.stack.update(0x8, loc(0xdeadbeef, 15), 4);
+        s.stack.update(0x10, loc(0xdeadbeef, 16), 4);
+        s.stack.update(0x18, loc(0xdeadbeef, 17), 4);
+        s.stack.update(0x20, loc(0xdeadbeef, 18), 4);
+        s.stack.update(0x28, loc(0xdeadbeef, 18), 4);
 
         s
     }
@@ -123,8 +114,7 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
                 in_state.adjust_stack_offset(opcode, dst, src1, src2);
                 in_state.set(dst, singleton(loc_idx.clone()))
             }
-            Stmt::Call(_) =>
-            {
+            Stmt::Call(_) => {
                 in_state.regs.rax = loc(loc_idx.addr, 0);
                 in_state.regs.rcx = loc(loc_idx.addr, 1);
                 in_state.regs.rdx = loc(loc_idx.addr, 2);
@@ -132,8 +122,8 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
                 in_state.regs.rbp = loc(loc_idx.addr, 4);
                 in_state.regs.rsi = loc(loc_idx.addr, 5);
                 in_state.regs.rdi = loc(loc_idx.addr, 6);
-                in_state.regs.r8 =  loc(loc_idx.addr, 7);
-                in_state.regs.r9 =  loc(loc_idx.addr, 8);
+                in_state.regs.r8 = loc(loc_idx.addr, 7);
+                in_state.regs.r9 = loc(loc_idx.addr, 8);
                 in_state.regs.r10 = loc(loc_idx.addr, 9);
                 in_state.regs.r11 = loc(loc_idx.addr, 10);
                 in_state.regs.r12 = loc(loc_idx.addr, 11);

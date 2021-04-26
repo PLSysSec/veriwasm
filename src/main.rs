@@ -4,14 +4,14 @@ pub mod lattices;
 pub mod utils;
 use crate::analyses::call_analyzer::CallAnalyzer;
 use crate::analyses::heap_analyzer::HeapAnalyzer;
-use crate::analyses::reaching_defs::{analyze_reaching_defs,ReachingDefnAnalyzer};
+use crate::analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
 use crate::analyses::run_worklist;
 use crate::analyses::stack_analyzer::StackAnalyzer;
 use crate::checkers::call_checker::check_calls;
 use crate::checkers::heap_checker::check_heap;
 use crate::checkers::stack_checker::check_stack;
 use crate::utils::ir_utils::has_indirect_calls;
-use crate::utils::utils::{fully_resolved_cfg,get_data};
+use crate::utils::utils::{fully_resolved_cfg, get_data};
 use clap::{App, Arg};
 use serde_json;
 use std::fs;
@@ -27,8 +27,6 @@ pub struct Config {
     has_output: bool,
     _quiet: bool,
 }
-
-
 
 fn run(config: Config) {
     let mut func_counter = 0;
@@ -73,14 +71,16 @@ fn run(config: Config) {
             let call_analyzer = CallAnalyzer {
                 metadata: metadata.clone(),
                 reaching_defs: reaching_defs.clone(),
-                reaching_analyzer: ReachingDefnAnalyzer {cfg: cfg.clone(), irmap: irmap.clone()},
+                reaching_analyzer: ReachingDefnAnalyzer {
+                    cfg: cfg.clone(),
+                    irmap: irmap.clone(),
+                },
             };
             let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
             let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs, &plt);
             if !call_safe {
                 panic!("Not Call Safe");
             }
-
         }
         let end = Instant::now();
         info.push((

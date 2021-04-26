@@ -1,9 +1,9 @@
 use crate::analyses::heap_analyzer::HeapAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
-use crate::utils::ir_utils::{is_mem_access, is_stack_access};
 use crate::lattices::heaplattice::{HeapLattice, HeapValue};
 use crate::lattices::reachingdefslattice::LocIdx;
+use crate::utils::ir_utils::{is_mem_access, is_stack_access};
 use crate::utils::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
 
 pub struct HeapChecker<'a> {
@@ -38,43 +38,41 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
     fn check_statement(&self, state: &HeapLattice, ir_stmt: &Stmt, _loc_idx: &LocIdx) -> bool {
         match ir_stmt {
             //1. Check that at each call rdi = HeapBase
-            Stmt::Call(_) => {
-                match state.regs.rdi.v {
-                    Some(HeapValue::HeapBase) => (),
-                    _ => {
-                        println!("Call failure {:?}", state.stack.get(0, 8));
-                        return false;
-                    }
+            Stmt::Call(_) => match state.regs.rdi.v {
+                Some(HeapValue::HeapBase) => (),
+                _ => {
+                    println!("Call failure {:?}", state.stack.get(0, 8));
+                    return false;
                 }
-            }
+            },
             //2. Check that all load and store are safe
             Stmt::Unop(_, dst, src) => {
-                if is_mem_access(dst) && !self.check_mem_access(state, dst){
+                if is_mem_access(dst) && !self.check_mem_access(state, dst) {
                     return false;
                 }
                 //stack read: probestack <= stackgrowth + c < 8K
-                if is_mem_access(src) && !self.check_mem_access(state, src){
+                if is_mem_access(src) && !self.check_mem_access(state, src) {
                     return false;
                 }
             }
 
             Stmt::Binop(_, dst, src1, src2) => {
-                if is_mem_access(dst) && !self.check_mem_access(state, dst){
+                if is_mem_access(dst) && !self.check_mem_access(state, dst) {
                     return false;
                 }
-                if is_mem_access(src1) && !self.check_mem_access(state, src1){
+                if is_mem_access(src1) && !self.check_mem_access(state, src1) {
                     return false;
                 }
-                if is_mem_access(src2) && !self.check_mem_access(state, src2){
+                if is_mem_access(src2) && !self.check_mem_access(state, src2) {
                     return false;
                 }
             }
             Stmt::Clear(dst, srcs) => {
-                if is_mem_access(dst) && !self.check_mem_access(state, dst){
+                if is_mem_access(dst) && !self.check_mem_access(state, dst) {
                     return false;
                 }
                 for src in srcs {
-                    if is_mem_access(src) && !self.check_mem_access(state, src){
+                    if is_mem_access(src) && !self.check_mem_access(state, src) {
                         return false;
                     }
                 }
@@ -168,35 +166,51 @@ impl HeapChecker<'_> {
 
     fn check_metadata_access(&self, state: &HeapLattice, access: &Value) -> bool {
         if let Value::Mem(_size, memargs) = access {
-            match memargs{
+            match memargs {
                 //Case 1: mem[globals_base]
-                MemArgs::Mem1Arg(MemArg::Reg(regnum,ValSize::Size64)) => {
-                    if let  Some(HeapValue::GlobalsBase) = state.regs.get(regnum,&ValSize::Size64).v {
-                        return true
-                    }
-                },
-                //Case 2: mem[lucet_tables + 8]
-                MemArgs::Mem2Args(MemArg::Reg(regnum,ValSize::Size64), MemArg::Imm(_,_,8)) => {
-                    if let Some(HeapValue::LucetTables) = state.regs.get(regnum,&ValSize::Size64).v{
-                        return true
-                    }
-                },
-                MemArgs::Mem2Args(MemArg::Reg(regnum1,ValSize::Size64), MemArg::Reg(regnum2,ValSize::Size64)) => {
-                    if let Some(HeapValue::GuestTable0) = state.regs.get(regnum1,&ValSize::Size64).v{
-                        return true
-                    }
-                    if let Some(HeapValue::GuestTable0) = state.regs.get(regnum2,&ValSize::Size64).v{
-                        return true
-                    }
-                },
-                MemArgs::Mem3Args(MemArg::Reg(regnum1,ValSize::Size64),MemArg::Reg(regnum2,ValSize::Size64), MemArg::Imm(_,_,8)) => {
-                    match (state.regs.get(regnum1,&ValSize::Size64).v,state.regs.get(regnum2,&ValSize::Size64).v){
-                        (Some(HeapValue::GuestTable0),_) => return true,
-                        (_,Some(HeapValue::GuestTable0)) => return true,
-                        _ => ()
+                MemArgs::Mem1Arg(MemArg::Reg(regnum, ValSize::Size64)) => {
+                    if let Some(HeapValue::GlobalsBase) = state.regs.get(regnum, &ValSize::Size64).v
+                    {
+                        return true;
                     }
                 }
-                _ => return false
+                //Case 2: mem[lucet_tables + 8]
+                MemArgs::Mem2Args(MemArg::Reg(regnum, ValSize::Size64), MemArg::Imm(_, _, 8)) => {
+                    if let Some(HeapValue::LucetTables) = state.regs.get(regnum, &ValSize::Size64).v
+                    {
+                        return true;
+                    }
+                }
+                MemArgs::Mem2Args(
+                    MemArg::Reg(regnum1, ValSize::Size64),
+                    MemArg::Reg(regnum2, ValSize::Size64),
+                ) => {
+                    if let Some(HeapValue::GuestTable0) =
+                        state.regs.get(regnum1, &ValSize::Size64).v
+                    {
+                        return true;
+                    }
+                    if let Some(HeapValue::GuestTable0) =
+                        state.regs.get(regnum2, &ValSize::Size64).v
+                    {
+                        return true;
+                    }
+                }
+                MemArgs::Mem3Args(
+                    MemArg::Reg(regnum1, ValSize::Size64),
+                    MemArg::Reg(regnum2, ValSize::Size64),
+                    MemArg::Imm(_, _, 8),
+                ) => {
+                    match (
+                        state.regs.get(regnum1, &ValSize::Size64).v,
+                        state.regs.get(regnum2, &ValSize::Size64).v,
+                    ) {
+                        (Some(HeapValue::GuestTable0), _) => return true,
+                        (_, Some(HeapValue::GuestTable0)) => return true,
+                        _ => (),
+                    }
+                }
+                _ => return false,
             }
         }
         false

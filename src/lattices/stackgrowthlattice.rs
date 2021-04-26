@@ -58,9 +58,15 @@ fn stack_growth_lattice_test() {
     use crate::lattices::Lattice;
 
     let x1 = StackGrowthLattice { v: None };
-    let x2 = StackGrowthLattice { v: Some((1, 4096, 0)) };
-    let x3 = StackGrowthLattice { v: Some((1, 4096, 0)) };
-    let x4 = StackGrowthLattice { v: Some((2, 4096, 0)) };
+    let x2 = StackGrowthLattice {
+        v: Some((1, 4096, 0)),
+    };
+    let x3 = StackGrowthLattice {
+        v: Some((1, 4096, 0)),
+    };
+    let x4 = StackGrowthLattice {
+        v: Some((2, 4096, 0)),
+    };
 
     assert_eq!(x1 == x2, false);
     assert_eq!(x2 == x3, true);
@@ -83,7 +89,10 @@ fn stack_growth_lattice_test() {
         true
     );
     assert_eq!(
-        x2.meet(&x3, &LocIdx { addr: 0, idx: 0 }) == StackGrowthLattice { v: Some((1, 4096, 0)) },
+        x2.meet(&x3, &LocIdx { addr: 0, idx: 0 })
+            == StackGrowthLattice {
+                v: Some((1, 4096, 0))
+            },
         true
     );
     assert_eq!(

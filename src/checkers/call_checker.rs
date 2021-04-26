@@ -10,7 +10,7 @@ pub struct CallChecker<'a> {
     irmap: &'a IRMap,
     analyzer: &'a CallAnalyzer,
     funcs: &'a Vec<u64>,
-    plt: &'a (u64,u64),
+    plt: &'a (u64, u64),
     // x86_64_data: &x86_64Data,
 }
 
@@ -19,15 +19,14 @@ pub fn check_calls(
     irmap: &IRMap,
     analyzer: &CallAnalyzer,
     funcs: &Vec<u64>,
-    plt: &(u64,u64),
+    plt: &(u64, u64),
     // x86_64_data: &x86_64Data,
 ) -> bool {
     CallChecker {
         irmap,
         analyzer,
         funcs,
-        plt
-        // x86_64_data,
+        plt, // x86_64_data,
     }
     .check(result)
 }
@@ -56,7 +55,10 @@ impl Checker<CallCheckLattice> for CallChecker<'_> {
         // 2. Check that lookup is using resolved DAV
         if let Stmt::Unop(_, _, Value::Mem(_, memargs)) = ir_stmt {
             if !self.check_calltable_lookup(state, memargs) {
-                println!("0x{:x} Failure Case: Lookup Call: {:?}", loc_idx.addr, memargs);
+                println!(
+                    "0x{:x} Failure Case: Lookup Call: {:?}",
+                    loc_idx.addr, memargs
+                );
                 print_mem_access(state, memargs);
                 return false;
             }
@@ -76,19 +78,17 @@ impl CallChecker<'_> {
             Value::Reg(regnum, size) => {
                 if let Some(CallCheckValue::FnPtr) = state.regs.get(regnum, size).v {
                     return true;
-                }
-                else{
+                } else {
                     println!("{:?}", state.regs.get(regnum, size).v)
                 }
             }
             Value::Mem(_, _) => return false,
-            Value::Imm(_, _, imm) => 
-            {
+            Value::Imm(_, _, imm) => {
                 let target = (*imm + (loc_idx.addr as i64) + 5) as u64;
                 let (plt_start, plt_end) = self.plt;
-                return self.funcs.contains(&target) || 
-                ((target >= *plt_start) && (target < *plt_end)) ; 
-            }, 
+                return self.funcs.contains(&target)
+                    || ((target >= *plt_start) && (target < *plt_end));
+            }
         }
         false
     }

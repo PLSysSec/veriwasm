@@ -59,11 +59,7 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
         }
     }
 
-    fn analyze_block(
-        &self,
-        state: &State,
-        irblock: &IRBlock,
-    ) -> State {
+    fn analyze_block(&self, state: &State, irblock: &IRBlock) -> State {
         let mut new_state = state.clone();
         for (addr, instruction) in irblock.iter() {
             for (idx, ir_insn) in instruction.iter().enumerate() {
@@ -81,8 +77,6 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
         new_state
     }
 }
-
-
 
 fn align_succ_addrs(addr: u64, succ_addrs: Vec<u64>) -> Vec<u64> {
     if succ_addrs.len() != 2 {
@@ -126,25 +120,26 @@ pub fn run_worklist<T: AbstractAnalyzer<State>, State: VarState + Lattice + Clon
         for (succ_addr, branch_state) in
             analyzer.process_branch(irmap, &new_state, &succ_addrs, &addr)
         {
-            let has_change = 
-                if statemap.contains_key(&succ_addr) {
-                    let old_state = statemap.get(&succ_addr).unwrap();
-                    let merged_state = old_state.meet(&branch_state, &LocIdx { addr: addr, idx: 0 });
+            let has_change = if statemap.contains_key(&succ_addr) {
+                let old_state = statemap.get(&succ_addr).unwrap();
+                let merged_state = old_state.meet(&branch_state, &LocIdx { addr: addr, idx: 0 });
 
-                    if merged_state > *old_state {
-                        println!("{:?} {:?}", merged_state, old_state);
-                        panic!("Meet monoticity error");
-                    }
-                    let has_change = *old_state != merged_state;
-                    println!("At block 0x{:x}: merged input {:?}", succ_addr, merged_state);
-                    statemap.insert(succ_addr, merged_state);
-                    has_change
-                    
-                } else {
-                    println!("At block 0x{:x}: new input {:?}", succ_addr, branch_state);
-                    statemap.insert(succ_addr, branch_state);
-                    true
-                };
+                if merged_state > *old_state {
+                    println!("{:?} {:?}", merged_state, old_state);
+                    panic!("Meet monoticity error");
+                }
+                let has_change = *old_state != merged_state;
+                println!(
+                    "At block 0x{:x}: merged input {:?}",
+                    succ_addr, merged_state
+                );
+                statemap.insert(succ_addr, merged_state);
+                has_change
+            } else {
+                println!("At block 0x{:x}: new input {:?}", succ_addr, branch_state);
+                statemap.insert(succ_addr, branch_state);
+                true
+            };
 
             if has_change && !worklist.contains(&succ_addr) {
                 worklist.push_back(succ_addr);

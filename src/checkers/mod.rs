@@ -16,9 +16,16 @@ pub trait Checker<State: Lattice + Clone> {
 
     fn check_state_at_statements(&self, result: AnalysisResult<State>) -> bool {
         for (block_addr, mut state) in result {
-            println!("Checking block 0x{:x} with start state {:?}", block_addr, state);
+            println!(
+                "Checking block 0x{:x} with start state {:?}",
+                block_addr, state
+            );
             for (addr, ir_stmts) in self.irmap().get(&block_addr).unwrap() {
                 for (idx, ir_stmt) in ir_stmts.iter().enumerate() {
+                    println!(
+                        "Checking stmt at 0x{:x}: {:?} with start state {:?}",
+                        addr, ir_stmt, state
+                    );
                     if !self.check_statement(
                         &state,
                         ir_stmt,

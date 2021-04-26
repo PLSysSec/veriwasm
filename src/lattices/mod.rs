@@ -6,10 +6,10 @@ pub mod regslattice;
 pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod switchlattice;
-use crate::utils::ir_utils::{get_imm_offset, is_rsp};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::regslattice::X86RegsLattice;
 use crate::lattices::stacklattice::StackLattice;
+use crate::utils::ir_utils::{get_imm_offset, is_rsp};
 use crate::utils::lifter::{Binopcode, MemArg, MemArgs, ValSize, Value};
 use std::cmp::Ordering;
 use std::fmt::Debug;
@@ -191,7 +191,7 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
     }
 
     fn on_call(&mut self) {
-        self.regs.clear_regs()
+        self.regs.clear_caller_save_regs();
     }
 
     fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value, src1: &Value, src2: &Value) {
