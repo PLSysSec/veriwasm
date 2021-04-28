@@ -1,17 +1,16 @@
-pub mod analyses;
-pub mod checkers;
-pub mod lattices;
-pub mod utils;
-use crate::analyses::call_analyzer::CallAnalyzer;
-use crate::analyses::heap_analyzer::HeapAnalyzer;
-use crate::analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
-use crate::analyses::run_worklist;
-use crate::analyses::stack_analyzer::StackAnalyzer;
-use crate::checkers::call_checker::check_calls;
-use crate::checkers::heap_checker::check_heap;
-use crate::checkers::stack_checker::check_stack;
-use crate::utils::ir_utils::has_indirect_calls;
-use crate::utils::utils::{fully_resolved_cfg, get_data};
+use veriwasm::{analyses, checkers, utils};
+
+use analyses::call_analyzer::CallAnalyzer;
+use analyses::heap_analyzer::HeapAnalyzer;
+use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
+use analyses::run_worklist;
+use analyses::stack_analyzer::StackAnalyzer;
+use checkers::call_checker::check_calls;
+use checkers::heap_checker::check_heap;
+use checkers::stack_checker::check_stack;
+use utils::ir_utils::has_indirect_calls;
+use utils::utils::{fully_resolved_cfg, get_data};
+
 use clap::{App, Arg};
 use serde_json;
 use std::fs;

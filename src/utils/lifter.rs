@@ -364,16 +364,19 @@ pub fn lift(
     log::debug!("lift: instr {:?}", instr);
     let mut instrs = Vec::new();
     match instr.opcode {
-        Opcode::MOV => instrs.push(unop(Unopcode::Mov, instr)),
-        Opcode::MOVSX => instrs.push(unop(Unopcode::Mov, instr)),
-        Opcode::MOVSXD => instrs.push(unop(Unopcode::Mov, instr)),
-        Opcode::MOVSD => instrs.push(unop(Unopcode::Mov, instr)),
-        Opcode::MOVD => instrs.push(unop(Unopcode::Mov, instr)),
-        Opcode::MOVQ => instrs.push(unop(Unopcode::Mov, instr)),
-        Opcode::MOVZX_b => instrs.push(unop(Unopcode::Mov, instr)),
-        Opcode::MOVSX_b => instrs.push(unop(Unopcode::Mov, instr)),
-        Opcode::MOVZX_w => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOV |
+        Opcode::MOVQ |
+        Opcode::MOVD |
+        Opcode::MOVSD |
+        Opcode::MOVZX_b |
+        Opcode::MOVSX_b |
+        Opcode::MOVZX_w |
         Opcode::MOVSX_w => instrs.push(unop(Unopcode::Mov, instr)),
+
+        // These sign-extends are not actually moves -- the mutate the value in some way.
+        Opcode::MOVSX |
+        Opcode::MOVSXD => instrs.extend(clear_dst(instr)),
+
         Opcode::LEA => instrs.extend(lea(instr, addr)),
 
         Opcode::TEST => instrs.push(binop(Binopcode::Test, instr)),

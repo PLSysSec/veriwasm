@@ -25,7 +25,7 @@ pub fn load_program(binpath: &str) -> ModuleData {
     let program = if let FileRepr::Executable(program) = program {
         program
     } else {
-        panic!(format!("function:{} is not a valid path", binpath));
+        panic!("function:{} is not a valid path", binpath);
     };
     program
 }
