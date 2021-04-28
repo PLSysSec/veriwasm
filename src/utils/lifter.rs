@@ -252,6 +252,30 @@ fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
     stmts
 }
 
+// Generic handling for unknown opcodes.
+fn generic_clear(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
+    let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
+    let writes_to_zf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
+        (Some(Location::ZF), Direction::Write) => true,
+        _ => false,
+    });
+    let mut stmts = vec![];
+
+    for (loc, dir) in uses_vec {
+        match (loc, dir) {
+            (Some(Location::Register(reg)), Direction::Write) => {
+                stmts.push(Stmt::Clear(convert_reg(reg), vec![]));
+            }
+            _ => {}
+        }
+    }
+    if writes_to_zf {
+        stmts.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), vec![]));
+    }
+
+    stmts
+}
+
 fn get_operand_size(op: yaxpeax_x86::long_mode::Operand) -> Option<ValSize> {
     match op {
         Operand::ImmediateI8(_) | Operand::ImmediateU8(_) => Some(ValSize::Size8),
@@ -691,7 +715,8 @@ pub fn lift(
         | Opcode::BSF
         | Opcode::ANDPD
         | Opcode::ORPD => instrs.extend(clear_dst(instr)),
-        _ => unimplemented!("Bad opcode: {:?} at 0x{:x}", instr.opcode, addr),
+
+        _ => instrs.extend(generic_clear(instr)),
     };
     instrs
 }
