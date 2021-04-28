@@ -92,7 +92,7 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
     fn aexec(&self, in_state: &mut ReachLattice, ir_instr: &Stmt, loc_idx: &LocIdx) -> () {
         match ir_instr {
             Stmt::Clear(dst, _) => in_state.set(dst, singleton(loc_idx.clone())),
-            Stmt::Unop(Unopcode::Mov, dst, src) => {
+            Stmt::Unop(Unopcode::Mov, dst, src) | Stmt::Unop(Unopcode::Movsx, dst, src) => {
                 if let Some(v) = in_state.get(src) {
                     if v.defs.is_empty() {
                         in_state.set(dst, singleton(loc_idx.clone()));

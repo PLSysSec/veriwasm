@@ -90,6 +90,7 @@ impl Stmt {
 #[derive(Debug, Clone)]
 pub enum Unopcode {
     Mov,
+    Movsx,
 }
 #[derive(Debug, Clone)]
 pub enum Binopcode {
@@ -369,13 +370,12 @@ pub fn lift(
         Opcode::MOVD |
         Opcode::MOVSD |
         Opcode::MOVZX_b |
-        Opcode::MOVSX_b |
-        Opcode::MOVZX_w |
-        Opcode::MOVSX_w => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVZX_w => instrs.push(unop(Unopcode::Mov, instr)),
 
-        // These sign-extends are not actually moves -- the mutate the value in some way.
         Opcode::MOVSX |
-        Opcode::MOVSXD => instrs.extend(clear_dst(instr)),
+        Opcode::MOVSX_w |
+        Opcode::MOVSX_b |
+        Opcode::MOVSXD => instrs.push(unop(Unopcode::Movsx, instr)),
 
         Opcode::LEA => instrs.extend(lea(instr, addr)),
 
@@ -721,9 +721,7 @@ fn extract_probestack_arg(instr: &yaxpeax_x86::long_mode::Instruction) -> Option
         if let Value::Reg(0, ValSize::Size32) =
             convert_operand(instr.operand(0), ValSize::SizeOther)
         {
-            if let Value::Imm(_, _, x) =
-                convert_operand(instr.operand(1), ValSize::SizeOther)
-            {
+            if let Value::Imm(_, _, x) = convert_operand(instr.operand(1), ValSize::SizeOther) {
                 if instr.operand_count() == 2 {
                     return Some(x as u64);
                 }
