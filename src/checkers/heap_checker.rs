@@ -135,6 +135,22 @@ impl HeapChecker<'_> {
         false
     }
 
+    fn check_ripconst_access(&self, state: &HeapLattice, access: &Value) -> bool {
+        if let Value::Mem(_, memargs) = access {
+            match memargs {
+                MemArgs::Mem1Arg(MemArg::Reg(regnum, ValSize::Size64))
+                | MemArgs::Mem2Args(MemArg::Reg(regnum, ValSize::Size64), _)
+                | MemArgs::Mem3Args(MemArg::Reg(regnum, ValSize::Size64), _, _) => {
+                    if let Some(HeapValue::RIPConst) = state.regs.get(regnum, &ValSize::Size64).v {
+                        return true;
+                    }
+                }
+                _ => {}
+            }
+        }
+        false
+    }
+
     fn check_heap_access(&self, state: &HeapLattice, access: &Value) -> bool {
         if let Value::Mem(_, memargs) = access {
             match memargs {
@@ -268,27 +284,35 @@ impl HeapChecker<'_> {
         if is_stack_access(access) {
             return true;
         }
-        // Case 1a: it is a frame slot (RBP-based) access
+        // Case 2: it is a frame slot (RBP-based) access
         if is_frame_access(access) {
             return true;
         }
-        // Case 2: its a heap access
+        // Case 3: it is an access based at a constant loaded from
+        // program data. We trust the compiler knows what it's doing
+        // in such a case. This could also be a globals or table
+        // access if we are validating in-process without relocation
+        // info.
+        if self.check_ripconst_access(state, access) {
+            return true;
+        }
+        // Case 4: its a heap access
         if self.check_heap_access(state, access) {
             return true;
         };
-        // Case 3: its a metadata access
+        // Case 5: its a metadata access
         if self.check_metadata_access(state, access) {
             return true;
         };
-        // Case 4: its a globals access
+        // Case 6: its a globals access
         if self.check_global_access(state, access) {
             return true;
         };
-        // Case 5: Jump table access
+        // Case 7: Jump table access
         if self.check_jump_table_access(state, access) {
             return true;
         };
-        // Case 6: its unknown
+        // Case 8: its unknown
         log::debug!("None of the memory accesses!");
         print_mem_access(state, access);
         return false;

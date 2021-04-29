@@ -64,7 +64,8 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
                     if !self.check_stack_write(state, dst) {
                         log::debug!(
                             "check_stack_write failed: access = {:?} state = {:?}",
-                            dst, state
+                            dst,
+                            state
                         );
                         return false;
                     }
@@ -74,7 +75,8 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
                     if !self.check_stack_read(state, src) {
                         log::debug!(
                             "check_stack_read failed: access = {:?} state = {:?}",
-                            src, state
+                            src,
+                            state
                         );
                         return false;
                     }

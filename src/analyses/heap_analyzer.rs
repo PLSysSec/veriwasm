@@ -3,7 +3,7 @@ use crate::lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{ConstLattice, VarState};
 use crate::utils::ir_utils::{extract_stack_offset, is_stack_access};
-use crate::utils::lifter::{Binopcode, MemArg, MemArgs, ValSize, Value};
+use crate::utils::lifter::{Binopcode, MemArg, MemArgs, Unopcode, ValSize, Value};
 use crate::utils::utils::LucetMetadata;
 use std::default::Default;
 
@@ -21,12 +21,20 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     fn aexec_unop(
         &self,
         in_state: &mut HeapLattice,
+        opcode: &Unopcode,
         dst: &Value,
         src: &Value,
         _loc_idx: &LocIdx,
     ) -> () {
-        let v = self.aeval_unop(in_state, src);
-        in_state.set(dst, v)
+        match opcode {
+            Unopcode::Mov => {
+                let v = self.aeval_unop(in_state, src);
+                in_state.set(dst, v);
+            }
+            Unopcode::Movsx => {
+                in_state.set(dst, Default::default());
+            }
+        }
     }
 
     fn aexec_binop(
@@ -58,6 +66,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
                                     v: Some(HeapValue::HeapAddr),
                                 },
                             );
+                            return;
                         }
                         _ => {}
                     }
@@ -69,10 +78,17 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         // Any write to a 32-bit register will clear the upper 32 bits of the containing 64-bit
         // register.
         if let &Value::Reg(rd, ValSize::Size32) = dst {
-            in_state.regs.set(&rd, &ValSize::Size64, ConstLattice {
-                v: Some(HeapValue::Bounded4GB),
-            });
+            in_state.regs.set(
+                &rd,
+                &ValSize::Size64,
+                ConstLattice {
+                    v: Some(HeapValue::Bounded4GB),
+                },
+            );
+            return;
         }
+
+        in_state.set_to_bot(dst);
     }
 }
 
@@ -126,7 +142,9 @@ impl HeapAnalyzer {
                 }
             }
 
-            Value::RIPConst => Default::default(),
+            Value::RIPConst => {
+                return HeapValueLattice::new(HeapValue::RIPConst);
+            }
         }
         Default::default()
     }

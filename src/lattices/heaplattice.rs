@@ -8,6 +8,7 @@ pub enum HeapValue {
     LucetTables,
     GuestTable0,
     GlobalsBase,
+    RIPConst,
 }
 
 pub type HeapValueLattice = ConstLattice<HeapValue>;

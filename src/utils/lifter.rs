@@ -153,6 +153,7 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
             memsize,
             MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size64, imm as i64)),
         ), //mem[c]
+        Operand::RegDeref(reg) if reg.bank == RegisterBank::RIP => Value::RIPConst,
         Operand::RegDeref(reg) => Value::Mem(memsize, MemArgs::Mem1Arg(convert_memarg_reg(reg))), // mem[reg]
         Operand::RegDisp(reg, _) if reg.bank == RegisterBank::RIP => Value::RIPConst,
         Operand::RegDisp(reg, imm) => Value::Mem(
@@ -386,7 +387,7 @@ pub fn lift(
     addr: &u64,
     metadata: &LucetMetadata,
 ) -> Vec<Stmt> {
-    log::debug!("lift: instr {:?}", instr);
+    log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
     let mut instrs = Vec::new();
     match instr.opcode {
         Opcode::MOV |
@@ -810,6 +811,13 @@ pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &LucetMetadata) ->
             let ir = (addr, lift(instr, &addr, metadata));
             block_ir.push(ir);
             x = extract_probestack_arg(instr);
+            if instr.opcode == Opcode::JMP {
+                // Don't continue past an unconditional jump --
+                // Cranelift's new backend embeds constants in the
+                // code stream at points (e.g. jump tables) and we
+                // should not disassemble them as code.
+                break;
+            }
         }
         irmap.insert(block_addr, block_ir);
     }

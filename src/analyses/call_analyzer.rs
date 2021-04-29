@@ -8,7 +8,7 @@ use crate::lattices::stacklattice::StackSlot;
 use crate::lattices::VarState;
 use crate::utils::ir_utils::{extract_stack_offset, is_stack_access};
 use crate::utils::lifter::IRBlock;
-use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
+use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value};
 use crate::utils::utils::LucetMetadata;
 use std::default::Default;
 use yaxpeax_x86::long_mode::Opcode;
@@ -27,7 +27,9 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
             for (idx, ir_insn) in instruction.iter().enumerate() {
                 log::debug!(
                     "Call analyzer: stmt at 0x{:x}: {:?} with state {:?}",
-                    addr, ir_insn, new_state
+                    addr,
+                    ir_insn,
+                    new_state
                 );
                 self.aexec(
                     &mut new_state,
@@ -45,6 +47,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
     fn aexec_unop(
         &self,
         in_state: &mut CallCheckLattice,
+        _opcode: &Unopcode,
         dst: &Value,
         src: &Value,
         _loc_idx: &LocIdx,
@@ -171,11 +174,13 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 
             log::debug!(
                 " ->     branch_state @ 0x{:x} = {:?}",
-                succ_addrs[1], branch_state
+                succ_addrs[1],
+                branch_state
             );
             log::debug!(
                 " -> not_branch_state @ 0x{:x} = {:?}",
-                succ_addrs[0], not_branch_state
+                succ_addrs[0],
+                not_branch_state
             );
 
             if flip {

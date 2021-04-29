@@ -5,7 +5,7 @@ pub mod reaching_defs;
 pub mod stack_analyzer;
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarState};
-use crate::utils::lifter::{Binopcode, IRBlock, IRMap, Stmt, Value};
+use crate::utils::lifter::{Binopcode, IRBlock, IRMap, Stmt, Unopcode, Value};
 use std::collections::{HashMap, VecDeque};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 
@@ -27,7 +27,14 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
             .map(|addr| (addr.clone(), in_state.clone()))
             .collect()
     }
-    fn aexec_unop(&self, in_state: &mut State, dst: &Value, _src: &Value, _loc_idx: &LocIdx) -> () {
+    fn aexec_unop(
+        &self,
+        in_state: &mut State,
+        _opcode: &Unopcode,
+        dst: &Value,
+        _src: &Value,
+        _loc_idx: &LocIdx,
+    ) -> () {
         in_state.set_to_bot(dst)
     }
     fn aexec_binop(
@@ -49,7 +56,7 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
     fn aexec(&self, in_state: &mut State, ir_instr: &Stmt, loc_idx: &LocIdx) -> () {
         match ir_instr {
             Stmt::Clear(dst, _srcs) => in_state.set_to_bot(dst),
-            Stmt::Unop(_, dst, src) => self.aexec_unop(in_state, &dst, &src, loc_idx),
+            Stmt::Unop(opcode, dst, src) => self.aexec_unop(in_state, opcode, &dst, &src, loc_idx),
             Stmt::Binop(opcode, dst, src1, src2) => {
                 self.aexec_binop(in_state, opcode, dst, src1, src2, loc_idx);
                 in_state.adjust_stack_offset(opcode, dst, src1, src2)
@@ -63,7 +70,12 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
         let mut new_state = state.clone();
         for (addr, instruction) in irblock.iter() {
             for (idx, ir_insn) in instruction.iter().enumerate() {
-                log::debug!("Analyzing insn @ 0x{:x}: {:?}: state = {:?}", addr, ir_insn, new_state);
+                log::debug!(
+                    "Analyzing insn @ 0x{:x}: {:?}: state = {:?}",
+                    addr,
+                    ir_insn,
+                    new_state
+                );
                 self.aexec(
                     &mut new_state,
                     ir_insn,
@@ -131,7 +143,8 @@ pub fn run_worklist<T: AbstractAnalyzer<State>, State: VarState + Lattice + Clon
                 let has_change = *old_state != merged_state;
                 log::debug!(
                     "At block 0x{:x}: merged input {:?}",
-                    succ_addr, merged_state
+                    succ_addr,
+                    merged_state
                 );
                 statemap.insert(succ_addr, merged_state);
                 has_change
