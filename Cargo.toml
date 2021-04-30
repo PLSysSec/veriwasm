@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 yaxpeax-core = {path = "yaxpeax-core"}
 yaxpeax-arch = { version = "0.0.4", features = ["use-serde"] }
-yaxpeax-x86 = {path = "yaxpeax-x86", features = ["std"]}
+yaxpeax-x86 = "0.2.0"
 "petgraph" = "0.4.13"
 clap = "2.33.3"
 lucet-runtime = "0.6.1"
