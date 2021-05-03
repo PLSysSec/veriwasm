@@ -1,13 +1,13 @@
 use crate::utils::utils::LucetMetadata;
 use std::collections::HashMap;
-use yaxpeax_arch::Arch;
+use yaxpeax_arch::{AddressBase, Arch, LengthedInstruction};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_core::arch::x86_64::analyses::data_flow::Location;
 use yaxpeax_core::arch::InstructionSpan;
 use yaxpeax_core::data::{Direction, ValueLocations};
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_x86::long_mode::Opcode::*;
-use yaxpeax_x86::long_mode::{Arch as AMD64, Opcode, Operand, RegisterBank};
+use yaxpeax_x86::long_mode::{Arch as AMD64, Opcode, Operand, RegSpec, register_class};
 
 #[derive(Debug, Clone)]
 pub enum ImmType {
@@ -104,33 +104,38 @@ pub enum Binopcode {
 }
 
 fn get_reg_size(reg: yaxpeax_x86::long_mode::RegSpec) -> ValSize {
-    let size = match reg.bank {
-        RegisterBank::Q => ValSize::Size64,
-        RegisterBank::D => ValSize::Size32,
-        RegisterBank::W => ValSize::Size16,
-        RegisterBank::B => ValSize::Size8,
-        RegisterBank::rB => ValSize::Size8,
-        RegisterBank::RIP => panic!("Write to RIP: {:?}", reg.bank),
-        RegisterBank::EIP => panic!("Write to EIP: {:?}", reg.bank),
-        _ => ValSize::SizeOther, //xmm and ymm
+    let size = match reg.class() {
+        register_class::Q => ValSize::Size64,
+        register_class::D => ValSize::Size32,
+        register_class::W => ValSize::Size16,
+        register_class::B => ValSize::Size8,
+        register_class::RB => ValSize::Size8,
+        register_class::RIP => panic!("Write to RIP: {:?}", reg.class()),
+        register_class::EIP => panic!("Write to EIP: {:?}", reg.class()),
+        register_class::X |
+        register_class::Y |
+        register_class::Z => {
+            ValSize::SizeOther
+        },
+        _ => panic!("Unknown register bank: {:?}", reg.class()),
     };
     return size;
 }
 
 fn convert_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> Value {
     let size = get_reg_size(reg);
-    Value::Reg(reg.num, size)
+    Value::Reg(reg.num(), size)
 }
 
 fn convert_memarg_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> MemArg {
-    let size = match reg.bank {
-        RegisterBank::Q => ValSize::Size64,
-        RegisterBank::D => ValSize::Size32,
-        RegisterBank::W => ValSize::Size16,
-        RegisterBank::B => ValSize::Size8,
-        _ => panic!("Unknown register bank: {:?}", reg.bank),
+    let size = match reg.class() {
+        register_class::Q => ValSize::Size64,
+        register_class::D => ValSize::Size32,
+        register_class::W => ValSize::Size16,
+        register_class::B => ValSize::Size8,
+        _ => panic!("Unknown register bank: {:?}", reg.class()),
     };
-    MemArg::Reg(reg.num, size)
+    MemArg::Reg(reg.num(), size)
 }
 
 fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Value {
@@ -153,9 +158,9 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
             memsize,
             MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size64, imm as i64)),
         ), //mem[c]
-        Operand::RegDeref(reg) if reg.bank == RegisterBank::RIP => Value::RIPConst,
+        Operand::RegDeref(reg) if reg == RegSpec::rip() => Value::RIPConst,
         Operand::RegDeref(reg) => Value::Mem(memsize, MemArgs::Mem1Arg(convert_memarg_reg(reg))), // mem[reg]
-        Operand::RegDisp(reg, _) if reg.bank == RegisterBank::RIP => Value::RIPConst,
+        Operand::RegDisp(reg, _) if reg == RegSpec::rip() => Value::RIPConst,
         Operand::RegDisp(reg, imm) => Value::Mem(
             memsize,
             MemArgs::Mem2Args(
@@ -208,6 +213,9 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
             )
         } //mem[reg1 + reg2*c1 + c2]
         Operand::Nothing => panic!("Nothing Operand?"),
+        op => {
+            panic!("Unhandled operand {}", op);
+        }
     }
 }
 
@@ -296,6 +304,9 @@ fn get_operand_size(op: yaxpeax_x86::long_mode::Operand) -> Option<ValSize> {
         | Operand::RegIndexBaseScale(_, _, _)
         | Operand::RegIndexBaseScaleDisp(_, _, _, _)
         | Operand::Nothing => None,
+        op => {
+            panic!("unsupported operand size: {}", op);
+        }
     }
 }
 
@@ -346,7 +357,7 @@ fn binop(opcode: Binopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt
 
 fn branch(instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     Stmt::Branch(
-        instr.opcode,
+        instr.opcode(),
         convert_operand(instr.operand(0), ValSize::Size64),
     )
 }
@@ -359,10 +370,11 @@ fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &LucetMetadata) 
 fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Vec<Stmt> {
     let dst = instr.operand(0);
     let src1 = instr.operand(1);
-    if let Operand::RegDisp(reg, _imm) = src1 {
-        if reg.bank == RegisterBank::RIP {
+    if let Operand::RegDisp(reg, disp) = src1 {
+        if reg == RegSpec::rip() {
             //addr + instruction length + displacement
-            let target = (*addr as i64) + (instr.length as i64) + (instr.disp as i64);
+            let length = 0u64.wrapping_offset(instr.len()).to_linear();
+            let target = (*addr as i64) + (length as i64) + (disp as i64);
             return vec![Stmt::Unop(
                 Unopcode::Mov,
                 convert_operand(dst, ValSize::SizeOther),
@@ -389,7 +401,7 @@ pub fn lift(
 ) -> Vec<Stmt> {
     log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
     let mut instrs = Vec::new();
-    match instr.opcode {
+    match instr.opcode() {
         Opcode::MOV |
         Opcode::MOVQ |
         Opcode::MOVD |
@@ -730,7 +742,7 @@ fn is_probestack(
     addr: &u64,
     metadata: &LucetMetadata,
 ) -> bool {
-    if let Opcode::CALL = instr.opcode {
+    if let Opcode::CALL = instr.opcode() {
         let op = convert_operand(instr.operand(0), ValSize::SizeOther);
         if let Value::Imm(_, _, offset) = op {
             // 5 = size of call instruction
@@ -743,7 +755,7 @@ fn is_probestack(
 }
 
 fn extract_probestack_arg(instr: &yaxpeax_x86::long_mode::Instruction) -> Option<u64> {
-    if let Opcode::MOV = instr.opcode {
+    if let Opcode::MOV = instr.opcode() {
         if let Value::Reg(0, ValSize::Size32) =
             convert_operand(instr.operand(0), ValSize::SizeOther)
         {
@@ -758,7 +770,7 @@ fn extract_probestack_arg(instr: &yaxpeax_x86::long_mode::Instruction) -> Option
 }
 
 fn check_probestack_suffix(instr: &yaxpeax_x86::long_mode::Instruction) -> bool {
-    if let Opcode::SUB = instr.opcode {
+    if let Opcode::SUB = instr.opcode() {
         if let Value::Reg(4, ValSize::Size64) =
             convert_operand(instr.operand(0), ValSize::SizeOther)
         {
@@ -811,7 +823,7 @@ pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &LucetMetadata) ->
             let ir = (addr, lift(instr, &addr, metadata));
             block_ir.push(ir);
             x = extract_probestack_arg(instr);
-            if instr.opcode == Opcode::JMP {
+            if instr.opcode() == Opcode::JMP {
                 // Don't continue past an unconditional jump --
                 // Cranelift's new backend embeds constants in the
                 // code stream at points (e.g. jump tables) and we
