@@ -98,7 +98,11 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
 
     pub fn clear_caller_save_regs(&mut self) {
         // x86-64 calling convention: rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 must be saved by
-        // the caller (are clobbered by the callee), so their states become after calls.
+        // the caller (are clobbered by the callee), so their states become unknown after calls.
+        //
+        // TODO: get calling convention from program's target ABI; on Windows, rsi and rdi are
+        // callee-save. The below is thus sound but conservative (and possibly
+        // false-positive-producing) on Windows.
         self.rax = Default::default();
         self.rcx = Default::default();
         self.rdx = Default::default();

@@ -1,6 +1,6 @@
 [submodule "yaxpeax-core"]
 	path = yaxpeax-core
-	url = git@github.com:cfallin/yaxpeax-core.git
+	url = https://github.com/iximeow/yaxpeax-core.git
 [submodule "yaxpeax-x86"]
 	path = yaxpeax-x86
-	url = git@github.com:cfallin/yaxpeax-x86.git
+	url = https://github.com/iximeow/yaxpeax-x86/git

@@ -37,7 +37,7 @@ fn run(config: Config) {
     let (x86_64_data, func_addrs, plt) = get_data(&config.module_path, &program);
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     for (addr, func_name) in func_addrs {
-        if config.only_func.is_some() && &func_name != &*config.only_func.as_ref().unwrap() {
+        if config.only_func.is_some() && func_name != config.only_func.as_ref().unwrap().as_str() {
             continue;
         }
         println!("Generating CFG for {:?}", func_name);

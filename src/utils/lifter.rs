@@ -14,7 +14,7 @@ pub enum ImmType {
     Signed,
     Unsigned,
 }
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValSize {
     Size8,
     Size16,

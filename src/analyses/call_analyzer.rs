@@ -94,7 +94,14 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         succ_addrs: &Vec<u64>,
         addr: &u64,
     ) -> Vec<(u64, CallCheckLattice)> {
-        let br_stmt = irmap.get(addr).unwrap().last().unwrap().1.last().unwrap();
+        let br_stmt = irmap
+            .get(addr)
+            .expect("no instruction at given address")
+            .last()
+            .expect("no instructions in block")
+            .1
+            .last()
+            .expect("no IR instructions for last disassembled instruction");
         let br_opcode = match br_stmt {
             Stmt::Branch(op, _) => Some(op),
             _ => None,

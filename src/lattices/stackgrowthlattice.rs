@@ -2,6 +2,12 @@ use crate::lattices::{ConstLattice, VarState};
 use crate::utils::lifter::{Binopcode, Value};
 
 /// Fields are: (stackgrowth, probestack, rbp_stackgrowth)
+///
+/// `stackgrowth` is a value that indicates how far downward the stack is valid.
+///
+/// `rbp_stackgrowth` is a copy of `stackgrowth` that is saved when `rsp` is
+/// copied to `rbp` during frame setup in the prologue. When `rsp` is restored
+/// from `rbp` in the epilogue, it is copied back.
 pub type StackGrowthLattice = ConstLattice<(i64, i64, i64)>;
 
 impl VarState for StackGrowthLattice {

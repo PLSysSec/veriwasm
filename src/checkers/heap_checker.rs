@@ -24,7 +24,8 @@ pub fn check_heap(
 }
 
 fn memarg_is_frame(memarg: &MemArg) -> bool {
-    if let MemArg::Reg(5, _) = memarg {
+    if let MemArg::Reg(5, size) = memarg {
+        assert_eq!(*size, ValSize::Size64);
         true
     } else {
         false
@@ -33,17 +34,16 @@ fn memarg_is_frame(memarg: &MemArg) -> bool {
 
 fn is_frame_access(v: &Value) -> bool {
     if let Value::Mem(_, memargs) = v {
+        // Accept only operands of the form `[rbp + OFFSET]` where `OFFSET` is an integer. In
+        // Cranelift-generated code from Wasm, there are never arrays or variable-length data in
+        // the function frame, so there should never be a computed address (e.g., `[rbp + 4*eax +
+        // OFFSET]`).
         match memargs {
             MemArgs::Mem1Arg(memarg) => memarg_is_frame(memarg),
             MemArgs::Mem2Args(memarg1, memarg2) => {
-                memarg_is_frame(memarg1) || memarg_is_frame(memarg2)
+                memarg_is_frame(memarg1) && matches!(memarg2, MemArg::Imm(..))
             }
-            MemArgs::Mem3Args(memarg1, memarg2, memarg3) => {
-                memarg_is_frame(memarg1) || memarg_is_frame(memarg2) || memarg_is_frame(memarg3)
-            }
-            MemArgs::MemScale(memarg1, memarg2, memarg3) => {
-                memarg_is_frame(memarg1) || memarg_is_frame(memarg2) || memarg_is_frame(memarg3)
-            }
+            _ => false,
         }
     } else {
         false
@@ -139,8 +139,7 @@ impl HeapChecker<'_> {
         if let Value::Mem(_, memargs) = access {
             match memargs {
                 MemArgs::Mem1Arg(MemArg::Reg(regnum, ValSize::Size64))
-                | MemArgs::Mem2Args(MemArg::Reg(regnum, ValSize::Size64), _)
-                | MemArgs::Mem3Args(MemArg::Reg(regnum, ValSize::Size64), _, _) => {
+                | MemArgs::Mem2Args(MemArg::Reg(regnum, ValSize::Size64), MemArg::Imm(..)) => {
                     if let Some(HeapValue::RIPConst) = state.regs.get(regnum, &ValSize::Size64).v {
                         return true;
                     }
@@ -175,12 +174,12 @@ impl HeapChecker<'_> {
                                     return true;
                                 }
                             }
-                            MemArg::Imm(_, _, v) => return *v <= 0xffffffff,
+                            MemArg::Imm(_, _, v) => return *v >= 0 && *v <= 0xffffffff,
                         }
                     }
                     if let Some(HeapValue::HeapAddr) = state.regs.get(regnum, &ValSize::Size64).v {
                         match memarg2 {
-                            MemArg::Imm(_, _, v) => return *v <= 0xffffffff,
+                            MemArg::Imm(_, _, v) => return *v >= 0 && *v <= 0xffffffff,
                             _ => {}
                         }
                     }
