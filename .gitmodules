@@ -1,6 +1,0 @@
-[submodule "yaxpeax-core"]
-	path = yaxpeax-core
-	url = https://github.com/iximeow/yaxpeax-core.git
-[submodule "yaxpeax-x86"]
-	path = yaxpeax-x86
-	url = https://github.com/iximeow/yaxpeax-x86/git
