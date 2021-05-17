@@ -7,7 +7,7 @@ use yaxpeax_core::arch::InstructionSpan;
 use yaxpeax_core::data::{Direction, ValueLocations};
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_x86::long_mode::Opcode::*;
-use yaxpeax_x86::long_mode::{Arch as AMD64, Opcode, Operand, RegSpec, register_class};
+use yaxpeax_x86::long_mode::{register_class, Arch as AMD64, Opcode, Operand, RegSpec};
 
 #[derive(Debug, Clone)]
 pub enum ImmType {
@@ -112,11 +112,7 @@ fn get_reg_size(reg: yaxpeax_x86::long_mode::RegSpec) -> ValSize {
         register_class::RB => ValSize::Size8,
         register_class::RIP => panic!("Write to RIP: {:?}", reg.class()),
         register_class::EIP => panic!("Write to EIP: {:?}", reg.class()),
-        register_class::X |
-        register_class::Y |
-        register_class::Z => {
-            ValSize::SizeOther
-        },
+        register_class::X | register_class::Y | register_class::Z => ValSize::SizeOther,
         _ => panic!("Unknown register bank: {:?}", reg.class()),
     };
     return size;

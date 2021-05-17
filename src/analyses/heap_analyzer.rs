@@ -26,6 +26,19 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         src: &Value,
         _loc_idx: &LocIdx,
     ) -> () {
+        // Any write to a 32-bit register will clear the upper 32 bits of the containing 64-bit
+        // register.
+        if let &Value::Reg(rd, ValSize::Size32) = dst {
+            in_state.regs.set(
+                &rd,
+                &ValSize::Size64,
+                ConstLattice {
+                    v: Some(HeapValue::Bounded4GB),
+                },
+            );
+            return;
+        }
+
         match opcode {
             Unopcode::Mov => {
                 let v = self.aeval_unop(in_state, src);

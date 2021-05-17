@@ -138,8 +138,25 @@ impl HeapChecker<'_> {
     fn check_ripconst_access(&self, state: &HeapLattice, access: &Value) -> bool {
         if let Value::Mem(_, memargs) = access {
             match memargs {
+                // `RIPConst` represents a trusted value laoded from .rodata or .data; any access involving
+                // such a pointer is trusted.
+                //
+                // An offset from the base, even with a computed value,
+                // is acceptable here:
+                //
+                // - If we are checking offline, in a mode where we have access
+                //   to symbols/relocations, we will specially recognize table
+                //   accesses and they will not reach here.
+                //
+                // - On the other hand, when we check online, as part of the
+                //   compilation and one function at a time without access to
+                //   relocations, we accept this approximation to the trusted
+                //   base: we trust any memory access based at such a
+                //   constant/global-variable-produced address.
                 MemArgs::Mem1Arg(MemArg::Reg(regnum, ValSize::Size64))
-                | MemArgs::Mem2Args(MemArg::Reg(regnum, ValSize::Size64), MemArg::Imm(..)) => {
+                | MemArgs::Mem2Args(MemArg::Reg(regnum, ValSize::Size64), _)
+                | MemArgs::Mem3Args(MemArg::Reg(regnum, ValSize::Size64), _, _)
+                | MemArgs::MemScale(MemArg::Reg(regnum, ValSize::Size64), _, _) => {
                     if let Some(HeapValue::RIPConst) = state.regs.get(regnum, &ValSize::Size64).v {
                         return true;
                     }
@@ -174,12 +191,12 @@ impl HeapChecker<'_> {
                                     return true;
                                 }
                             }
-                            MemArg::Imm(_, _, v) => return *v >= 0 && *v <= 0xffffffff,
+                            MemArg::Imm(_, _, v) => return *v >= -0x1000 && *v <= 0xffffffff,
                         }
                     }
                     if let Some(HeapValue::HeapAddr) = state.regs.get(regnum, &ValSize::Size64).v {
                         match memarg2 {
-                            MemArg::Imm(_, _, v) => return *v >= 0 && *v <= 0xffffffff,
+                            MemArg::Imm(_, _, v) => return *v >= -0x1000 && *v <= 0xffffffff,
                             _ => {}
                         }
                     }
