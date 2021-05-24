@@ -1,33 +1,36 @@
-use crate::utils::lifter::IRBlock;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::analyses::AbstractAnalyzer;
 use crate::analyses::AnalysisResult;
-use crate::utils::ir_utils::{extract_stack_offset, is_stack_access};
 use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
 use crate::lattices::davlattice::DAV;
 use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use crate::lattices::stacklattice::StackSlot;
 use crate::lattices::VarState;
-use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, ValSize, Value};
+use crate::utils::ir_utils::{extract_stack_offset, is_stack_access};
+use crate::utils::lifter::IRBlock;
+use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value};
 use crate::utils::utils::LucetMetadata;
 use std::default::Default;
+use yaxpeax_x86::long_mode::Opcode;
 
 pub struct CallAnalyzer {
     pub metadata: LucetMetadata,
     pub reaching_defs: AnalysisResult<ReachLattice>,
     pub reaching_analyzer: ReachingDefnAnalyzer,
+    pub funcs: Vec<u64>,
 }
 
 impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
-
-    fn analyze_block(
-        &self,
-        state:  &CallCheckLattice,
-        irblock: &IRBlock,
-    ) -> CallCheckLattice {
+    fn analyze_block(&self, state: &CallCheckLattice, irblock: &IRBlock) -> CallCheckLattice {
         let mut new_state = state.clone();
         for (addr, instruction) in irblock.iter() {
             for (idx, ir_insn) in instruction.iter().enumerate() {
+                log::debug!(
+                    "Call analyzer: stmt at 0x{:x}: {:?} with state {:?}",
+                    addr,
+                    ir_insn,
+                    new_state
+                );
                 self.aexec(
                     &mut new_state,
                     ir_insn,
@@ -44,6 +47,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
     fn aexec_unop(
         &self,
         in_state: &mut CallCheckLattice,
+        _opcode: &Unopcode,
         dst: &Value,
         src: &Value,
         _loc_idx: &LocIdx,
@@ -62,12 +66,12 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
     ) -> () {
         if let Binopcode::Cmp = opcode {
             match (src1, src2) {
-                (Value::Reg(regnum1,size1), Value::Reg(regnum2, size2)) => {
-                    if let Some(CallCheckValue::TableSize) = in_state.regs.get(regnum2, size2).v{
+                (Value::Reg(regnum1, size1), Value::Reg(regnum2, size2)) => {
+                    if let Some(CallCheckValue::TableSize) = in_state.regs.get(regnum2, size2).v {
                         in_state.regs.zf =
                             CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum1))
                     }
-                    if let Some(CallCheckValue::TableSize) = in_state.regs.get(regnum1, size1).v{
+                    if let Some(CallCheckValue::TableSize) = in_state.regs.get(regnum1, size1).v {
                         in_state.regs.zf =
                             CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum2))
                     }
@@ -90,18 +94,35 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         succ_addrs: &Vec<u64>,
         addr: &u64,
     ) -> Vec<(u64, CallCheckLattice)> {
-        if succ_addrs.len() == 2 {
+        let br_stmt = irmap
+            .get(addr)
+            .expect("no instruction at given address")
+            .last()
+            .expect("no instructions in block")
+            .1
+            .last()
+            .expect("no IR instructions for last disassembled instruction");
+        let br_opcode = match br_stmt {
+            Stmt::Branch(op, _) => Some(op),
+            _ => None,
+        };
+        let (is_unsigned_cmp, flip) = match br_opcode {
+            Some(Opcode::JB) => (true, false),
+            Some(Opcode::JNB) => (true, true),
+            _ => (false, false),
+        };
+
+        if succ_addrs.len() == 2 && is_unsigned_cmp {
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
             if let Some(CallCheckValue::CheckFlag(_, regnum)) = not_branch_state.regs.zf.v {
+                log::debug!("branch at 0x{:x}: CheckFlag for reg {}", addr, regnum);
                 let new_val = CallCheckValueLattice {
                     v: Some(CallCheckValue::CheckedVal),
                 };
-                branch_state.regs.set(
-                    &regnum,
-                    &ValSize::Size64,
-                    new_val.clone(),
-                );
+                branch_state
+                    .regs
+                    .set(&regnum, &ValSize::Size64, new_val.clone());
                 //1. propagate checked values
                 let defs_state = self.reaching_defs.get(addr).unwrap();
                 let ir_block = irmap.get(addr).unwrap();
@@ -125,7 +146,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                         branch_state.stack.map.insert(*stack_offset, vv);
                     }
                 }
-                
+
                 //3. resolve ptr thunks in registers
                 let checked_ptr = CallCheckValueLattice {
                     v: Some(CallCheckValue::PtrOffset(DAV::Checked)),
@@ -146,11 +167,11 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     let stack_val = stack_slot.value.v.clone();
                     if let Some(CallCheckValue::PtrOffset(DAV::Unchecked(stack_def))) = stack_val {
                         if !checked_defs.is_empty() && (stack_def == checked_defs) {
-                        let v = StackSlot {
-                            size: stack_slot.size,
-                            value: checked_ptr.clone(),
-                        };
-                        branch_state.stack.map.insert(*stack_offset, v);
+                            let v = StackSlot {
+                                size: stack_slot.size,
+                                value: checked_ptr.clone(),
+                            };
+                            branch_state.stack.map.insert(*stack_offset, v);
                         }
                     }
                 }
@@ -158,10 +179,28 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
             branch_state.regs.zf = Default::default();
             not_branch_state.regs.zf = Default::default();
 
-            vec![
-                (succ_addrs[0].clone(), not_branch_state),
-                (succ_addrs[1].clone(), branch_state),
-            ]
+            log::debug!(
+                " ->     branch_state @ 0x{:x} = {:?}",
+                succ_addrs[1],
+                branch_state
+            );
+            log::debug!(
+                " -> not_branch_state @ 0x{:x} = {:?}",
+                succ_addrs[0],
+                not_branch_state
+            );
+
+            if flip {
+                vec![
+                    (succ_addrs[0].clone(), branch_state),
+                    (succ_addrs[1].clone(), not_branch_state),
+                ]
+            } else {
+                vec![
+                    (succ_addrs[0].clone(), not_branch_state),
+                    (succ_addrs[1].clone(), branch_state),
+                ]
+            }
         } else {
             succ_addrs
                 .into_iter()
@@ -210,6 +249,10 @@ pub fn is_fn_ptr(in_state: &CallCheckLattice, memargs: &MemArgs) -> bool {
 }
 
 impl CallAnalyzer {
+    fn is_func_start(&self, addr: u64) -> bool {
+        self.funcs.contains(&addr)
+    }
+
     pub fn aeval_unop(&self, in_state: &CallCheckLattice, value: &Value) -> CallCheckValueLattice {
         match value {
             Value::Mem(memsize, memargs) => {
@@ -238,7 +281,18 @@ impl CallAnalyzer {
                     return CallCheckValueLattice {
                         v: Some(CallCheckValue::LucetTablesBase),
                     };
+                } else if self.is_func_start(*immval as u64) {
+                    return CallCheckValueLattice {
+                        v: Some(CallCheckValue::FnPtr),
+                    };
                 }
+            }
+
+            Value::RIPConst => {
+                // The backend uses rip-relative data to embed constant function pointers.
+                return CallCheckValueLattice {
+                    v: Some(CallCheckValue::FnPtr),
+                };
             }
         }
         Default::default()
@@ -260,7 +314,9 @@ impl CallAnalyzer {
                         v: Some(CallCheckValue::PtrOffset(DAV::Checked)),
                     };
                 } else {
-                    let def_state = self.reaching_analyzer.fetch_def(&self.reaching_defs, loc_idx);
+                    let def_state = self
+                        .reaching_analyzer
+                        .fetch_def(&self.reaching_defs, loc_idx);
                     let reg_def = def_state.regs.get(regnum1, size1);
                     return CallCheckValueLattice {
                         v: Some(CallCheckValue::PtrOffset(DAV::Unchecked(reg_def))),

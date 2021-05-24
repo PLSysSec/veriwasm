@@ -62,7 +62,7 @@ pub fn singleton(loc_idx: LocIdx) -> ReachingDefnLattice {
     ReachingDefnLattice { defs: bset }
 }
 
-pub fn loc(addr: u64, idx: u32) -> ReachingDefnLattice{
+pub fn loc(addr: u64, idx: u32) -> ReachingDefnLattice {
     singleton(LocIdx {
         addr: addr,
         idx: idx,

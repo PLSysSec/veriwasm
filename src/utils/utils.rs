@@ -4,7 +4,7 @@ use crate::analyses::reaching_defs::analyze_reaching_defs;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::checkers::jump_resolver::resolve_jumps;
 use crate::utils::ir_utils::has_indirect_jumps;
-use crate::utils::lifter::{MemArg, MemArgs, IRMap, lift_cfg};
+use crate::utils::lifter::{lift_cfg, IRMap, MemArg, MemArgs};
 use std::path::Path;
 use yaxpeax_arch::Arch;
 use yaxpeax_core::analyses::control_flow::{get_cfg, VW_CFG};
@@ -25,7 +25,7 @@ pub fn load_program(binpath: &str) -> ModuleData {
     let program = if let FileRepr::Executable(program) = program {
         program
     } else {
-        panic!(format!("function:{} is not a valid path", binpath));
+        panic!("function:{} is not a valid path", binpath);
     };
     program
 }
@@ -93,7 +93,10 @@ fn try_resolve_jumps(
     let switch_analyzer = SwitchAnalyzer {
         metadata: metadata.clone(),
         reaching_defs: reaching_defs,
-        reaching_analyzer: ReachingDefnAnalyzer {cfg: cfg.clone(), irmap: irmap.clone()},
+        reaching_analyzer: ReachingDefnAnalyzer {
+            cfg: cfg.clone(),
+            irmap: irmap.clone(),
+        },
     };
     let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
     let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
@@ -148,7 +151,7 @@ pub fn fully_resolved_cfg(
 pub fn get_data(
     binpath: &str,
     program: &ModuleData,
-) -> (x86_64Data, Vec<(u64, std::string::String)>, (u64,u64)) {
+) -> (x86_64Data, Vec<(u64, std::string::String)>, (u64, u64)) {
     let (_, sections, entrypoint, imports, exports, symbols) =
         match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
             Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
@@ -165,13 +168,11 @@ pub fn get_data(
             }
         };
     // println!("Sections: {:?}", sections);
-    let plt_bounds = 
-    if let Some(plt_idx) = sections.iter().position(|x| x.name == ".plt"){
+    let plt_bounds = if let Some(plt_idx) = sections.iter().position(|x| x.name == ".plt") {
         let plt = sections.get(plt_idx).unwrap();
         (plt.start, plt.start + plt.size)
-        }
-    else{
-        (0,0)
+    } else {
+        (0, 0)
     };
 
     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
@@ -188,14 +189,15 @@ pub fn get_data(
         if let Some(symbol) = x86_64_data.symbol_for(addr) {
             if is_valid_func_name(&symbol.1) {
                 addrs.push((addr, symbol.1.clone()));
+            } else {
+                println!("Symbol = 0x{:x} {:?}", addr, symbol.1);
             }
-            else{println!("Symbol = 0x{:x} {:?}", addr, symbol.1);}
         }
     }
     (x86_64_data, addrs, plt_bounds)
 }
 
-pub fn get_one_resolved_cfg(binpath: &str, func: &str) -> ((VW_CFG, IRMap),x86_64Data) {
+pub fn get_one_resolved_cfg(binpath: &str, func: &str) -> ((VW_CFG, IRMap), x86_64Data) {
     let program = load_program(binpath);
     let metadata = load_metadata(binpath);
 
@@ -221,7 +223,10 @@ pub fn get_one_resolved_cfg(binpath: &str, func: &str) -> ((VW_CFG, IRMap),x86_6
     let addr = get_symbol_addr(symbols, func).unwrap();
     assert!(is_valid_func_name(&String::from(func)));
     println!("Generating CFG for: {:?}", func);
-    return (fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr),x86_64_data);
+    return (
+        fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr),
+        x86_64_data,
+    );
 }
 
 fn get_symbol_addr(symbols: &Vec<ELFSymbol>, name: &str) -> std::option::Option<u64> {
@@ -280,7 +285,7 @@ pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
         MemArgs::Mem1Arg(arg) => {
             if let MemArg::Reg(regnum, _) = arg {
                 if *regnum == 4 {
-                    return Some(0)
+                    return Some(0);
                 }
             }
             None
@@ -289,12 +294,12 @@ pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
             if let MemArg::Reg(regnum, _) = arg1 {
                 if *regnum == 4 {
                     if let MemArg::Imm(_, _, offset) = arg2 {
-                        return Some(*offset)
-                        }
+                        return Some(*offset);
                     }
                 }
-                None
             }
+            None
+        }
         _ => None,
     }
 }
@@ -303,7 +308,7 @@ pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
 // 1. starts with guest_func_
 // 2. ends in _# (where # is some number)
 pub fn is_valid_func_name(name: &String) -> bool {
-    if name == "lucet_probestack"{
+    if name == "lucet_probestack" {
         return false;
     }
     true

@@ -10,7 +10,7 @@ pub struct CallChecker<'a> {
     irmap: &'a IRMap,
     analyzer: &'a CallAnalyzer,
     funcs: &'a Vec<u64>,
-    plt: &'a (u64,u64),
+    plt: &'a (u64, u64),
     // x86_64_data: &x86_64Data,
 }
 
@@ -19,15 +19,14 @@ pub fn check_calls(
     irmap: &IRMap,
     analyzer: &CallAnalyzer,
     funcs: &Vec<u64>,
-    plt: &(u64,u64),
+    plt: &(u64, u64),
     // x86_64_data: &x86_64Data,
 ) -> bool {
     CallChecker {
         irmap,
         analyzer,
         funcs,
-        plt
-        // x86_64_data,
+        plt, // x86_64_data,
     }
     .check(result)
 }
@@ -56,7 +55,10 @@ impl Checker<CallCheckLattice> for CallChecker<'_> {
         // 2. Check that lookup is using resolved DAV
         if let Stmt::Unop(_, _, Value::Mem(_, memargs)) = ir_stmt {
             if !self.check_calltable_lookup(state, memargs) {
-                println!("0x{:x} Failure Case: Lookup Call: {:?}", loc_idx.addr, memargs);
+                println!(
+                    "0x{:x} Failure Case: Lookup Call: {:?}",
+                    loc_idx.addr, memargs
+                );
                 print_mem_access(state, memargs);
                 return false;
             }
@@ -76,25 +78,26 @@ impl CallChecker<'_> {
             Value::Reg(regnum, size) => {
                 if let Some(CallCheckValue::FnPtr) = state.regs.get(regnum, size).v {
                     return true;
-                }
-                else{
-                    println!("{:?}", state.regs.get(regnum, size).v)
+                } else {
+                    log::debug!("{:?}", state.regs.get(regnum, size).v)
                 }
             }
             Value::Mem(_, _) => return false,
-            Value::Imm(_, _, imm) => 
-            {
+            Value::Imm(_, _, imm) => {
                 let target = (*imm + (loc_idx.addr as i64) + 5) as u64;
                 let (plt_start, plt_end) = self.plt;
-                return self.funcs.contains(&target) || 
-                ((target >= *plt_start) && (target < *plt_end)) ; 
-            }, 
+                return self.funcs.contains(&target)
+                    || ((target >= *plt_start) && (target < *plt_end));
+            }
+            Value::RIPConst => {
+                return true;
+            }
         }
         false
     }
 
     fn check_calltable_lookup(&self, state: &CallCheckLattice, memargs: &MemArgs) -> bool {
-        // println!("Call Table Lookup: {:?}", memargs);
+        log::debug!("Call Table Lookup: {:?}", memargs);
         match memargs {
             MemArgs::Mem3Args(
                 MemArg::Reg(regnum1, ValSize::Size64),
@@ -130,19 +133,19 @@ pub fn memarg_repr(state: &CallCheckLattice, memarg: &MemArg) -> String {
 
 pub fn print_mem_access(state: &CallCheckLattice, memargs: &MemArgs) {
     match memargs {
-        MemArgs::Mem1Arg(x) => println!("mem[{:?}]", memarg_repr(state, x)),
-        MemArgs::Mem2Args(x, y) => println!(
+        MemArgs::Mem1Arg(x) => log::debug!("mem[{:?}]", memarg_repr(state, x)),
+        MemArgs::Mem2Args(x, y) => log::debug!(
             "mem[{:?} + {:?}]",
             memarg_repr(state, x),
             memarg_repr(state, y)
         ),
-        MemArgs::Mem3Args(x, y, z) => println!(
+        MemArgs::Mem3Args(x, y, z) => log::debug!(
             "mem[{:?} + {:?} + {:?}]",
             memarg_repr(state, x),
             memarg_repr(state, y),
             memarg_repr(state, z)
         ),
-        MemArgs::MemScale(x, y, z) => println!(
+        MemArgs::MemScale(x, y, z) => log::debug!(
             "mem[{:?} + {:?} * {:?}]",
             memarg_repr(state, x),
             memarg_repr(state, y),
