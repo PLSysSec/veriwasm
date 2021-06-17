@@ -3,7 +3,7 @@ use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::stackgrowthlattice::StackGrowthLattice;
-use crate::utils::ir_utils::{get_imm_mem_offset, is_stack_access};
+use crate::utils::ir_utils::{get_imm_mem_offset, is_stack_access, is_bp_access};
 use crate::utils::lifter::{IRMap, MemArgs, Stmt, Value};
 
 pub struct StackChecker<'a> {
@@ -70,11 +70,31 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
                         return false;
                     }
                 }
+                if is_bp_access(dst) {
+                    if !self.check_bp_write(state, dst) {
+                        log::debug!(
+                            "check_bp_write failed: access = {:?} state = {:?}",
+                            dst,
+                            state
+                        );
+                        return false;
+                    }
+                }
                 //stack read: probestack <= stackgrowth + c < 8K
-                else if is_stack_access(src) {
+                if is_stack_access(src) {
                     if !self.check_stack_read(state, src) {
                         log::debug!(
                             "check_stack_read failed: access = {:?} state = {:?}",
+                            src,
+                            state
+                        );
+                        return false;
+                    }
+                }
+                else if is_bp_access(src) {
+                    if !self.check_bp_read(state, src) {
+                        log::debug!(
+                            "check_bp_read failed: access = {:?} state = {:?}",
                             src,
                             state
                         );
@@ -119,6 +139,27 @@ impl StackChecker<'_> {
         panic!("Unreachable")
     }
 
+    fn check_bp_read(&self, state: &StackGrowthLattice, src: &Value) -> bool {
+        if let Value::Mem(_, memargs) = src {
+            match memargs {
+                MemArgs::Mem1Arg(_memarg) => {
+                    return (-state.get_probestack().unwrap() <= state.get_rbp().unwrap())
+                        && (state.get_rbp().unwrap() < 8096)
+                }
+                MemArgs::Mem2Args(_memarg1, memarg2) => {
+                    let offset = get_imm_mem_offset(memarg2);
+                    return (-state.get_probestack().unwrap()
+                        <= state.get_rbp().unwrap() + offset)
+                        && (state.get_rbp().unwrap() + offset < 8096);
+                }
+                _ => return false, //stack accesses should never have 3 args
+            }
+        }
+        panic!("Unreachable")
+    }
+
+
+
     fn check_stack_write(&self, state: &StackGrowthLattice, dst: &Value) -> bool {
         if let Value::Mem(_, memargs) = dst {
             match memargs {
@@ -131,6 +172,25 @@ impl StackChecker<'_> {
                     return (-state.get_probestack().unwrap()
                         <= state.get_stackgrowth().unwrap() + offset)
                         && (state.get_stackgrowth().unwrap() + offset < 0);
+                }
+                _ => return false, //stack accesses should never have 3 args
+            }
+        }
+        panic!("Unreachable")
+    }
+
+    fn check_bp_write(&self, state: &StackGrowthLattice, dst: &Value) -> bool {
+        if let Value::Mem(_, memargs) = dst {
+            match memargs {
+                MemArgs::Mem1Arg(_memarg) => {
+                    return (-state.get_probestack().unwrap() <= state.get_rbp().unwrap())
+                        && (state.get_rbp().unwrap() < 0);
+                }
+                MemArgs::Mem2Args(_memarg1, memarg2) => {
+                    let offset = get_imm_mem_offset(memarg2);
+                    return (-state.get_probestack().unwrap()
+                        <= state.get_rbp().unwrap() + offset)
+                        && (state.get_rbp().unwrap() + offset < 0);
                 }
                 _ => return false, //stack accesses should never have 3 args
             }

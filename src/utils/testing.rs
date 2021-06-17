@@ -329,7 +329,7 @@ fn negative_test_13() {
 }
 
 #[test]
-#[should_panic(expected = "assertion failed: heap_safe")]
+#[should_panic(expected = "assertion failed: stack_safe")]
 fn negative_test_14() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",

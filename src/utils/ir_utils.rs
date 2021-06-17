@@ -67,6 +67,41 @@ pub fn is_stack_access(v: &Value) -> bool {
     false
 }
 
+pub fn memarg_is_bp(memarg: &MemArg) -> bool {
+    if let MemArg::Reg(5, regsize) = memarg {
+        if let ValSize::Size64 = regsize {
+            return true;
+        } else {
+            panic!("Non 64 bit version of rbp being used")
+        };
+    }
+    return false;
+}
+
+pub fn is_bp_access(v: &Value) -> bool {
+    if let Value::Mem(_size, memargs) = v {
+        match memargs {
+            MemArgs::Mem1Arg(memarg) => return memarg_is_bp(memarg),
+            MemArgs::Mem2Args(memarg1, memarg2) => {
+                return memarg_is_bp(memarg1) || memarg_is_bp(memarg2)
+            }
+            MemArgs::Mem3Args(memarg1, memarg2, memarg3) => {
+                return memarg_is_bp(memarg1)
+                    || memarg_is_bp(memarg2)
+                    || memarg_is_bp(memarg3)
+            }
+            MemArgs::MemScale(memarg1, memarg2, memarg3) => {
+                return memarg_is_bp(memarg1)
+                    || memarg_is_bp(memarg2)
+                    || memarg_is_bp(memarg3)
+            }
+        }
+    }
+    false
+}
+
+
+
 pub fn extract_stack_offset(memargs: &MemArgs) -> i64 {
     match memargs {
         MemArgs::Mem1Arg(_memarg) => 0,
