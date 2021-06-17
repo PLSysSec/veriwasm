@@ -4,7 +4,7 @@ use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use crate::lattices::stacklattice::StackSlot;
 use crate::lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
 use crate::lattices::VarState;
-use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, ValSize, Value};
+use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value};
 use crate::utils::utils::{get_rsp_offset, LucetMetadata};
 use std::default::Default;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
@@ -28,6 +28,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
     fn aexec_unop(
         &self,
         in_state: &mut SwitchLattice,
+        _opcode: &Unopcode,
         dst: &Value,
         src: &Value,
         _loc_idx: &LocIdx,
@@ -48,7 +49,9 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
             match (src1, src2) {
                 (Value::Reg(regnum, _), Value::Imm(_, _, imm))
                 | (Value::Imm(_, _, imm), Value::Reg(regnum, _)) => {
-                    let reg_def = self.reaching_analyzer.fetch_def(&self.reaching_defs, loc_idx);
+                    let reg_def = self
+                        .reaching_analyzer
+                        .fetch_def(&self.reaching_defs, loc_idx);
                     let src_loc = reg_def.regs.get(regnum, &ValSize::Size64);
                     in_state.regs.zf =
                         SwitchValueLattice::new(SwitchValue::ZF(*imm as u32, *regnum, src_loc));
@@ -56,10 +59,12 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                 _ => (),
             }
         }
-        
+
         match opcode {
             Binopcode::Cmp => (),
-            Binopcode::Test =>  {in_state.regs.zf = Default::default();},
+            Binopcode::Test => {
+                in_state.regs.zf = Default::default();
+            }
             _ => in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2)),
         }
     }
@@ -171,6 +176,7 @@ impl SwitchAnalyzer {
                     SwitchValueLattice::new(SwitchValue::SwitchBase(*immval as u32))
                 }
             }
+            Value::RIPConst => Default::default(),
         }
     }
 

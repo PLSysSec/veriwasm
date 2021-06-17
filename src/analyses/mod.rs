@@ -5,7 +5,7 @@ pub mod reaching_defs;
 pub mod stack_analyzer;
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarState};
-use crate::utils::lifter::{Binopcode, IRBlock, IRMap, Stmt, Value};
+use crate::utils::lifter::{Binopcode, IRBlock, IRMap, Stmt, Unopcode, Value};
 use std::collections::{HashMap, VecDeque};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 
@@ -27,7 +27,14 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
             .map(|addr| (addr.clone(), in_state.clone()))
             .collect()
     }
-    fn aexec_unop(&self, in_state: &mut State, dst: &Value, _src: &Value, _loc_idx: &LocIdx) -> () {
+    fn aexec_unop(
+        &self,
+        in_state: &mut State,
+        _opcode: &Unopcode,
+        dst: &Value,
+        _src: &Value,
+        _loc_idx: &LocIdx,
+    ) -> () {
         in_state.set_to_bot(dst)
     }
     fn aexec_binop(
@@ -49,7 +56,7 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
     fn aexec(&self, in_state: &mut State, ir_instr: &Stmt, loc_idx: &LocIdx) -> () {
         match ir_instr {
             Stmt::Clear(dst, _srcs) => in_state.set_to_bot(dst),
-            Stmt::Unop(_, dst, src) => self.aexec_unop(in_state, &dst, &src, loc_idx),
+            Stmt::Unop(opcode, dst, src) => self.aexec_unop(in_state, opcode, &dst, &src, loc_idx),
             Stmt::Binop(opcode, dst, src1, src2) => {
                 self.aexec_binop(in_state, opcode, dst, src1, src2, loc_idx);
                 in_state.adjust_stack_offset(opcode, dst, src1, src2)
@@ -59,14 +66,16 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
         }
     }
 
-    fn analyze_block(
-        &self,
-        state: &State,
-        irblock: &IRBlock,
-    ) -> State {
+    fn analyze_block(&self, state: &State, irblock: &IRBlock) -> State {
         let mut new_state = state.clone();
         for (addr, instruction) in irblock.iter() {
             for (idx, ir_insn) in instruction.iter().enumerate() {
+                log::debug!(
+                    "Analyzing insn @ 0x{:x}: {:?}: state = {:?}",
+                    addr,
+                    ir_insn,
+                    new_state
+                );
                 self.aexec(
                     &mut new_state,
                     ir_insn,
@@ -80,8 +89,6 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
         new_state
     }
 }
-
-
 
 fn align_succ_addrs(addr: u64, succ_addrs: Vec<u64>) -> Vec<u64> {
     if succ_addrs.len() != 2 {
@@ -121,27 +128,31 @@ pub fn run_worklist<T: AbstractAnalyzer<State>, State: VarState + Lattice + Clon
         let new_state = analyzer.analyze_block(state, irblock);
         let succ_addrs_unaligned: Vec<u64> = cfg.graph.neighbors(addr).collect();
         let succ_addrs: Vec<u64> = align_succ_addrs(addr, succ_addrs_unaligned);
-        //println!("Processing Block: 0x{:x} -> {:?}", addr, succ_addrs);
+        log::debug!("Processing Block: 0x{:x} -> {:?}", addr, succ_addrs);
         for (succ_addr, branch_state) in
             analyzer.process_branch(irmap, &new_state, &succ_addrs, &addr)
         {
-            let has_change = 
-                if statemap.contains_key(&succ_addr) {
-                    let old_state = statemap.get(&succ_addr).unwrap();
-                    let merged_state = old_state.meet(&branch_state, &LocIdx { addr: addr, idx: 0 });
+            let has_change = if statemap.contains_key(&succ_addr) {
+                let old_state = statemap.get(&succ_addr).unwrap();
+                let merged_state = old_state.meet(&branch_state, &LocIdx { addr: addr, idx: 0 });
 
-                    if merged_state > *old_state {
-                        println!("{:?} {:?}", merged_state, old_state);
-                        panic!("Meet monoticity error");
-                    }
-                    let has_change = *old_state != merged_state;
-                    statemap.insert(succ_addr, merged_state);
-                    has_change
-                    
-                } else {
-                    statemap.insert(succ_addr, branch_state);
-                    true
-                };
+                if merged_state > *old_state {
+                    log::debug!("{:?} {:?}", merged_state, old_state);
+                    panic!("Meet monoticity error");
+                }
+                let has_change = *old_state != merged_state;
+                log::debug!(
+                    "At block 0x{:x}: merged input {:?}",
+                    succ_addr,
+                    merged_state
+                );
+                statemap.insert(succ_addr, merged_state);
+                has_change
+            } else {
+                log::debug!("At block 0x{:x}: new input {:?}", succ_addr, branch_state);
+                statemap.insert(succ_addr, branch_state);
+                true
+            };
 
             if has_change && !worklist.contains(&succ_addr) {
                 worklist.push_back(succ_addr);

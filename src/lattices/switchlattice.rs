@@ -1,6 +1,6 @@
+use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use crate::lattices::{ConstLattice, VariableState};
-use crate::lattices::reachingdefslattice::LocIdx;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum SwitchValue {

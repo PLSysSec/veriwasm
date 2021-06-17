@@ -29,9 +29,7 @@ impl Default for CallCheckValueLattice {
 
 impl CallCheckValueLattice {
     pub fn new(v: CallCheckValue) -> Self {
-        CallCheckValueLattice {
-            v: Some(v),
-        }
+        CallCheckValueLattice { v: Some(v) }
     }
 }
 

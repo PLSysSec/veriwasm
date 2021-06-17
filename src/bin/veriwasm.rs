@@ -1,17 +1,16 @@
-pub mod analyses;
-pub mod checkers;
-pub mod lattices;
-pub mod utils;
-use crate::analyses::call_analyzer::CallAnalyzer;
-use crate::analyses::heap_analyzer::HeapAnalyzer;
-use crate::analyses::reaching_defs::{analyze_reaching_defs,ReachingDefnAnalyzer};
-use crate::analyses::run_worklist;
-use crate::analyses::stack_analyzer::StackAnalyzer;
-use crate::checkers::call_checker::check_calls;
-use crate::checkers::heap_checker::check_heap;
-use crate::checkers::stack_checker::check_stack;
-use crate::utils::ir_utils::has_indirect_calls;
-use crate::utils::utils::{fully_resolved_cfg,get_data};
+use veriwasm::{analyses, checkers, utils};
+
+use analyses::call_analyzer::CallAnalyzer;
+use analyses::heap_analyzer::HeapAnalyzer;
+use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
+use analyses::run_worklist;
+use analyses::stack_analyzer::StackAnalyzer;
+use checkers::call_checker::check_calls;
+use checkers::heap_checker::check_heap;
+use checkers::stack_checker::check_stack;
+use utils::ir_utils::has_indirect_calls;
+use utils::utils::{fully_resolved_cfg, get_data};
+
 use clap::{App, Arg};
 use serde_json;
 use std::fs;
@@ -26,9 +25,8 @@ pub struct Config {
     output_path: String,
     has_output: bool,
     _quiet: bool,
+    only_func: Option<String>,
 }
-
-
 
 fn run(config: Config) {
     let mut func_counter = 0;
@@ -39,6 +37,9 @@ fn run(config: Config) {
     let (x86_64_data, func_addrs, plt) = get_data(&config.module_path, &program);
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     for (addr, func_name) in func_addrs {
+        if config.only_func.is_some() && func_name != config.only_func.as_ref().unwrap().as_str() {
+            continue;
+        }
         println!("Generating CFG for {:?}", func_name);
         let start = Instant::now();
         let (cfg, irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
@@ -73,14 +74,17 @@ fn run(config: Config) {
             let call_analyzer = CallAnalyzer {
                 metadata: metadata.clone(),
                 reaching_defs: reaching_defs.clone(),
-                reaching_analyzer: ReachingDefnAnalyzer {cfg: cfg.clone(), irmap: irmap.clone()},
+                reaching_analyzer: ReachingDefnAnalyzer {
+                    cfg: cfg.clone(),
+                    irmap: irmap.clone(),
+                },
+                funcs: valid_funcs.clone(),
             };
             let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
             let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs, &plt);
             if !call_safe {
                 panic!("Not Call Safe");
             }
-
         }
         let end = Instant::now();
         info.push((
@@ -130,6 +134,7 @@ fn run(config: Config) {
 }
 
 fn main() {
+    let _ = env_logger::try_init();
     let matches = App::new("VeriWasm")
         .version("0.1.0")
         .about("Validates safety of native Wasm code")
@@ -154,6 +159,13 @@ fn main() {
                 .takes_value(true)
                 .help("Path to output stats file"),
         )
+        .arg(
+            Arg::with_name("one function")
+                .short("f")
+                .long("func")
+                .takes_value(true)
+                .help("Single function to process (rather than whole module"),
+        )
         .arg(Arg::with_name("quiet").short("q").long("quiet"))
         .get_matches();
 
@@ -164,6 +176,7 @@ fn main() {
         .map(|s| s.parse::<u32>().unwrap_or(1))
         .unwrap_or(1);
     let quiet = matches.is_present("quiet");
+    let only_func = matches.value_of("one function").map(|s| s.to_owned());
 
     let has_output = if output_path == "" { false } else { true };
 
@@ -173,6 +186,7 @@ fn main() {
         output_path: output_path.to_string(),
         has_output: has_output,
         _quiet: quiet,
+        only_func,
     };
 
     run(config);

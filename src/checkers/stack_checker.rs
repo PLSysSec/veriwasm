@@ -1,9 +1,9 @@
 use crate::analyses::stack_analyzer::StackAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
-use crate::utils::ir_utils::{get_imm_mem_offset, is_stack_access};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::stackgrowthlattice::StackGrowthLattice;
+use crate::utils::ir_utils::{get_imm_mem_offset, is_stack_access};
 use crate::utils::lifter::{IRMap, MemArgs, Stmt, Value};
 
 pub struct StackChecker<'a> {
@@ -44,10 +44,10 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
         //1, stackgrowth is never Bottom or >= 0
         match state.v {
             None => {
-                println!("Failure Case: Stackgrowth = None");
+                println!("Failure Case at {:?}: Stackgrowth = None", ir_stmt);
                 return false;
             }
-            Some((stackgrowth, _)) => {
+            Some((stackgrowth, _, _)) => {
                 if stackgrowth > 0 {
                     return false;
                 }
@@ -62,9 +62,10 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
             {
                 if is_stack_access(dst) {
                     if !self.check_stack_write(state, dst) {
-                        println!(
+                        log::debug!(
                             "check_stack_write failed: access = {:?} state = {:?}",
-                            dst, state
+                            dst,
+                            state
                         );
                         return false;
                     }
@@ -72,9 +73,10 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
                 //stack read: probestack <= stackgrowth + c < 8K
                 else if is_stack_access(src) {
                     if !self.check_stack_read(state, src) {
-                        println!(
+                        log::debug!(
                             "check_stack_read failed: access = {:?} state = {:?}",
-                            src, state
+                            src,
+                            state
                         );
                         return false;
                     }
@@ -85,9 +87,9 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
 
         // 3. For all rets stackgrowth = 0
         if let Stmt::Ret = ir_stmt {
-            if let Some((stackgrowth, _)) = state.v {
+            if let Some((stackgrowth, _, _)) = state.v {
                 if stackgrowth != 0 {
-                    println!("stackgrowth != 0 at ret: stackgrowth = {:?}", stackgrowth);
+                    log::debug!("stackgrowth != 0 at ret: stackgrowth = {:?}", stackgrowth);
                     return false;
                 }
             }

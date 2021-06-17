@@ -1,4 +1,4 @@
-use crate::utils::lifter::{MemArg, MemArgs, ValSize, Value, Stmt, IRMap};
+use crate::utils::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
 
 pub fn is_rsp(v: &Value) -> bool {
     match v {
@@ -6,6 +6,16 @@ pub fn is_rsp(v: &Value) -> bool {
         Value::Reg(4, ValSize::Size32)
         | Value::Reg(4, ValSize::Size16)
         | Value::Reg(4, ValSize::Size8) => panic!("Illegal RSP access"),
+        _ => return false,
+    }
+}
+
+pub fn is_rbp(v: &Value) -> bool {
+    match v {
+        Value::Reg(5, ValSize::Size64) => return true,
+        Value::Reg(5, ValSize::Size32)
+        | Value::Reg(5, ValSize::Size16)
+        | Value::Reg(5, ValSize::Size8) => panic!("Illegal RBP access"),
         _ => return false,
     }
 }

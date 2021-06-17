@@ -1,0 +1,26 @@
+name: Rust
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  # Lint code with rustfmt, report an error if it needs to be run.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install rustfmt
+      run: rustup component add rustfmt
+    - name: Run rustfmt and check there's no difference
+      run: cargo fmt --all -- --check
+
+  # Make sure the code compiles.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: cargo build
