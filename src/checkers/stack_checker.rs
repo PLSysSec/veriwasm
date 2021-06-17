@@ -3,7 +3,7 @@ use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::stackgrowthlattice::StackGrowthLattice;
-use crate::utils::ir_utils::{get_imm_mem_offset, is_stack_access, is_bp_access};
+use crate::utils::ir_utils::{get_imm_mem_offset, is_bp_access, is_stack_access};
 use crate::utils::lifter::{IRMap, MemArgs, Stmt, Value};
 
 pub struct StackChecker<'a> {
@@ -90,8 +90,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
                         );
                         return false;
                     }
-                }
-                else if is_bp_access(src) {
+                } else if is_bp_access(src) {
                     if !self.check_bp_read(state, src) {
                         log::debug!(
                             "check_bp_read failed: access = {:?} state = {:?}",
@@ -148,8 +147,7 @@ impl StackChecker<'_> {
                 }
                 MemArgs::Mem2Args(_memarg1, memarg2) => {
                     let offset = get_imm_mem_offset(memarg2);
-                    return (-state.get_probestack().unwrap()
-                        <= state.get_rbp().unwrap() + offset)
+                    return (-state.get_probestack().unwrap() <= state.get_rbp().unwrap() + offset)
                         && (state.get_rbp().unwrap() + offset < 8096);
                 }
                 _ => return false, //stack accesses should never have 3 args
@@ -157,8 +155,6 @@ impl StackChecker<'_> {
         }
         panic!("Unreachable")
     }
-
-
 
     fn check_stack_write(&self, state: &StackGrowthLattice, dst: &Value) -> bool {
         if let Value::Mem(_, memargs) = dst {
@@ -188,8 +184,7 @@ impl StackChecker<'_> {
                 }
                 MemArgs::Mem2Args(_memarg1, memarg2) => {
                     let offset = get_imm_mem_offset(memarg2);
-                    return (-state.get_probestack().unwrap()
-                        <= state.get_rbp().unwrap() + offset)
+                    return (-state.get_probestack().unwrap() <= state.get_rbp().unwrap() + offset)
                         && (state.get_rbp().unwrap() + offset < 0);
                 }
                 _ => return false, //stack accesses should never have 3 args

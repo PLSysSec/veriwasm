@@ -86,21 +86,15 @@ pub fn is_bp_access(v: &Value) -> bool {
                 return memarg_is_bp(memarg1) || memarg_is_bp(memarg2)
             }
             MemArgs::Mem3Args(memarg1, memarg2, memarg3) => {
-                return memarg_is_bp(memarg1)
-                    || memarg_is_bp(memarg2)
-                    || memarg_is_bp(memarg3)
+                return memarg_is_bp(memarg1) || memarg_is_bp(memarg2) || memarg_is_bp(memarg3)
             }
             MemArgs::MemScale(memarg1, memarg2, memarg3) => {
-                return memarg_is_bp(memarg1)
-                    || memarg_is_bp(memarg2)
-                    || memarg_is_bp(memarg3)
+                return memarg_is_bp(memarg1) || memarg_is_bp(memarg2) || memarg_is_bp(memarg3)
             }
         }
     }
     false
 }
-
-
 
 pub fn extract_stack_offset(memargs: &MemArgs) -> i64 {
     match memargs {
