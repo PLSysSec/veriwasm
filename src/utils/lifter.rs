@@ -725,7 +725,7 @@ pub fn lift(
         | Opcode::ANDPD
         | Opcode::ORPD => instrs.extend(clear_dst(instr)),
 
-        _ => instrs.extend(generic_clear(instr)),
+        _ => unimplemented!(),/*instrs.extend(generic_clear(instr)),*/
     };
     instrs
 }
