@@ -1,4 +1,4 @@
-use veriwasm::{analyses, checkers, utils};
+use veriwasm::{analyses, checkers, compilers, utils};
 
 use analyses::call_analyzer::CallAnalyzer;
 use analyses::heap_analyzer::HeapAnalyzer;
@@ -8,6 +8,7 @@ use analyses::stack_analyzer::StackAnalyzer;
 use checkers::call_checker::check_calls;
 use checkers::heap_checker::check_heap;
 use checkers::stack_checker::check_stack;
+use compilers::TargetCompiler;
 use utils::ir_utils::has_indirect_calls;
 use utils::utils::{fully_resolved_cfg, get_data};
 
@@ -15,6 +16,7 @@ use clap::{App, Arg};
 use serde_json;
 use std::fs;
 use std::panic;
+use std::str::FromStr;
 use std::time::Instant;
 use utils::utils::{load_metadata, load_program};
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
@@ -26,6 +28,7 @@ pub struct Config {
     has_output: bool,
     _quiet: bool,
     only_func: Option<String>,
+    target_compiler: TargetCompiler,
 }
 
 fn run(config: Config) {
@@ -166,6 +169,13 @@ fn main() {
                 .takes_value(true)
                 .help("Single function to process (rather than whole module"),
         )
+        .arg(
+            Arg::with_name("target compiler")
+                .short("c")
+                .long("compiler")
+                .takes_value(true)
+                .help("Single function to process (rather than whole module"),
+        )
         .arg(Arg::with_name("quiet").short("q").long("quiet"))
         .get_matches();
 
@@ -177,6 +187,8 @@ fn main() {
         .unwrap_or(1);
     let quiet = matches.is_present("quiet");
     let only_func = matches.value_of("one function").map(|s| s.to_owned());
+    let target_compiler =
+        TargetCompiler::from_str(matches.value_of("target compiler").unwrap_or("lucet")).unwrap();
 
     let has_output = if output_path == "" { false } else { true };
 
@@ -187,6 +199,7 @@ fn main() {
         has_output: has_output,
         _quiet: quiet,
         only_func,
+        target_compiler,
     };
 
     run(config);
