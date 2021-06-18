@@ -167,14 +167,14 @@ fn main() {
                 .short("f")
                 .long("func")
                 .takes_value(true)
-                .help("Single function to process (rather than whole module"),
+                .help("Single function to process (rather than whole module)"),
         )
         .arg(
             Arg::with_name("target compiler")
                 .short("c")
                 .long("compiler")
                 .takes_value(true)
-                .help("Single function to process (rather than whole module"),
+                .help("Compiler used to compile the target binary"),
         )
         .arg(Arg::with_name("quiet").short("q").long("quiet"))
         .get_matches();
