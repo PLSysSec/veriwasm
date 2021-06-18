@@ -6,17 +6,18 @@ use crate::analyses::stack_analyzer::StackAnalyzer;
 use crate::checkers::call_checker::check_calls;
 use crate::checkers::heap_checker::check_heap;
 use crate::checkers::stack_checker::check_stack;
+use crate::loaders::{ExecutableType, Loadable};
 use crate::utils::ir_utils::has_indirect_calls;
+use crate::utils::utils::load_metadata;
 use crate::utils::utils::{fully_resolved_cfg, get_data, get_one_resolved_cfg};
-use crate::utils::utils::{load_metadata, load_program};
 use std::panic;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
 
-fn full_test_helper(path: &str) {
-    let program = load_program(&path);
+fn full_test_helper(path: &str, format: ExecutableType) {
+    let program = format.load_program(&path);
     println!("Loading Metadata");
-    let metadata = load_metadata(&path);
-    let (x86_64_data, func_addrs, plt) = get_data(&path, &program);
+    let metadata = load_metadata(&program);
+    let (x86_64_data, func_addrs, plt) = get_data(&program);
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     for (addr, _func_name) in func_addrs {
         let (cfg, irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
@@ -52,13 +53,13 @@ fn full_test_helper(path: &str) {
     println!("Done!");
 }
 
-fn negative_test_helper(path: &str, func_name: &str) {
-    let program = load_program(&path);
-    let (x86_64_data, func_addrs, plt) = get_data(&path, &program);
+fn negative_test_helper(path: &str, func_name: &str, format: ExecutableType) {
+    let program = format.load_program(&path);
+    let (x86_64_data, func_addrs, plt) = get_data(&program);
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     println!("Loading Metadata");
-    let metadata = load_metadata(&path);
-    let ((cfg, irmap), x86_64_data) = get_one_resolved_cfg(path, func_name);
+    let metadata = load_metadata(&program);
+    let ((cfg, irmap), x86_64_data) = get_one_resolved_cfg(path, func_name, &program);
     println!("Analyzing: {:?}", func_name);
     check_cfg_integrity(&cfg.blocks, &cfg.graph);
     println!("Checking Stack Safety");
@@ -94,12 +95,18 @@ fn negative_test_helper(path: &str, func_name: &str) {
 
 #[test]
 fn full_test_libgraphite() {
-    full_test_helper("./veriwasm_public_data/firefox_libs/libgraphitewasm.so")
+    full_test_helper(
+        "./veriwasm_public_data/firefox_libs/libgraphitewasm.so",
+        ExecutableType::Lucet,
+    )
 }
 
 #[test]
 fn full_test_libogg() {
-    full_test_helper("./veriwasm_public_data/firefox_libs/liboggwasm.so")
+    full_test_helper(
+        "./veriwasm_public_data/firefox_libs/liboggwasm.so",
+        ExecutableType::Lucet,
+    )
 }
 
 #[test]
@@ -108,6 +115,7 @@ fn negative_test_1() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_1_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -117,6 +125,7 @@ fn negative_test_2() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_2_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -126,6 +135,7 @@ fn negative_test_3() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_3_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -135,6 +145,7 @@ fn negative_test_4() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_4_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -144,6 +155,7 @@ fn negative_test_5() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_5_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -153,6 +165,7 @@ fn negative_test_6() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_6_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -162,6 +175,7 @@ fn negative_test_7() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_7_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -171,6 +185,7 @@ fn negative_test_8() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_8_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -180,6 +195,7 @@ fn negative_test_9() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_9_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -189,6 +205,7 @@ fn negative_test_10() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_10_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -198,6 +215,7 @@ fn negative_test_11() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_11_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -207,6 +225,7 @@ fn negative_test_12() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_12_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -216,6 +235,7 @@ fn negative_test_13() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_13_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -225,6 +245,7 @@ fn negative_test_14() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_14_testfail",
+        ExecutableType::Lucet,
     );
 }
 
@@ -235,6 +256,7 @@ fn negative_test_nacl_23() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_23",
+        ExecutableType::Lucet,
     );
 }
 
@@ -244,6 +266,7 @@ fn negative_test_nacl_323_1() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_323_1",
+        ExecutableType::Lucet,
     );
 }
 
@@ -253,6 +276,7 @@ fn negative_test_nacl_323_2() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_323_2",
+        ExecutableType::Lucet,
     );
 }
 
@@ -262,6 +286,7 @@ fn negative_test_nacl_323_3() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_323_3",
+        ExecutableType::Lucet,
     );
 }
 
@@ -271,6 +296,7 @@ fn negative_test_nacl_323_4() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_323_4",
+        ExecutableType::Lucet,
     );
 }
 
@@ -280,6 +306,7 @@ fn negative_test_nacl_390() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_390",
+        ExecutableType::Lucet,
     );
 }
 
@@ -289,6 +316,7 @@ fn negative_test_nacl_1585() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_1585",
+        ExecutableType::Lucet,
     );
 }
 
@@ -298,6 +326,7 @@ fn negative_test_nacl_2532() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_nacl_2532",
+        ExecutableType::Lucet,
     );
 }
 
@@ -307,6 +336,7 @@ fn negative_test_bakersfield_1() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_bakersfield_1",
+        ExecutableType::Lucet,
     );
 }
 
@@ -316,6 +346,7 @@ fn negative_test_misfit_1() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_misfit_1",
+        ExecutableType::Lucet,
     );
 }
 
@@ -325,5 +356,6 @@ fn negative_test_cranelift_805() {
     negative_test_helper(
         "veriwasm_public_data/negative_tests/negative_tests.so",
         "guest_func_cranelift_805",
+        ExecutableType::Lucet,
     );
 }

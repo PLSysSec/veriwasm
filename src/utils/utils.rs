@@ -20,15 +20,15 @@ use yaxpeax_core::memory::MemoryRepr;
 use yaxpeax_core::ContextWrite;
 use yaxpeax_x86::long_mode::Arch as AMD64;
 
-pub fn load_program(binpath: &str) -> ModuleData {
-    let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
-    let program = if let FileRepr::Executable(program) = program {
-        program
-    } else {
-        panic!("function:{} is not a valid path", binpath);
-    };
-    program
-}
+// pub fn load_program(binpath: &str) -> ModuleData {
+//     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
+//     let program = if let FileRepr::Executable(program) = program {
+//         program
+//     } else {
+//         panic!("function:{} is not a valid path", binpath);
+//     };
+//     program
+// }
 
 fn get_function_starts(
     entrypoint: &u64,
@@ -148,23 +148,17 @@ pub fn fully_resolved_cfg(
     return resolve_cfg(program, contexts, &cfg, metadata, &irmap, addr);
 }
 
-pub fn get_data(
-    binpath: &str,
-    program: &ModuleData,
-) -> (x86_64Data, Vec<(u64, std::string::String)>, (u64, u64)) {
+pub fn get_data(program: &ModuleData) -> (x86_64Data, Vec<(u64, std::string::String)>, (u64, u64)) {
     let (_, sections, entrypoint, imports, exports, symbols) =
         match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
             Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
                 (isa, sections, entry, imports, exports, symbols)
             }
             Some(other) => {
-                panic!("{:?} isn't an elf, but is a {:?}?", binpath, other);
+                panic!("Module isn't an elf, but is a {:?}?", other);
             }
             None => {
-                panic!(
-                    "{:?} doesn't appear to be a binary yaxpeax understands.",
-                    binpath
-                );
+                panic!("Module doesn't appear to be a binary yaxpeax understands.");
             }
         };
     // println!("Sections: {:?}", sections);
@@ -197,13 +191,16 @@ pub fn get_data(
     (x86_64_data, addrs, plt_bounds)
 }
 
-pub fn get_one_resolved_cfg(binpath: &str, func: &str) -> ((VW_CFG, IRMap), x86_64Data) {
-    let program = load_program(binpath);
-    let metadata = load_metadata(binpath);
+pub fn get_one_resolved_cfg(
+    binpath: &str,
+    func: &str,
+    program: &ModuleData,
+) -> ((VW_CFG, IRMap), x86_64Data) {
+    let metadata = load_metadata(program);
 
     // grab some details from the binary and panic if it's not what we expected
     let (_, sections, entrypoint, imports, exports, symbols) =
-        match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
+        match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
             Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
                 (isa, sections, entry, imports, exports, symbols)
             }
@@ -246,23 +243,20 @@ pub struct LucetMetadata {
     pub lucet_probestack: u64,
 }
 
-pub fn load_metadata(binpath: &str) -> LucetMetadata {
-    let program = load_program(binpath);
+pub fn load_metadata(program: &ModuleData) -> LucetMetadata {
+    // let program = load_program(binpath);
 
     // grab some details from the binary and panic if it's not what we expected
     let (_, _sections, _entrypoint, _imports, _exports, symbols) =
-        match (&program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
+        match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
             Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
                 (isa, sections, entry, imports, exports, symbols)
             }
             Some(other) => {
-                panic!("{:?} isn't an elf, but is a {:?}?", binpath, other);
+                panic!("Module isn't an elf, but is a {:?}?", other);
             }
             None => {
-                panic!(
-                    "{:?} doesn't appear to be a binary yaxpeax understands.",
-                    binpath
-                );
+                panic!("Module doesn't appear to be a binary yaxpeax understands");
             }
         };
 

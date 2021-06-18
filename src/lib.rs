@@ -15,8 +15,8 @@ use yaxpeax_core::memory::repr::process::{ModuleData, ModuleInfo, Segment};
 
 pub mod analyses;
 pub mod checkers;
-pub mod compilers;
 pub mod lattices;
+pub mod loaders;
 pub mod utils;
 
 #[derive(Clone, Copy, Debug)]
