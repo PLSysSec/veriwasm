@@ -20,16 +20,6 @@ use yaxpeax_core::memory::MemoryRepr;
 use yaxpeax_core::ContextWrite;
 use yaxpeax_x86::long_mode::Arch as AMD64;
 
-// pub fn load_program(binpath: &str) -> ModuleData {
-//     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
-//     let program = if let FileRepr::Executable(program) = program {
-//         program
-//     } else {
-//         panic!("function:{} is not a valid path", binpath);
-//     };
-//     program
-// }
-
 fn get_function_starts(
     entrypoint: &u64,
     symbols: &std::vec::Vec<ELFSymbol>,

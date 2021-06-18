@@ -33,11 +33,6 @@ pub struct Config {
 }
 
 fn run(config: Config) {
-    // if let ExecutableType::Wasmtime = config.executable_type{
-    //     println!("This is wasmtime!");
-    //     return;
-    // }
-
     let program = config.executable_type.load_program(&config.module_path);
     let metadata = load_metadata(&program);
     let (x86_64_data, func_addrs, plt) = get_data(&program);
