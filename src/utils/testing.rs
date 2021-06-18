@@ -92,11 +92,6 @@ fn negative_test_helper(path: &str, func_name: &str) {
     println!("Done! ");
 }
 
-// #[test]
-// fn full_test_unit_tests() {
-//     full_test_helper("./veriwasm_public_data/regression/stack_check_unit_tests.so")
-// }
-
 #[test]
 fn full_test_libgraphite() {
     full_test_helper("./veriwasm_public_data/firefox_libs/libgraphitewasm.so")
@@ -107,110 +102,6 @@ fn full_test_libogg() {
     full_test_helper("./veriwasm_public_data/firefox_libs/liboggwasm.so")
 }
 
-// #[test]
-// fn full_test_shootout() {
-//     full_test_helper("./veriwasm_data/shootout/shootout.so")
-// }
-
-// #[test]
-// fn full_test_astar() {
-//     full_test_helper("./veriwasm_data/spec/astar_base.wasm_lucet")
-// }
-
-// #[test]
-// fn full_test_gobmk() {
-//     full_test_helper("./veriwasm_data/spec/gobmk_base.wasm_lucet")
-// }
-
-// #[test]
-// fn full_test_lbm() {
-//     full_test_helper("./veriwasm_data/spec/lbm_base.wasm_lucet")
-// }
-
-// #[test]
-// fn full_test_mcf() {
-//     full_test_helper("./veriwasm_data/spec/mcf_base.wasm_lucet")
-// }
-
-// #[test]
-// fn full_test_namd() {
-//     full_test_helper("./veriwasm_data/spec/namd_base.wasm_lucet")
-// }
-
-// #[test]
-// fn full_test_sjeng() {
-//     full_test_helper("./veriwasm_data/spec/sjeng_base.wasm_lucet")
-// }
-
-// #[test]
-// fn full_test_sphinx_livepretend() {
-//     full_test_helper("./veriwasm_data/spec/sphinx_livepretend_base.wasm_lucet")
-// }
-
-// #[test]
-// fn full_test_bzip2() {
-//     full_test_helper("./veriwasm_data/spec/bzip2_base.wasm_lucet")
-// }
-
-// #[test]
-// fn full_test_h264ref() {
-//     full_test_helper("./veriwasm_data/spec/h264ref_base.wasm_lucet")
-// }
-
-// #[test]
-// fn full_test_libquantum() {
-//     full_test_helper("./veriwasm_data/spec/libquantum_base.wasm_lucet")
-// }
-
-// #[test]
-// fn full_test_milc() {
-//     full_test_helper("./veriwasm_data/spec/milc_base.wasm_lucet")
-// }
-
-// #[test]
-// fn full_test_povray() {
-//     full_test_helper("./veriwasm_data/spec/povray_base.wasm_lucet")
-// }
-
-// #[test]
-// fn full_test_soplex() {
-//     full_test_helper("./veriwasm_data/spec/soplex_base.wasm_lucet")
-// }
-
-#[test]
-// fn full_test_rust_regression_1() {
-//     full_test_helper("./veriwasm_data/regression/rust_regression_1")
-// }
-
-// #[test]
-// fn full_test_csmith_regression_1() {
-//     full_test_helper("./veriwasm_data/regression/csmith_regression_1")
-// }
-
-// #[test]
-// fn full_test_csmith_regression_2() {
-//     full_test_helper("./veriwasm_data/regression/csmith_regression_2")
-// }
-
-// #[test]
-// fn full_test_csmith_regression_3() {
-//     full_test_helper("./veriwasm_data/regression/csmith_regression_3")
-// }
-
-// #[test]
-// fn full_test_csmith_regression_4() {
-//     full_test_helper("./veriwasm_data/regression/csmith_regression_4")
-// }
-
-// #[test]
-// fn full_test_csmith_regression_5() {
-//     full_test_helper("./veriwasm_data/regression/csmith_regression_5")
-// }
-
-// #[test]
-// fn full_test_rust_lucet() {
-//     full_test_helper("./veriwasm_data/regression/rust_lucet_recent.so")
-// }
 #[test]
 #[should_panic(expected = "assertion failed: stack_safe")]
 fn negative_test_1() {
