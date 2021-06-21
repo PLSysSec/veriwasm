@@ -4,7 +4,7 @@ use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use crate::lattices::stacklattice::StackSlot;
 use crate::lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
 use crate::lattices::VarState;
-use crate::loaders::utils::LucetMetadata;
+use crate::loaders::utils::VW_Metadata;
 use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value};
 use crate::utils::utils::get_rsp_offset;
 use std::default::Default;
@@ -20,7 +20,7 @@ pub fn analyze_jumps(
 }
 
 pub struct SwitchAnalyzer {
-    pub metadata: LucetMetadata,
+    pub metadata: VW_Metadata,
     pub reaching_defs: AnalysisResult<ReachLattice>,
     pub reaching_analyzer: ReachingDefnAnalyzer,
 }

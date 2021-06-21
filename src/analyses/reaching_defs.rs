@@ -1,7 +1,7 @@
 use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
 use crate::lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
 use crate::lattices::VarState;
-use crate::loaders::utils::LucetMetadata;
+use crate::loaders::utils::VW_Metadata;
 use crate::utils::lifter::{Binopcode, IRMap, Stmt, Unopcode};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 
@@ -9,7 +9,7 @@ use yaxpeax_core::analyses::control_flow::VW_CFG;
 pub fn analyze_reaching_defs(
     cfg: &VW_CFG,
     irmap: &IRMap,
-    _metadata: LucetMetadata,
+    _metadata: VW_Metadata,
 ) -> AnalysisResult<ReachLattice> {
     run_worklist(
         cfg,

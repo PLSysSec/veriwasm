@@ -6,9 +6,8 @@
 use crate::analyses::heap_analyzer::HeapAnalyzer;
 use crate::analyses::run_worklist;
 use crate::checkers::heap_checker::check_heap;
+use crate::loaders::utils::VW_Metadata;
 use crate::utils::lifter::{lift_cfg, IRMap, MemArg, MemArgs};
-// use crate::utils::utils::LucetMetadata;
-use crate::loaders::utils::LucetMetadata;
 use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;
 use yaxpeax_core::analyses::control_flow::{get_cfg, VW_Block, VW_CFG};
@@ -60,7 +59,7 @@ fn func_body_and_bbs_to_cfg(
     code: &[u8],
     basic_blocks: &[usize],
     cfg_edges: &[(usize, usize)],
-) -> (VW_CFG, IRMap, LucetMetadata) {
+) -> (VW_CFG, IRMap, VW_Metadata) {
     // We build the VW_CFG manually; we skip the CFG-recovery
     // algorithm that has to analyze the machine code and compute
     // reaching-defs in a fixpoint loop.
@@ -127,7 +126,7 @@ fn func_body_and_bbs_to_cfg(
         name: "function.o".to_owned(),
         module_info,
     };
-    let lucet = LucetMetadata {
+    let lucet = VW_Metadata {
         guest_table_0: 0x123456789abcdef0,
         lucet_tables: 0x123456789abcdef0,
         lucet_probestack: 0x123456789abcdef0,

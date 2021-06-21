@@ -3,7 +3,7 @@ use crate::analyses::jump_analyzer::SwitchAnalyzer;
 use crate::analyses::reaching_defs::analyze_reaching_defs;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::checkers::jump_resolver::resolve_jumps;
-use crate::loaders::utils::LucetMetadata;
+use crate::loaders::utils::VW_Metadata;
 use crate::loaders::{ExecutableType, Loadable};
 use crate::utils::ir_utils::has_indirect_jumps;
 use crate::utils::lifter::{lift_cfg, IRMap, MemArg, MemArgs};
@@ -75,7 +75,7 @@ fn try_resolve_jumps(
     program: &ModuleData,
     contexts: &MergedContextTable,
     cfg: &VW_CFG,
-    metadata: &LucetMetadata,
+    metadata: &VW_Metadata,
     irmap: &IRMap,
     _addr: u64,
 ) -> (VW_CFG, IRMap, i32, u32) {
@@ -104,7 +104,7 @@ fn resolve_cfg(
     program: &ModuleData,
     contexts: &MergedContextTable,
     cfg: &VW_CFG,
-    metadata: &LucetMetadata,
+    metadata: &VW_Metadata,
     orig_irmap: &IRMap,
     addr: u64,
 ) -> (VW_CFG, IRMap) {
@@ -129,7 +129,7 @@ fn resolve_cfg(
 pub fn fully_resolved_cfg(
     program: &ModuleData,
     contexts: &MergedContextTable,
-    metadata: &LucetMetadata,
+    metadata: &VW_Metadata,
     addr: u64,
 ) -> (VW_CFG, IRMap) {
     let (cfg, _) = get_cfg(program, contexts, addr, None);

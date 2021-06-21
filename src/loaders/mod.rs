@@ -2,7 +2,7 @@ pub mod lucet;
 pub mod utils;
 pub mod wasmtime;
 use crate::loaders::lucet::{load_lucet_metadata, load_lucet_program};
-use crate::loaders::utils::LucetMetadata;
+use crate::loaders::utils::VW_Metadata;
 use crate::loaders::wasmtime::{load_wasmtime_metadata, load_wasmtime_program};
 use core::str::FromStr;
 use std::string::ParseError;
@@ -16,7 +16,7 @@ pub enum ExecutableType {
 
 pub trait Loadable {
     fn load_program(&self, binpath: &str) -> ModuleData;
-    fn load_metadata(&self, program: &ModuleData) -> LucetMetadata;
+    fn load_metadata(&self, program: &ModuleData) -> VW_Metadata;
 }
 
 impl Loadable for ExecutableType {
@@ -27,7 +27,7 @@ impl Loadable for ExecutableType {
         }
     }
 
-    fn load_metadata(&self, program: &ModuleData) -> LucetMetadata {
+    fn load_metadata(&self, program: &ModuleData) -> VW_Metadata {
         match self {
             ExecutableType::Lucet => load_lucet_metadata(program),
             ExecutableType::Wasmtime => load_wasmtime_metadata(program),

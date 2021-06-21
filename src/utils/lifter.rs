@@ -1,4 +1,4 @@
-use crate::loaders::utils::LucetMetadata;
+use crate::loaders::utils::VW_Metadata;
 use std::collections::HashMap;
 use yaxpeax_arch::{AddressBase, Arch, LengthedInstruction};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
@@ -358,7 +358,7 @@ fn branch(instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     )
 }
 
-fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &LucetMetadata) -> Stmt {
+fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &VW_Metadata) -> Stmt {
     let dst = convert_operand(instr.operand(0), ValSize::Size64);
     Stmt::Call(dst)
 }
@@ -393,7 +393,7 @@ fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Vec<Stmt> {
 pub fn lift(
     instr: &yaxpeax_x86::long_mode::Instruction,
     addr: &u64,
-    metadata: &LucetMetadata,
+    metadata: &VW_Metadata,
 ) -> Vec<Stmt> {
     log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
     let mut instrs = Vec::new();
@@ -736,7 +736,7 @@ pub type IRMap = HashMap<u64, IRBlock>;
 fn is_probestack(
     instr: &yaxpeax_x86::long_mode::Instruction,
     addr: &u64,
-    metadata: &LucetMetadata,
+    metadata: &VW_Metadata,
 ) -> bool {
     if let Opcode::CALL = instr.opcode() {
         let op = convert_operand(instr.operand(0), ValSize::SizeOther);
@@ -783,7 +783,7 @@ fn check_probestack_suffix(instr: &yaxpeax_x86::long_mode::Instruction) -> bool 
     panic!("Broken Probestack?")
 }
 
-pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &LucetMetadata) -> IRMap {
+pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &VW_Metadata) -> IRMap {
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
     for block_addr in g.nodes() {

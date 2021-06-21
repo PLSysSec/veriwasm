@@ -19,7 +19,7 @@ pub fn load_lucet_program(binpath: &str) -> ModuleData {
     }
 }
 
-pub fn load_lucet_metadata(program: &ModuleData) -> LucetMetadata {
+pub fn load_lucet_metadata(program: &ModuleData) -> VW_Metadata {
     // let program = load_program(binpath);
 
     // grab some details from the binary and panic if it's not what we expected
@@ -43,7 +43,7 @@ pub fn load_lucet_metadata(program: &ModuleData) -> LucetMetadata {
         "guest_table_0 = {:x} lucet_tables = {:x} probestack = {:x}",
         guest_table_0, lucet_tables, lucet_probestack
     );
-    LucetMetadata {
+    VW_Metadata {
         guest_table_0: guest_table_0,
         lucet_tables: lucet_tables,
         lucet_probestack: lucet_probestack,

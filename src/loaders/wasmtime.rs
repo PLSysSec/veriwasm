@@ -5,7 +5,7 @@ use yaxpeax_core::memory::repr::process::{
 };
 use yaxpeax_core::memory::repr::FileRepr;
 
-use crate::loaders::utils::LucetMetadata;
+use crate::loaders::utils::VW_Metadata;
 use std::env;
 use std::fs;
 use wasmtime::*;
@@ -25,7 +25,7 @@ pub fn load_wasmtime_program(path: &str) -> ModuleData {
     }
 }
 
-pub fn load_wasmtime_metadata(program: &ModuleData) -> LucetMetadata {
+pub fn load_wasmtime_metadata(program: &ModuleData) -> VW_Metadata {
     unimplemented!()
 }
 

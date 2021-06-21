@@ -6,16 +6,15 @@ use crate::lattices::davlattice::DAV;
 use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use crate::lattices::stacklattice::StackSlot;
 use crate::lattices::VarState;
+use crate::loaders::utils::VW_Metadata;
 use crate::utils::ir_utils::{extract_stack_offset, is_stack_access};
 use crate::utils::lifter::IRBlock;
 use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value};
-// use crate::utils::utils::LucetMetadata;
-use crate::loaders::utils::LucetMetadata;
 use std::default::Default;
 use yaxpeax_x86::long_mode::Opcode;
 
 pub struct CallAnalyzer {
-    pub metadata: LucetMetadata,
+    pub metadata: VW_Metadata,
     pub reaching_defs: AnalysisResult<ReachLattice>,
     pub reaching_analyzer: ReachingDefnAnalyzer,
     pub funcs: Vec<u64>,

@@ -2,14 +2,13 @@ use crate::analyses::AbstractAnalyzer;
 use crate::lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{ConstLattice, VarState};
+use crate::loaders::utils::VW_Metadata;
 use crate::utils::ir_utils::{extract_stack_offset, is_stack_access};
 use crate::utils::lifter::{Binopcode, MemArg, MemArgs, Unopcode, ValSize, Value};
-// use crate::utils::utils::LucetMetadata;
-use crate::loaders::utils::LucetMetadata;
 use std::default::Default;
 
 pub struct HeapAnalyzer {
-    pub metadata: LucetMetadata,
+    pub metadata: VW_Metadata,
 }
 
 impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
