@@ -18,7 +18,6 @@ use std::fs;
 use std::panic;
 use std::str::FromStr;
 use std::time::Instant;
-// use utils::utils::load_metadata;
 use veriwasm::loaders::Loadable;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
 

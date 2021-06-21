@@ -229,30 +229,6 @@ pub fn get_symbol_addr(symbols: &Vec<ELFSymbol>, name: &str) -> std::option::Opt
     x
 }
 
-pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
-    match memargs {
-        MemArgs::Mem1Arg(arg) => {
-            if let MemArg::Reg(regnum, _) = arg {
-                if *regnum == 4 {
-                    return Some(0);
-                }
-            }
-            None
-        }
-        MemArgs::Mem2Args(arg1, arg2) => {
-            if let MemArg::Reg(regnum, _) = arg1 {
-                if *regnum == 4 {
-                    if let MemArg::Imm(_, _, offset) = arg2 {
-                        return Some(*offset);
-                    }
-                }
-            }
-            None
-        }
-        _ => None,
-    }
-}
-
 // func name is valid if:
 // 1. starts with guest_func_
 // 2. ends in _# (where # is some number)
