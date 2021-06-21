@@ -20,3 +20,5 @@ serde_json = "1.0.59"
 log = "*"
 env_logger = "*"
 goblin = "*"
+wasmtime = { path = "../wasmtime/crates/wasmtime" }
+wasmtime-jit = { path = "../wasmtime/crates/jit" }

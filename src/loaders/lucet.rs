@@ -7,10 +7,9 @@ use yaxpeax_core::memory::repr::FileRepr;
 
 pub fn load_lucet_program(binpath: &str) -> ModuleData {
     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
-    let program = if let FileRepr::Executable(program) = program {
+    if let FileRepr::Executable(program) = program {
         program
     } else {
-        panic!("function:{} is not a valid path", binpath);
-    };
-    program
+        panic!("function:{} is not a valid path", binpath)
+    }
 }

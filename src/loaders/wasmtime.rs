@@ -5,20 +5,23 @@ use yaxpeax_core::memory::repr::process::{
 };
 use yaxpeax_core::memory::repr::FileRepr;
 
-// use wasmtime::*;
+use wasmtime::*;
 use std::env;
 use std::fs;
 
-pub fn load_wasmtime_program(binpath: &str) -> ModuleData {
-    unimplemented!();
+pub fn load_wasmtime_program(path: &str) -> ModuleData {
+    let buffer = fs::read(path)
+        .expect("Something went wrong reading the file");
+    let store: Store<()> = Store::default();
+    // Deserialize wasmtime module
+    let module = unsafe { Module::deserialize(store.engine(), buffer).unwrap() };
+    let obj = module.obj();
 
-    let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
-    let program = if let FileRepr::Executable(program) = program {
-        program
-    } else {
-        panic!("function:{} is not a valid path", binpath);
-    };
-    program
+
+    match ModuleData::load_from(&obj, path.to_string()) {
+        Some(program) => { program }//{ FileRepr::Executable(data) }
+        None => {panic!("function:{} is not a valid path", path)}
+    }
 }
 
 // fn deserialize_module(path: &String) -> Module {
