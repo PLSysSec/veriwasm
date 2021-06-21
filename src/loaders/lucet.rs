@@ -49,3 +49,13 @@ pub fn load_lucet_metadata(program: &ModuleData) -> VW_Metadata {
         lucet_probestack: lucet_probestack,
     }
 }
+
+
+// func name is valid if:
+// 1. is not probestack
+pub fn is_valid_lucet_func_name(name: &String) -> bool {
+    if name == "lucet_probestack" {
+        return false;
+    }
+    true
+}

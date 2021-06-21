@@ -15,12 +15,30 @@ use yaxpeax_core::arch::x86_64::MergedContextTable;
 use yaxpeax_core::arch::SymbolQuery;
 use yaxpeax_core::arch::{BaseUpdate, Library, Symbol};
 use yaxpeax_core::memory::repr::process::{
-    ELFExport, ELFImport, ELFSymbol, ModuleData, ModuleInfo,
+    ELFExport, ELFImport, ELFSymbol, ModuleData, ModuleInfo, ELFSection
 };
 use yaxpeax_core::memory::repr::FileRepr;
 use yaxpeax_core::memory::MemoryRepr;
 use yaxpeax_core::ContextWrite;
 use yaxpeax_x86::long_mode::Arch as AMD64;
+
+
+fn deconstruct_elf(program: &ModuleData) ->     
+(&Vec<ELFSection>, &u64, &Vec<ELFImport>, &Vec<ELFExport>, &Vec<ELFSymbol>)
+{
+    match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
+        Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
+            (sections, entry, imports, exports, symbols)
+        }
+        Some(other) => {
+            panic!("Module isn't an elf, but is a {:?}?", other);
+        }
+        None => {
+            panic!("Module doesn't appear to be a binary yaxpeax understands.");
+        }
+    }
+}
+
 
 fn get_function_starts(
     entrypoint: &u64,
@@ -140,20 +158,13 @@ pub fn fully_resolved_cfg(
     return resolve_cfg(program, contexts, &cfg, metadata, &irmap, addr);
 }
 
-pub fn get_data(program: &ModuleData) -> (x86_64Data, Vec<(u64, std::string::String)>, (u64, u64)) {
-    let (_, sections, entrypoint, imports, exports, symbols) =
-        match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
-            Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
-                (isa, sections, entry, imports, exports, symbols)
-            }
-            Some(other) => {
-                panic!("Module isn't an elf, but is a {:?}?", other);
-            }
-            None => {
-                panic!("Module doesn't appear to be a binary yaxpeax understands.");
-            }
-        };
-    // println!("Sections: {:?}", sections);
+pub fn get_data(program: &ModuleData, format: &ExecutableType,
+) -> (x86_64Data, Vec<(u64, std::string::String)>, (u64, u64)) {
+    let (sections,entrypoint,imports,exports,symbols) = deconstruct_elf(program);
+    let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
+    let mut x86_64_data =
+        get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
+
     let plt_bounds = if let Some(plt_idx) = sections.iter().position(|x| x.name == ".plt") {
         let plt = sections.get(plt_idx).unwrap();
         (plt.start, plt.start + plt.size)
@@ -161,11 +172,7 @@ pub fn get_data(program: &ModuleData) -> (x86_64Data, Vec<(u64, std::string::Str
         (0, 0)
     };
 
-    let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
     let text_section = sections.get(text_section_idx).unwrap();
-
-    let mut x86_64_data =
-        get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
 
     let mut addrs: Vec<(u64, std::string::String)> = Vec::new();
     while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
@@ -173,7 +180,7 @@ pub fn get_data(program: &ModuleData) -> (x86_64Data, Vec<(u64, std::string::Str
             continue;
         }
         if let Some(symbol) = x86_64_data.symbol_for(addr) {
-            if is_valid_func_name(&symbol.1) {
+            if format.is_valid_func_name(&symbol.1) {
                 addrs.push((addr, symbol.1.clone()));
             } else {
                 println!("Symbol = 0x{:x} {:?}", addr, symbol.1);
@@ -191,27 +198,12 @@ pub fn get_one_resolved_cfg(
 ) -> ((VW_CFG, IRMap), x86_64Data) {
     let metadata = format.load_metadata(program);
 
-    // grab some details from the binary and panic if it's not what we expected
-    let (_, sections, entrypoint, imports, exports, symbols) =
-        match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
-            Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
-                (isa, sections, entry, imports, exports, symbols)
-            }
-            Some(other) => {
-                panic!("{:?} isn't an elf, but is a {:?}?", binpath, other);
-            }
-            None => {
-                panic!(
-                    "{:?} doesn't appear to be a binary yaxpeax understands.",
-                    binpath
-                );
-            }
-        };
-
+    let (sections,entrypoint,imports,exports,symbols) = deconstruct_elf(program);
     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
     let x86_64_data = get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
+
     let addr = get_symbol_addr(symbols, func).unwrap();
-    assert!(is_valid_func_name(&String::from(func)));
+    assert!(format.is_valid_func_name(&String::from(func)));
     println!("Generating CFG for: {:?}", func);
     return (
         fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr),
@@ -219,22 +211,9 @@ pub fn get_one_resolved_cfg(
     );
 }
 
-pub fn get_symbol_addr(symbols: &Vec<ELFSymbol>, name: &str) -> std::option::Option<u64> {
-    let mut x = None;
-    for symbol in symbols.iter() {
-        if symbol.name == name {
-            x = Some(symbol.addr);
-        }
-    }
-    x
+//return addr of symbol if present, else None
+pub fn get_symbol_addr(symbols: &Vec<ELFSymbol>, name: &str) -> Option<u64> {
+    symbols.iter().find(|sym| sym.name == name).map(|sym| sym.addr)
 }
 
-// func name is valid if:
-// 1. starts with guest_func_
-// 2. ends in _# (where # is some number)
-pub fn is_valid_func_name(name: &String) -> bool {
-    if name == "lucet_probestack" {
-        return false;
-    }
-    true
-}
+

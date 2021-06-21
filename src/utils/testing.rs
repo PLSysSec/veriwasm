@@ -17,7 +17,7 @@ fn full_test_helper(path: &str, format: ExecutableType) {
     let program = format.load_program(&path);
     println!("Loading Metadata");
     let metadata = format.load_metadata(&program);
-    let (x86_64_data, func_addrs, plt) = get_data(&program);
+    let (x86_64_data, func_addrs, plt) = get_data(&program, &format);
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     for (addr, _func_name) in func_addrs {
         let (cfg, irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
@@ -55,7 +55,7 @@ fn full_test_helper(path: &str, format: ExecutableType) {
 
 fn negative_test_helper(path: &str, func_name: &str, format: ExecutableType) {
     let program = format.load_program(&path);
-    let (x86_64_data, func_addrs, plt) = get_data(&program);
+    let (x86_64_data, func_addrs, plt) = get_data(&program, &format);
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     println!("Loading Metadata");
     let metadata = format.load_metadata(&program);

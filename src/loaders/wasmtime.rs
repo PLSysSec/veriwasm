@@ -61,6 +61,13 @@ pub fn load_wasmtime_metadata(program: &ModuleData) -> VW_Metadata {
     // }
 }
 
+
+// Currently no need to filter wasmtime functions
+pub fn is_valid_wasmtime_func_name(name: &String) -> bool {
+    true
+}
+
+
 // pub fn load_wasmtime_metadata(program: &ModuleData) -> VW_Metadata {
 //     unimplemented!()
 // }
