@@ -23,7 +23,7 @@ use yaxpeax_core::ContextWrite;
 use yaxpeax_x86::long_mode::Arch as AMD64;
 
 
-fn deconstruct_elf(program: &ModuleData) ->     
+pub fn deconstruct_elf(program: &ModuleData) ->     
 (&Vec<ELFSection>, &u64, &Vec<ELFImport>, &Vec<ELFExport>, &Vec<ELFSymbol>)
 {
     match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
@@ -182,8 +182,6 @@ pub fn get_data(program: &ModuleData, format: &ExecutableType,
         if let Some(symbol) = x86_64_data.symbol_for(addr) {
             if format.is_valid_func_name(&symbol.1) {
                 addrs.push((addr, symbol.1.clone()));
-            } else {
-                println!("Symbol = 0x{:x} {:?}", addr, symbol.1);
             }
         }
     }
