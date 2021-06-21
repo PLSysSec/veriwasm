@@ -9,7 +9,8 @@ use crate::lattices::VarState;
 use crate::utils::ir_utils::{extract_stack_offset, is_stack_access};
 use crate::utils::lifter::IRBlock;
 use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value};
-use crate::utils::utils::LucetMetadata;
+// use crate::utils::utils::LucetMetadata;
+use crate::loaders::utils::LucetMetadata;
 use std::default::Default;
 use yaxpeax_x86::long_mode::Opcode;
 

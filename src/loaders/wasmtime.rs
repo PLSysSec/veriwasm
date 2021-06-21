@@ -5,23 +5,28 @@ use yaxpeax_core::memory::repr::process::{
 };
 use yaxpeax_core::memory::repr::FileRepr;
 
-use wasmtime::*;
+use crate::loaders::utils::LucetMetadata;
 use std::env;
 use std::fs;
+use wasmtime::*;
 
 pub fn load_wasmtime_program(path: &str) -> ModuleData {
-    let buffer = fs::read(path)
-        .expect("Something went wrong reading the file");
+    let buffer = fs::read(path).expect("Something went wrong reading the file");
     let store: Store<()> = Store::default();
     // Deserialize wasmtime module
     let module = unsafe { Module::deserialize(store.engine(), buffer).unwrap() };
     let obj = module.obj();
 
-
     match ModuleData::load_from(&obj, path.to_string()) {
-        Some(program) => { program }//{ FileRepr::Executable(data) }
-        None => {panic!("function:{} is not a valid path", path)}
+        Some(program) => program, //{ FileRepr::Executable(data) }
+        None => {
+            panic!("function:{} is not a valid path", path)
+        }
     }
+}
+
+pub fn load_wasmtime_metadata(program: &ModuleData) -> LucetMetadata {
+    unimplemented!()
 }
 
 // fn deserialize_module(path: &String) -> Module {

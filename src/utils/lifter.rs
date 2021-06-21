@@ -1,4 +1,4 @@
-use crate::utils::utils::LucetMetadata;
+use crate::loaders::utils::LucetMetadata;
 use std::collections::HashMap;
 use yaxpeax_arch::{AddressBase, Arch, LengthedInstruction};
 use yaxpeax_core::analyses::control_flow::VW_CFG;

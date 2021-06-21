@@ -18,7 +18,7 @@ use std::fs;
 use std::panic;
 use std::str::FromStr;
 use std::time::Instant;
-use utils::utils::load_metadata;
+// use utils::utils::load_metadata;
 use veriwasm::loaders::Loadable;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
 
@@ -34,7 +34,7 @@ pub struct Config {
 
 fn run(config: Config) {
     let program = config.executable_type.load_program(&config.module_path);
-    let metadata = load_metadata(&program);
+    let metadata = config.executable_type.load_metadata(&program);
     let (x86_64_data, func_addrs, plt) = get_data(&program);
 
     let mut func_counter = 0;

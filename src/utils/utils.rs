@@ -3,6 +3,8 @@ use crate::analyses::jump_analyzer::SwitchAnalyzer;
 use crate::analyses::reaching_defs::analyze_reaching_defs;
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::checkers::jump_resolver::resolve_jumps;
+use crate::loaders::utils::LucetMetadata;
+use crate::loaders::{ExecutableType, Loadable};
 use crate::utils::ir_utils::has_indirect_jumps;
 use crate::utils::lifter::{lift_cfg, IRMap, MemArg, MemArgs};
 use std::path::Path;
@@ -185,8 +187,9 @@ pub fn get_one_resolved_cfg(
     binpath: &str,
     func: &str,
     program: &ModuleData,
+    format: &ExecutableType,
 ) -> ((VW_CFG, IRMap), x86_64Data) {
-    let metadata = load_metadata(program);
+    let metadata = format.load_metadata(program);
 
     // grab some details from the binary and panic if it's not what we expected
     let (_, sections, entrypoint, imports, exports, symbols) =
@@ -216,7 +219,7 @@ pub fn get_one_resolved_cfg(
     );
 }
 
-fn get_symbol_addr(symbols: &Vec<ELFSymbol>, name: &str) -> std::option::Option<u64> {
+pub fn get_symbol_addr(symbols: &Vec<ELFSymbol>, name: &str) -> std::option::Option<u64> {
     let mut x = None;
     for symbol in symbols.iter() {
         if symbol.name == name {
@@ -224,44 +227,6 @@ fn get_symbol_addr(symbols: &Vec<ELFSymbol>, name: &str) -> std::option::Option<
         }
     }
     x
-}
-
-#[derive(Clone)]
-pub struct LucetMetadata {
-    pub guest_table_0: u64,
-    pub lucet_tables: u64,
-    pub lucet_probestack: u64,
-}
-
-pub fn load_metadata(program: &ModuleData) -> LucetMetadata {
-    // let program = load_program(binpath);
-
-    // grab some details from the binary and panic if it's not what we expected
-    let (_, _sections, _entrypoint, _imports, _exports, symbols) =
-        match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
-            Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
-                (isa, sections, entry, imports, exports, symbols)
-            }
-            Some(other) => {
-                panic!("Module isn't an elf, but is a {:?}?", other);
-            }
-            None => {
-                panic!("Module doesn't appear to be a binary yaxpeax understands");
-            }
-        };
-
-    let guest_table_0 = get_symbol_addr(symbols, "guest_table_0").unwrap();
-    let lucet_tables = get_symbol_addr(symbols, "lucet_tables").unwrap();
-    let lucet_probestack = get_symbol_addr(symbols, "lucet_probestack").unwrap();
-    println!(
-        "guest_table_0 = {:x} lucet_tables = {:x} probestack = {:x}",
-        guest_table_0, lucet_tables, lucet_probestack
-    );
-    LucetMetadata {
-        guest_table_0: guest_table_0,
-        lucet_tables: lucet_tables,
-        lucet_probestack: lucet_probestack,
-    }
 }
 
 pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
