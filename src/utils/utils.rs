@@ -15,17 +15,22 @@ use yaxpeax_core::arch::x86_64::MergedContextTable;
 use yaxpeax_core::arch::SymbolQuery;
 use yaxpeax_core::arch::{BaseUpdate, Library, Symbol};
 use yaxpeax_core::memory::repr::process::{
-    ELFExport, ELFImport, ELFSymbol, ModuleData, ModuleInfo, ELFSection
+    ELFExport, ELFImport, ELFSection, ELFSymbol, ModuleData, ModuleInfo,
 };
 use yaxpeax_core::memory::repr::FileRepr;
 use yaxpeax_core::memory::MemoryRepr;
 use yaxpeax_core::ContextWrite;
 use yaxpeax_x86::long_mode::Arch as AMD64;
 
-
-pub fn deconstruct_elf(program: &ModuleData) ->     
-(&Vec<ELFSection>, &u64, &Vec<ELFImport>, &Vec<ELFExport>, &Vec<ELFSymbol>)
-{
+pub fn deconstruct_elf(
+    program: &ModuleData,
+) -> (
+    &Vec<ELFSection>,
+    &u64,
+    &Vec<ELFImport>,
+    &Vec<ELFExport>,
+    &Vec<ELFSymbol>,
+) {
     match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
         Some(ModuleInfo::ELF(isa, _, _, sections, entry, _, imports, exports, symbols)) => {
             (sections, entry, imports, exports, symbols)
@@ -38,7 +43,6 @@ pub fn deconstruct_elf(program: &ModuleData) ->
         }
     }
 }
-
 
 fn get_function_starts(
     entrypoint: &u64,
@@ -158,9 +162,11 @@ pub fn fully_resolved_cfg(
     return resolve_cfg(program, contexts, &cfg, metadata, &irmap, addr);
 }
 
-pub fn get_data(program: &ModuleData, format: &ExecutableType,
+pub fn get_data(
+    program: &ModuleData,
+    format: &ExecutableType,
 ) -> (x86_64Data, Vec<(u64, std::string::String)>, (u64, u64)) {
-    let (sections,entrypoint,imports,exports,symbols) = deconstruct_elf(program);
+    let (sections, entrypoint, imports, exports, symbols) = deconstruct_elf(program);
     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
     let mut x86_64_data =
         get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
@@ -196,7 +202,7 @@ pub fn get_one_resolved_cfg(
 ) -> ((VW_CFG, IRMap), x86_64Data) {
     let metadata = format.load_metadata(program);
 
-    let (sections,entrypoint,imports,exports,symbols) = deconstruct_elf(program);
+    let (sections, entrypoint, imports, exports, symbols) = deconstruct_elf(program);
     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
     let x86_64_data = get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
 
@@ -211,7 +217,8 @@ pub fn get_one_resolved_cfg(
 
 //return addr of symbol if present, else None
 pub fn get_symbol_addr(symbols: &Vec<ELFSymbol>, name: &str) -> Option<u64> {
-    symbols.iter().find(|sym| sym.name == name).map(|sym| sym.addr)
+    symbols
+        .iter()
+        .find(|sym| sym.name == name)
+        .map(|sym| sym.addr)
 }
-
-

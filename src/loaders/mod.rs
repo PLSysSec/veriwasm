@@ -1,13 +1,12 @@
 pub mod lucet;
 pub mod utils;
 pub mod wasmtime;
-use crate::loaders::lucet::{load_lucet_metadata, load_lucet_program, is_valid_lucet_func_name};
-use crate::loaders::utils::VW_Metadata;
-use crate::loaders::wasmtime::{load_wasmtime_metadata, load_wasmtime_program, is_valid_wasmtime_func_name};
+use crate::loaders::lucet::*;
+use crate::loaders::utils::{FuncSignatures, VW_Metadata};
+use crate::loaders::wasmtime::*;
 use core::str::FromStr;
 use std::string::ParseError;
 use yaxpeax_core::memory::repr::process::ModuleData;
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExecutableType {
@@ -15,13 +14,14 @@ pub enum ExecutableType {
     Wasmtime,
 }
 
-//TODO: this should be static dispatch, not dynamic dispatch
+// TODO: this should be static dispatch, not dynamic dispatch
 // not performance critical, but static dispatch is more rusty
 
 pub trait Loadable {
     fn load_program(&self, binpath: &str) -> ModuleData;
     fn load_metadata(&self, program: &ModuleData) -> VW_Metadata;
     fn is_valid_func_name(&self, name: &String) -> bool;
+    fn get_func_signatures(&self) -> FuncSignatures;
 }
 
 impl Loadable for ExecutableType {
@@ -45,6 +45,13 @@ impl Loadable for ExecutableType {
             ExecutableType::Wasmtime => is_valid_wasmtime_func_name(name),
         }
     }
+
+    fn get_func_signatures(&self) -> FuncSignatures {
+        match self {
+            ExecutableType::Lucet => get_lucet_func_signatures(),
+            ExecutableType::Wasmtime => get_wasmtime_func_signatures(),
+        }
+    }
 }
 
 impl FromStr for ExecutableType {
@@ -57,6 +64,3 @@ impl FromStr for ExecutableType {
         }
     }
 }
-
-
-

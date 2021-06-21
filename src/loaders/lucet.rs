@@ -1,4 +1,5 @@
 use crate::loaders::utils::*;
+use crate::utils::utils::deconstruct_elf;
 use crate::utils::utils::get_symbol_addr;
 use std::path::Path;
 use yaxpeax_arch::Arch;
@@ -9,7 +10,6 @@ use yaxpeax_core::memory::repr::process::{
 use yaxpeax_core::memory::repr::FileRepr;
 use yaxpeax_core::memory::MemoryRepr;
 use yaxpeax_x86::long_mode::Arch as AMD64;
-use crate::utils::utils::deconstruct_elf;
 
 pub fn load_lucet_program(binpath: &str) -> ModuleData {
     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
@@ -21,7 +21,7 @@ pub fn load_lucet_program(binpath: &str) -> ModuleData {
 }
 
 pub fn load_lucet_metadata(program: &ModuleData) -> VW_Metadata {
-    let (sections,entrypoint,imports,exports,symbols) = deconstruct_elf(program);
+    let (sections, entrypoint, imports, exports, symbols) = deconstruct_elf(program);
 
     let guest_table_0 = get_symbol_addr(symbols, "guest_table_0").unwrap();
     let lucet_tables = get_symbol_addr(symbols, "lucet_tables").unwrap();
@@ -37,7 +37,6 @@ pub fn load_lucet_metadata(program: &ModuleData) -> VW_Metadata {
     }
 }
 
-
 // func name is valid if:
 // 1. is not probestack
 pub fn is_valid_lucet_func_name(name: &String) -> bool {
@@ -45,4 +44,8 @@ pub fn is_valid_lucet_func_name(name: &String) -> bool {
         return false;
     }
     true
+}
+
+pub fn get_lucet_func_signatures() -> FuncSignatures {
+    unimplemented!();
 }
