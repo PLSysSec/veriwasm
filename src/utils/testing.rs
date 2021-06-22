@@ -531,7 +531,7 @@ fn wasmtime_wat_linking2() {
 #[test]
 fn wasmtime_wat_minimal_reactor() {
     full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/minimal_reactor.wat",
+        "./veriwasm_public_data/wasmtime/bin/wat/minimal-reactor.wat",
         ExecutableType::Wasmtime,
     )
 }
@@ -571,7 +571,7 @@ fn wasmtime_wat_hello_wasi_snapshot0() {
 #[test]
 fn wasmtime_wat_iloop_start() {
     full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/iloop_start.wat",
+        "./veriwasm_public_data/wasmtime/bin/wat/iloop-start.wat",
         ExecutableType::Wasmtime,
     )
 }
@@ -633,9 +633,9 @@ fn wasmtime_wat_memory() {
 }
 
 #[test]
-fn wasmtime_wat_r2wasm_add_func() {
+fn wasmtime_wat_rs2wasm_add_func() {
     full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/r2wasm-add-func.wat",
+        "./veriwasm_public_data/wasmtime/bin/wat/rs2wasm-add-func.wat",
         ExecutableType::Wasmtime,
     )
 }
