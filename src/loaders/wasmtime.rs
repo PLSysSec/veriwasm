@@ -32,7 +32,7 @@ pub fn load_wasmtime_program(path: &str) -> ModuleData {
 }
 
 pub fn load_wasmtime_metadata(program: &ModuleData) -> VW_Metadata {
-    let (sections, entrypoint, imports, exports, symbols) = deconstruct_elf(program);
+    let (_, sections, entrypoint, imports, exports, symbols) = deconstruct_elf(program);
 
     // unimplemented!();
 
