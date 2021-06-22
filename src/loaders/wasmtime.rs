@@ -11,10 +11,10 @@ use std::env;
 use std::fs;
 use wasmtime::*;
 use yaxpeax_arch::Arch;
-use yaxpeax_core::memory::MemoryRepr;
-use yaxpeax_x86::long_mode::Arch as AMD64;
 use yaxpeax_core::goblin::Object;
 use yaxpeax_core::memory::repr::process::Segment;
+use yaxpeax_core::memory::MemoryRepr;
+use yaxpeax_x86::long_mode::Arch as AMD64;
 
 //yaxpeax doesnt load .o files correctly, so this code
 // manually adds memory regions corresponding to ELF sections
@@ -22,29 +22,32 @@ use yaxpeax_core::memory::repr::process::Segment;
 fn fixup_object_file(program: &mut ModuleData, obj: &[u8]) {
     // let elf = program.module_info().unwrap();
     let elf = match Object::parse(obj) {
-        Ok(obj @ Object::Elf(_)) => {
-            match obj {
-                Object::Elf(elf) => elf,
-                _ => panic!()
-                }
-            },
-        _ => panic!()
-        };
+        Ok(obj @ Object::Elf(_)) => match obj {
+            Object::Elf(elf) => elf,
+            _ => panic!(),
+        },
+        _ => panic!(),
+    };
 
-    for section in elf.section_headers.iter(){
+    for section in elf.section_headers.iter() {
         if section.sh_name == 0 {
             continue;
         }
         //Load data for section
         let mut section_data = vec![0; section.sh_size as usize];
-        for idx in 0..section.sh_size{
+        for idx in 0..section.sh_size {
             section_data[idx as usize] = obj[(section.sh_offset + idx) as usize];
         }
         //add as segment
         let new_section = Segment {
             start: section.sh_addr as usize, // virtual addr
             data: section_data,
-            name: elf.shdr_strtab.get(section.sh_name).unwrap().unwrap().to_string(),
+            name: elf
+                .shdr_strtab
+                .get(section.sh_name)
+                .unwrap()
+                .unwrap()
+                .to_string(),
         };
         program.segments.push(new_section);
     }
@@ -60,7 +63,10 @@ pub fn load_wasmtime_program(path: &str) -> ModuleData {
     // println!("{:?}", types);
 
     match ModuleData::load_from(&obj, path.to_string()) {
-        Some(mut program) => {fixup_object_file(&mut program, &obj); program}, //{ FileRepr::Executable(data) }
+        Some(mut program) => {
+            fixup_object_file(&mut program, &obj);
+            program
+        } //{ FileRepr::Executable(data) }
         None => {
             panic!("function:{} is not a valid path", path)
         }

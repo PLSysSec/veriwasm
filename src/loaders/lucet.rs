@@ -12,7 +12,6 @@ use yaxpeax_core::memory::MemoryRepr;
 use yaxpeax_x86::long_mode::Arch as AMD64;
 // use lucet_analyze::*;
 
-
 pub fn load_lucet_program(binpath: &str) -> ModuleData {
     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
     if let FileRepr::Executable(program) = program {
@@ -63,7 +62,6 @@ pub fn is_valid_lucet_func_name(name: &String) -> bool {
 //     let module_data =
 //         ModuleData::deserialize(module_data_bytes).expect("ModuleData can be deserialized");
 
-    
 // }
 
 // pub fn read_module_buffer(program: &ModuleData) -> Option<Vec<u8>> {
@@ -79,9 +77,6 @@ pub fn is_valid_lucet_func_name(name: &String) -> bool {
 //         }
 //     }
 // }
-
-
-
 
 pub fn get_lucet_func_signatures() -> FuncSignatures {
     unimplemented!();
