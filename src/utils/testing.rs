@@ -14,6 +14,7 @@ use std::panic;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
 
 fn full_test_helper(path: &str, format: ExecutableType) {
+    let _ = env_logger::builder().is_test(true).try_init();
     let program = format.load_program(&path);
     println!("Loading Metadata");
     let metadata = format.load_metadata(&program);
@@ -22,7 +23,7 @@ fn full_test_helper(path: &str, format: ExecutableType) {
     for (addr, func_name) in func_addrs {
         let (cfg, irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
-        println!("Analyzing: {:?}", func_name);
+        println!("Analyzing: {:?} @ {:x}", func_name, addr);
         println!("Checking Stack Safety");
         let stack_analyzer = StackAnalyzer {};
         let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
@@ -56,6 +57,7 @@ fn full_test_helper(path: &str, format: ExecutableType) {
 }
 
 fn negative_test_helper(path: &str, func_name: &str, format: ExecutableType) {
+    let _ = env_logger::builder().is_test(true).try_init();
     let program = format.load_program(&path);
     let (x86_64_data, func_addrs, plt) = get_data(&program, &format);
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
