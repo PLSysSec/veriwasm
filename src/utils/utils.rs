@@ -23,8 +23,6 @@ use yaxpeax_core::ContextWrite;
 use yaxpeax_x86::long_mode::Arch as AMD64;
 use yaxpeax_core::goblin::elf::program_header::ProgramHeader;
 
-//    ELF(ISAHint, goblin::elf::header::Header, Vec<goblin::elf::program_header::ProgramHeader>, Vec<ELFSection>, u64, Vec<ELFReloc>, Vec<ELFImport>, Vec<ELFExport>, Vec<ELFSymbol>)
-
 pub fn deconstruct_elf(
     program: &ModuleData,
 ) -> (

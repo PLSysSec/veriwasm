@@ -39,8 +39,8 @@ fn run(config: Config) {
     let mut func_counter = 0;
     let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64)> = vec![];
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
-    let func_signatures = config.executable_type.get_func_signatures();
-    println!("{:?}", func_signatures);
+    // let func_signatures = config.executable_type.get_func_signatures();
+    // println!("{:?}", func_signatures);
     for (addr, func_name) in func_addrs {
         if config.only_func.is_some() && func_name != config.only_func.as_ref().unwrap().as_str() {
             continue;
@@ -54,6 +54,9 @@ fn run(config: Config) {
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
 
         let stack_start = Instant::now();
+        // println!("CFG: {:?}", cfg.blocks);
+        // println!("IRCFG: {:?}", irmap);
+        println!("Checking stack");
         let stack_analyzer = StackAnalyzer {};
         let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
         let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);

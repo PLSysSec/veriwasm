@@ -48,6 +48,38 @@ pub fn is_valid_lucet_func_name(name: &String) -> bool {
     true
 }
 
+// pub fn load_lucet_module_data(program: &ModuleData) -> lucet_module::ModuleData {
+//     let (program_header, sections, entrypoint, imports, exports, symbols) = deconstruct_elf(program);
+//     let module_start = get_symbol_addr(symbols, "lucet_module_data").unwrap();
+//     let module_size = mem::size_of::<SerializedModule>() as u64;
+
+//     let mut rdr = Cursor::new(buffer);
+
+//     let module_data_ptr = rdr.read_u64::<LittleEndian>().unwrap();
+//     let module_data_len = rdr.read_u64::<LittleEndian>().unwrap();
+
+//     let buffer = read_module_buffer(module_data_ptr, module_data_len);
+
+//     let module_data =
+//         ModuleData::deserialize(module_data_bytes).expect("ModuleData can be deserialized");
+
+    
+// }
+
+// pub fn read_module_buffer(program: &ModuleData) -> Option<Vec<u8>> {
+//     for header in program_header {
+//         if header.p_type == elf::program_header::PT_LOAD {
+//             // Bounds check the entry
+//             if addr >= header.p_vaddr && (addr + size) <= (header.p_vaddr + header.p_memsz) {
+//                 let start = (addr - header.p_vaddr + header.p_offset) as usize;
+//                 let end = start + size as usize;
+
+//                 return Some(&self.buffer[start..end]);
+//             }
+//         }
+//     }
+// }
+
 
 
 
