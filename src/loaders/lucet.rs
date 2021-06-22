@@ -1,13 +1,19 @@
 use crate::loaders::utils::*;
 use crate::utils::utils::deconstruct_elf;
 use crate::utils::utils::get_symbol_addr;
+use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
+use lucet_module;
+use std::io::{Cursor, Read};
+use std::mem;
 use std::path::Path;
+use yaxpeax_arch::Address;
 use yaxpeax_arch::Arch;
 use yaxpeax_core::memory::reader;
 use yaxpeax_core::memory::repr::process::{
-    ELFExport, ELFImport, ELFSymbol, ModuleData, ModuleInfo,
+    ELFExport, ELFImport, ELFSymbol, ModuleData, ModuleInfo, Segment,
 };
 use yaxpeax_core::memory::repr::FileRepr;
+use yaxpeax_core::memory::MemoryRange;
 use yaxpeax_core::memory::MemoryRepr;
 use yaxpeax_x86::long_mode::Arch as AMD64;
 // use lucet_analyze::*;
@@ -47,36 +53,37 @@ pub fn is_valid_lucet_func_name(name: &String) -> bool {
     true
 }
 
-// pub fn load_lucet_module_data(program: &ModuleData) -> lucet_module::ModuleData {
-//     let (program_header, sections, entrypoint, imports, exports, symbols) = deconstruct_elf(program);
-//     let module_start = get_symbol_addr(symbols, "lucet_module_data").unwrap();
-//     let module_size = mem::size_of::<SerializedModule>() as u64;
+pub fn load_lucet_module_data(program: &ModuleData) -> lucet_module::ModuleData {
+    let (program_header, sections, entrypoint, imports, exports, symbols) =
+        deconstruct_elf(program);
+    let module_start: usize = get_symbol_addr(symbols, "lucet_module_data").unwrap() as usize;
+    let module_size: usize = mem::size_of::<lucet_module::SerializedModule>();
 
-//     let mut rdr = Cursor::new(buffer);
+    let buffer = read_module_buffer(program, module_start, module_size).unwrap();
+    let mut rdr = Cursor::new(buffer);
+    let module_data_ptr = rdr.read_u64::<LittleEndian>().unwrap();
+    let module_data_len = rdr.read_u64::<LittleEndian>().unwrap();
 
-//     let module_data_ptr = rdr.read_u64::<LittleEndian>().unwrap();
-//     let module_data_len = rdr.read_u64::<LittleEndian>().unwrap();
+    let module_data_buffer =
+        read_module_buffer(program, module_data_ptr as usize, module_data_len as usize).unwrap();
 
-//     let buffer = read_module_buffer(module_data_ptr, module_data_len);
+    lucet_module::ModuleData::deserialize(module_data_buffer)
+        .expect("ModuleData can be deserialized")
+}
 
-//     let module_data =
-//         ModuleData::deserialize(module_data_bytes).expect("ModuleData can be deserialized");
+fn segment_for(program: &ModuleData, addr: usize) -> Option<&Segment> {
+    for segment in program.segments.iter() {
+        if addr >= segment.start && addr < (segment.start + segment.data.len()) {
+            return Some(segment);
+        }
+    }
+    None
+}
 
-// }
-
-// pub fn read_module_buffer(program: &ModuleData) -> Option<Vec<u8>> {
-//     for header in program_header {
-//         if header.p_type == elf::program_header::PT_LOAD {
-//             // Bounds check the entry
-//             if addr >= header.p_vaddr && (addr + size) <= (header.p_vaddr + header.p_memsz) {
-//                 let start = (addr - header.p_vaddr + header.p_offset) as usize;
-//                 let end = start + size as usize;
-
-//                 return Some(&self.buffer[start..end]);
-//             }
-//         }
-//     }
-// }
+// Finds and returns the data corresponding [addr..addr+size]
+pub fn read_module_buffer(program: &ModuleData, addr: usize, size: usize) -> Option<&[u8]> {
+    segment_for(program, addr).map(|segment| &segment.data[0..size])
+}
 
 pub fn get_lucet_func_signatures() -> FuncSignatures {
     unimplemented!();
