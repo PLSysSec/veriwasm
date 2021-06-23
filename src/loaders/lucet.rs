@@ -56,7 +56,7 @@ pub fn is_valid_lucet_func_name(name: &String) -> bool {
 pub fn load_lucet_module_data(program: &ModuleData) -> lucet_module::ModuleData {
     let (program_header, sections, entrypoint, imports, exports, symbols) =
         deconstruct_elf(program);
-    let module_start: usize = get_symbol_addr(symbols, "lucet_module_data").unwrap() as usize;
+    let module_start: usize = get_symbol_addr(symbols, "lucet_module").unwrap() as usize;
     let module_size: usize = mem::size_of::<lucet_module::SerializedModule>();
 
     let buffer = read_module_buffer(program, module_start, module_size).unwrap();
@@ -68,7 +68,7 @@ pub fn load_lucet_module_data(program: &ModuleData) -> lucet_module::ModuleData 
         read_module_buffer(program, module_data_ptr as usize, module_data_len as usize).unwrap();
 
     lucet_module::ModuleData::deserialize(module_data_buffer)
-        .expect("ModuleData can be deserialized")
+        .expect("ModuleData deserialization failure")
 }
 
 fn segment_for(program: &ModuleData, addr: usize) -> Option<&Segment> {
@@ -82,9 +82,20 @@ fn segment_for(program: &ModuleData, addr: usize) -> Option<&Segment> {
 
 // Finds and returns the data corresponding [addr..addr+size]
 pub fn read_module_buffer(program: &ModuleData, addr: usize, size: usize) -> Option<&[u8]> {
-    segment_for(program, addr).map(|segment| &segment.data[0..size])
+    println!("Addr = {:x}", addr);
+    for s in &program.segments{
+        println!("{} {:x} {:x}", s.name, s.start, s.start + s.data.len());
+    }
+    let segment = segment_for(program, addr)?;
+    let read_start = addr - segment.start;
+    let read_end = read_start + size;
+    Some(&segment.data[read_start..read_end])
 }
 
-pub fn get_lucet_func_signatures() -> FuncSignatures {
+pub fn get_lucet_func_signatures(program: &ModuleData) -> FuncSignatures {
+    let lucet_module_data = load_lucet_module_data(program);
+    println!("{:?}", lucet_module_data.signatures());
+    println!("{:?}", lucet_module_data.function_info());
+    // Vec::new()
     unimplemented!();
 }

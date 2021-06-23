@@ -21,7 +21,7 @@ pub trait Loadable {
     fn load_program(&self, binpath: &str) -> ModuleData;
     fn load_metadata(&self, program: &ModuleData) -> VW_Metadata;
     fn is_valid_func_name(&self, name: &String) -> bool;
-    fn get_func_signatures(&self) -> FuncSignatures;
+    fn get_func_signatures(&self, program: &ModuleData) -> FuncSignatures;
 }
 
 impl Loadable for ExecutableType {
@@ -46,10 +46,10 @@ impl Loadable for ExecutableType {
         }
     }
 
-    fn get_func_signatures(&self) -> FuncSignatures {
+    fn get_func_signatures(&self, program: &ModuleData) -> FuncSignatures {
         match self {
-            ExecutableType::Lucet => get_lucet_func_signatures(),
-            ExecutableType::Wasmtime => get_wasmtime_func_signatures(),
+            ExecutableType::Lucet => get_lucet_func_signatures(program),
+            ExecutableType::Wasmtime => get_wasmtime_func_signatures(program),
         }
     }
 }

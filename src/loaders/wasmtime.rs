@@ -98,6 +98,6 @@ pub fn is_valid_wasmtime_func_name(name: &String) -> bool {
     !name.starts_with("_trampoline")
 }
 
-pub fn get_wasmtime_func_signatures() -> FuncSignatures {
+pub fn get_wasmtime_func_signatures(program: &ModuleData) -> FuncSignatures {
     unimplemented!();
 }
