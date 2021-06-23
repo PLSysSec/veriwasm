@@ -21,6 +21,13 @@ use std::time::Instant;
 use veriwasm::loaders::Loadable;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
 
+#[derive(Debug)]
+pub struct PassConfig{
+    stack: bool,
+    linear_mem: bool,
+    call: bool,
+}
+
 pub struct Config {
     module_path: String,
     _num_jobs: u32,
@@ -29,6 +36,7 @@ pub struct Config {
     _quiet: bool,
     only_func: Option<String>,
     executable_type: ExecutableType,
+    active_passes: PassConfig,
 }
 
 fn run(config: Config) {
@@ -50,48 +58,51 @@ fn run(config: Config) {
         let (cfg, irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
         func_counter += 1;
         println!("Analyzing: {:?}", func_name);
-        //let irmap = lift_cfg(&program, &cfg, &metadata);
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
 
         let stack_start = Instant::now();
-        // println!("CFG: {:?}", cfg.blocks);
-        // println!("IRCFG: {:?}", irmap);
-        println!("Checking stack");
-        let stack_analyzer = StackAnalyzer {};
-        let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
-        let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
-        if !stack_safe {
-            panic!("Not Stack Safe");
+        if config.active_passes.stack{
+            println!("Checking Stack Safety");
+            let stack_analyzer = StackAnalyzer {};
+            let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
+            let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
+            if !stack_safe {
+                panic!("Not Stack Safe");
+            }
         }
 
-        println!("Checking Heap Safety");
         let heap_start = Instant::now();
-        let heap_analyzer = HeapAnalyzer {
-            metadata: metadata.clone(),
-        };
-        let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
-        let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
-        if !heap_safe {
-            panic!("Not Heap Safe");
+        if config.active_passes.linear_mem{
+            println!("Checking Heap Safety");
+            let heap_analyzer = HeapAnalyzer {
+                metadata: metadata.clone(),
+            };
+            let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
+            let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
+            if !heap_safe {
+                panic!("Not Heap Safe");
+            }
         }
 
         let call_start = Instant::now();
-        println!("Checking Call Safety");
-        if has_indirect_calls(&irmap) {
-            let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
-            let call_analyzer = CallAnalyzer {
-                metadata: metadata.clone(),
-                reaching_defs: reaching_defs.clone(),
-                reaching_analyzer: ReachingDefnAnalyzer {
-                    cfg: cfg.clone(),
-                    irmap: irmap.clone(),
-                },
-                funcs: valid_funcs.clone(),
-            };
-            let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
-            let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs, &plt);
-            if !call_safe {
-                panic!("Not Call Safe");
+        if config.active_passes.linear_mem{
+            println!("Checking Call Safety");
+            if has_indirect_calls(&irmap) {
+                let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
+                let call_analyzer = CallAnalyzer {
+                    metadata: metadata.clone(),
+                    reaching_defs: reaching_defs.clone(),
+                    reaching_analyzer: ReachingDefnAnalyzer {
+                        cfg: cfg.clone(),
+                        irmap: irmap.clone(),
+                    },
+                    funcs: valid_funcs.clone(),
+                };
+                let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
+                let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs, &plt);
+                if !call_safe {
+                    panic!("Not Call Safe");
+                }
             }
         }
         let end = Instant::now();
@@ -182,6 +193,9 @@ fn main() {
                 .help("Format of the executable (lucet | wasmtime)"),
         )
         .arg(Arg::with_name("quiet").short("q").long("quiet"))
+        .arg(Arg::with_name("disable_stack_checks").long("disable_stack_checks"))
+        .arg(Arg::with_name("disable_linear_mem_checks").long("disable_linear_mem_checks"))
+        .arg(Arg::with_name("disable_call_checks").long("disable_call_checks"))
         .get_matches();
 
     let module_path = matches.value_of("module path").unwrap();
@@ -191,11 +205,20 @@ fn main() {
         .map(|s| s.parse::<u32>().unwrap_or(1))
         .unwrap_or(1);
     let quiet = matches.is_present("quiet");
+    let disable_stack_checks = matches.is_present("disable_stack_checks");
+    let disable_linear_mem_checks = matches.is_present("disable_linear_mem_checks");
+    let disable_call_checks = matches.is_present("disable_call_checks");
     let only_func = matches.value_of("one function").map(|s| s.to_owned());
     let executable_type =
         ExecutableType::from_str(matches.value_of("executable type").unwrap_or("lucet")).unwrap();
 
     let has_output = if output_path == "" { false } else { true };
+
+    let active_passes = PassConfig{
+        stack: !disable_stack_checks,
+        linear_mem: !disable_linear_mem_checks,
+        call: !disable_call_checks,
+    };
 
     let config = Config {
         module_path: module_path.to_string(),
@@ -205,6 +228,7 @@ fn main() {
         _quiet: quiet,
         only_func,
         executable_type,
+        active_passes,
     };
 
     run(config);
