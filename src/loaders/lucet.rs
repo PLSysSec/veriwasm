@@ -83,7 +83,7 @@ fn segment_for(program: &ModuleData, addr: usize) -> Option<&Segment> {
 // Finds and returns the data corresponding [addr..addr+size]
 pub fn read_module_buffer(program: &ModuleData, addr: usize, size: usize) -> Option<&[u8]> {
     println!("Addr = {:x}", addr);
-    for s in &program.segments{
+    for s in &program.segments {
         println!("{} {:x} {:x}", s.name, s.start, s.start + s.data.len());
     }
     let segment = segment_for(program, addr)?;
