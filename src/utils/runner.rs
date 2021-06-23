@@ -1,5 +1,6 @@
 use crate::{analyses, checkers, loaders, utils};
 
+use crate::{IRMap, VW_Metadata, VW_CFG};
 use analyses::call_analyzer::CallAnalyzer;
 use analyses::heap_analyzer::HeapAnalyzer;
 use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
@@ -38,6 +39,44 @@ pub struct Config {
     pub active_passes: PassConfig,
 }
 
+fn run_stack(cfg: &VW_CFG, irmap: &IRMap) -> bool {
+    let stack_analyzer = StackAnalyzer {};
+    let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
+    let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
+    stack_safe
+}
+
+fn run_heap(cfg: &VW_CFG, irmap: &IRMap, metadata: &VW_Metadata) -> bool {
+    let heap_analyzer = HeapAnalyzer {
+        metadata: metadata.clone(),
+    };
+    let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
+    let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
+    heap_safe
+}
+
+fn run_calls(
+    cfg: &VW_CFG,
+    irmap: &IRMap,
+    metadata: &VW_Metadata,
+    valid_funcs: &Vec<u64>,
+    plt: (u64, u64),
+) -> bool {
+    let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
+    let call_analyzer = CallAnalyzer {
+        metadata: metadata.clone(),
+        reaching_defs: reaching_defs.clone(),
+        reaching_analyzer: ReachingDefnAnalyzer {
+            cfg: cfg.clone(),
+            irmap: irmap.clone(),
+        },
+        funcs: valid_funcs.clone(),
+    };
+    let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
+    let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs, &plt);
+    call_safe
+}
+
 pub fn run(config: Config) {
     let program = config.executable_type.load_program(&config.module_path);
     let metadata = config.executable_type.load_metadata(&program);
@@ -62,9 +101,7 @@ pub fn run(config: Config) {
         let stack_start = Instant::now();
         if config.active_passes.stack {
             println!("Checking Stack Safety");
-            let stack_analyzer = StackAnalyzer {};
-            let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
-            let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
+            let stack_safe = run_stack(&cfg, &irmap);
             if !stack_safe {
                 panic!("Not Stack Safe");
             }
@@ -73,11 +110,7 @@ pub fn run(config: Config) {
         let heap_start = Instant::now();
         if config.active_passes.linear_mem {
             println!("Checking Heap Safety");
-            let heap_analyzer = HeapAnalyzer {
-                metadata: metadata.clone(),
-            };
-            let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
-            let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
+            let heap_safe = run_heap(&cfg, &irmap, &metadata);
             if !heap_safe {
                 panic!("Not Heap Safe");
             }
@@ -87,19 +120,7 @@ pub fn run(config: Config) {
         if config.active_passes.linear_mem {
             println!("Checking Call Safety");
             if has_indirect_calls(&irmap) {
-                let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
-                let call_analyzer = CallAnalyzer {
-                    metadata: metadata.clone(),
-                    reaching_defs: reaching_defs.clone(),
-                    reaching_analyzer: ReachingDefnAnalyzer {
-                        cfg: cfg.clone(),
-                        irmap: irmap.clone(),
-                    },
-                    funcs: valid_funcs.clone(),
-                };
-                let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
-                let call_safe =
-                    check_calls(call_result, &irmap, &call_analyzer, &valid_funcs, &plt);
+                let call_safe = run_calls(&cfg, &irmap, &metadata, &valid_funcs, plt);
                 if !call_safe {
                     panic!("Not Call Safe");
                 }
