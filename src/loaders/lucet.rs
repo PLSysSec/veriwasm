@@ -102,10 +102,8 @@ pub fn get_lucet_func_signatures(program: &ModuleData) -> VwFuncInfo {
         );
     }
     // Vec::new()
-    let f = VwFuncInfo {
+    VwFuncInfo {
         signatures: lucet_module_data.signatures().to_vec(),
         indexes,
-    };
-
-    unimplemented!();
+    }
 }
