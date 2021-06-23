@@ -3,6 +3,7 @@ use crate::utils::utils::deconstruct_elf;
 use crate::utils::utils::get_symbol_addr;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use lucet_module;
+use std::collections::HashMap;
 use std::io::{Cursor, Read};
 use std::mem;
 use std::path::Path;
@@ -16,7 +17,6 @@ use yaxpeax_core::memory::repr::FileRepr;
 use yaxpeax_core::memory::MemoryRange;
 use yaxpeax_core::memory::MemoryRepr;
 use yaxpeax_x86::long_mode::Arch as AMD64;
-// use lucet_analyze::*;
 
 pub fn load_lucet_program(binpath: &str) -> ModuleData {
     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
@@ -82,20 +82,30 @@ fn segment_for(program: &ModuleData, addr: usize) -> Option<&Segment> {
 
 // Finds and returns the data corresponding [addr..addr+size]
 pub fn read_module_buffer(program: &ModuleData, addr: usize, size: usize) -> Option<&[u8]> {
-    println!("Addr = {:x}", addr);
-    for s in &program.segments {
-        println!("{} {:x} {:x}", s.name, s.start, s.start + s.data.len());
-    }
     let segment = segment_for(program, addr)?;
     let read_start = addr - segment.start;
     let read_end = read_start + size;
     Some(&segment.data[read_start..read_end])
 }
 
-pub fn get_lucet_func_signatures(program: &ModuleData) -> FuncSignatures {
+pub fn get_lucet_func_signatures(program: &ModuleData) -> VwFuncInfo {
     let lucet_module_data = load_lucet_module_data(program);
-    println!("{:?}", lucet_module_data.signatures());
-    println!("{:?}", lucet_module_data.function_info());
+    for signature in lucet_module_data.signatures() {
+        println!("{:?}", signature);
+    }
+    let mut indexes = HashMap::new();
+    for func_info in lucet_module_data.function_info() {
+        println!("{:?}", func_info);
+        indexes.insert(
+            func_info.name.unwrap().to_string(),
+            func_info.signature.as_u32(),
+        );
+    }
     // Vec::new()
+    let f = VwFuncInfo {
+        signatures: lucet_module_data.signatures().to_vec(),
+        indexes,
+    };
+
     unimplemented!();
 }

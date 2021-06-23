@@ -2,7 +2,7 @@ pub mod lucet;
 pub mod utils;
 pub mod wasmtime;
 use crate::loaders::lucet::*;
-use crate::loaders::utils::{FuncSignatures, VW_Metadata};
+use crate::loaders::utils::{VW_Metadata, VwFuncInfo};
 use crate::loaders::wasmtime::*;
 use core::str::FromStr;
 use std::string::ParseError;
@@ -21,7 +21,7 @@ pub trait Loadable {
     fn load_program(&self, binpath: &str) -> ModuleData;
     fn load_metadata(&self, program: &ModuleData) -> VW_Metadata;
     fn is_valid_func_name(&self, name: &String) -> bool;
-    fn get_func_signatures(&self, program: &ModuleData) -> FuncSignatures;
+    fn get_func_signatures(&self, program: &ModuleData) -> VwFuncInfo;
 }
 
 impl Loadable for ExecutableType {
@@ -46,7 +46,7 @@ impl Loadable for ExecutableType {
         }
     }
 
-    fn get_func_signatures(&self, program: &ModuleData) -> FuncSignatures {
+    fn get_func_signatures(&self, program: &ModuleData) -> VwFuncInfo {
         match self {
             ExecutableType::Lucet => get_lucet_func_signatures(program),
             ExecutableType::Wasmtime => get_wasmtime_func_signatures(program),
