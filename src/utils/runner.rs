@@ -10,6 +10,7 @@ use checkers::call_checker::check_calls;
 use checkers::heap_checker::check_heap;
 use checkers::stack_checker::check_stack;
 use ir::utils::has_indirect_calls;
+use ir::VwArch;
 use loaders::ExecutableType;
 use utils::utils::{fully_resolved_cfg, get_data};
 
@@ -37,6 +38,7 @@ pub struct Config {
     pub only_func: Option<String>,
     pub executable_type: ExecutableType,
     pub active_passes: PassConfig,
+    pub architecture: VwArch,
 }
 
 fn run_stack(cfg: &VW_CFG, irmap: &IRMap) -> bool {

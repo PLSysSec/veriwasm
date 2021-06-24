@@ -1,8 +1,9 @@
 use clap::{App, Arg};
+use ir::VwArch;
 use loaders::ExecutableType;
 use std::str::FromStr;
 use utils::runner::*;
-use veriwasm::{loaders, utils};
+use veriwasm::{ir, loaders, utils};
 
 fn main() {
     let _ = env_logger::try_init();
@@ -44,6 +45,12 @@ fn main() {
                 .takes_value(true)
                 .help("Format of the executable (lucet | wasmtime)"),
         )
+        .arg(
+            Arg::with_name("architecture")
+                .long("arch")
+                .takes_value(true)
+                .help("Architecture of the executable (x64 | aarch64)"),
+        )
         .arg(Arg::with_name("quiet").short("q").long("quiet"))
         .arg(Arg::with_name("disable_stack_checks").long("disable_stack_checks"))
         .arg(Arg::with_name("disable_linear_mem_checks").long("disable_linear_mem_checks"))
@@ -63,6 +70,7 @@ fn main() {
     let only_func = matches.value_of("one function").map(|s| s.to_owned());
     let executable_type =
         ExecutableType::from_str(matches.value_of("executable type").unwrap_or("lucet")).unwrap();
+    let architecture = VwArch::from_str(matches.value_of("architecture").unwrap_or("x64")).unwrap();
 
     let has_output = if output_path == "" { false } else { true };
 
@@ -81,6 +89,7 @@ fn main() {
         only_func,
         executable_type,
         active_passes,
+        architecture,
     };
 
     run(config);
