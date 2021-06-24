@@ -1,4 +1,4 @@
-use crate::utils::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
+use crate::ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
 
 pub fn is_rsp(v: &Value) -> bool {
     match v {

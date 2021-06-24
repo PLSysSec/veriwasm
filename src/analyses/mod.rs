@@ -3,9 +3,9 @@ pub mod heap_analyzer;
 pub mod jump_analyzer;
 pub mod reaching_defs;
 pub mod stack_analyzer;
+use crate::ir::types::{Binopcode, IRBlock, IRMap, Stmt, Unopcode, Value};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarState};
-use crate::utils::lifter::{Binopcode, IRBlock, IRMap, Stmt, Unopcode, Value};
 use std::collections::{HashMap, VecDeque};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 

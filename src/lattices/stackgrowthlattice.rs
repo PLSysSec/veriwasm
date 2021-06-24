@@ -1,5 +1,5 @@
+use crate::ir::types::{Binopcode, Value};
 use crate::lattices::{ConstLattice, VarState};
-use crate::utils::lifter::{Binopcode, Value};
 
 /// Fields are: (stackgrowth, probestack, rbp_stackgrowth)
 ///

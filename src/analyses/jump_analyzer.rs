@@ -1,12 +1,12 @@
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
+use crate::ir::types::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value};
+use crate::ir::utils::get_rsp_offset;
 use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use crate::lattices::stacklattice::StackSlot;
 use crate::lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
 use crate::lattices::VarState;
 use crate::loaders::utils::VW_Metadata;
-use crate::utils::ir_utils::get_rsp_offset;
-use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value};
 use std::default::Default;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 

@@ -1,4 +1,4 @@
-use crate::{analyses, checkers, loaders, utils};
+use crate::{analyses, checkers, ir, loaders, utils};
 
 use crate::{IRMap, VW_Metadata, VW_CFG};
 use analyses::call_analyzer::CallAnalyzer;
@@ -9,8 +9,8 @@ use analyses::stack_analyzer::StackAnalyzer;
 use checkers::call_checker::check_calls;
 use checkers::heap_checker::check_heap;
 use checkers::stack_checker::check_stack;
+use ir::utils::has_indirect_calls;
 use loaders::ExecutableType;
-use utils::ir_utils::has_indirect_calls;
 use utils::utils::{fully_resolved_cfg, get_data};
 
 use loaders::Loadable;

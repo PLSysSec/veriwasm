@@ -2,22 +2,23 @@
 //! function's machine code and basic-block offsets.
 
 #![allow(dead_code, unused_imports, unused_variables)]
+pub mod analyses;
+pub mod checkers;
+pub mod ir;
+pub mod lattices;
+pub mod loaders;
+pub mod utils;
 
-use crate::analyses::heap_analyzer::HeapAnalyzer;
-use crate::analyses::run_worklist;
-use crate::checkers::heap_checker::check_heap;
-use crate::loaders::utils::VW_Metadata;
-use crate::utils::lifter::{lift_cfg, IRMap, MemArg, MemArgs};
+use analyses::heap_analyzer::HeapAnalyzer;
+use analyses::run_worklist;
+use checkers::heap_checker::check_heap;
+use ir::types::{IRMap, MemArg, MemArgs};
+use ir::x64::lift_cfg;
+use loaders::utils::VW_Metadata;
 use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;
 use yaxpeax_core::analyses::control_flow::{get_cfg, VW_Block, VW_CFG};
 use yaxpeax_core::memory::repr::process::{ModuleData, ModuleInfo, Segment};
-
-pub mod analyses;
-pub mod checkers;
-pub mod lattices;
-pub mod loaders;
-pub mod utils;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ValidationError {

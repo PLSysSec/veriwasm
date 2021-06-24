@@ -1,8 +1,8 @@
 use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
+use crate::ir::types::{Binopcode, IRMap, Stmt, Unopcode};
 use crate::lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
 use crate::lattices::VarState;
 use crate::loaders::utils::VW_Metadata;
-use crate::utils::lifter::{Binopcode, IRMap, Stmt, Unopcode};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 
 //Top level function
