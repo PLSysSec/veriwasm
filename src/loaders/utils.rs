@@ -14,7 +14,7 @@ pub struct VW_Metadata {
     pub lucet_probestack: u64,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct VwFuncInfo {
     // Index -> Type
     pub signatures: Vec<Signature>,

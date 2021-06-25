@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+
 use crate::analyses::AbstractAnalyzer;
+use crate::loaders::utils::VwFuncInfo;
 use crate::lattices::mem_to_stack_offset;
 use crate::ir::types::{Value, Binopcode, Stmt, IRMap, ValSize};
 use crate::lattices::reachingdefslattice::LocIdx;
@@ -7,11 +10,13 @@ use crate::lattices::{VariableState, VarState, Lattice, VarIndex};
 
 use SlotVal::*;
 
-pub struct LocalsAnalyzer {
-    pub fun_type: Vec<(VarIndex, ValSize)>
+pub struct LocalsAnalyzer<'a> {
+    pub fun_type: Vec<(VarIndex, ValSize)>,
+    pub symbol_table: &'a VwFuncInfo,
+    pub name_addr_map: &'a HashMap<u64, String>,
 }
 
-impl LocalsAnalyzer {
+impl<'a> LocalsAnalyzer<'a> {
     fn aeval_val(&self, state: &LocalsLattice, value: &Value) -> SlotVal {
         match value {
             Value::Mem(memsize, memargs) => {
@@ -38,7 +43,7 @@ impl LocalsAnalyzer {
     }
 }
 
-impl AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer {
+impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
     fn init_state(&self) -> LocalsLattice {
         let mut lattice: LocalsLattice = Default::default();
         for arg in self.fun_type.iter() {
@@ -66,7 +71,12 @@ impl AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer {
                 let dst_val = self.aeval_val(in_state, src1).meet(&self.aeval_val(in_state, src2), loc_idx);
                 in_state.set(dst, dst_val)
             }
-            Stmt::Call(_) => todo!(),
+            Stmt::Call(Value::Imm(_, _, dst)) => {
+                let target = (*dst + (loc_idx.addr as i64) + 5) as u64;
+                println!("{:?}: {:?}", loc_idx, dst);
+                println!("name: {:?}", self.name_addr_map.get(&target));
+                todo!();
+            },
             _ => todo!()
         }
     }

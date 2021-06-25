@@ -16,6 +16,8 @@ use ir::VwArch;
 use loaders::ExecutableType;
 use utils::utils::{fully_resolved_cfg, get_data};
 use std::convert::TryFrom;
+use std::collections::HashMap;
+use std::iter::FromIterator;
 
 use loaders::Loadable;
 use serde_json;
@@ -43,11 +45,15 @@ pub struct Config {
     pub architecture: VwArch,
 }
 
-fn run_locals(func_signatures: &VwFuncInfo, func_name: &String, cfg: &VW_CFG, irmap: &IRMap) -> bool {
+fn run_locals(func_addrs_map: &HashMap<u64, String>, func_signatures: &VwFuncInfo, func_name: &String, cfg: &VW_CFG, irmap: &IRMap) -> bool {
     if let Some(fun_type) = func_signatures.indexes.get(func_name)
         .and_then(|index| func_signatures.signatures.get(usize::try_from(*index).unwrap()))
         .map(to_system_v) {
-        let locals_analyzer = LocalsAnalyzer { fun_type };
+            let locals_analyzer = LocalsAnalyzer {
+                fun_type,
+                symbol_table: func_signatures,
+                name_addr_map: func_addrs_map,
+            };
         let locals_result = run_worklist(&cfg, &irmap, &locals_analyzer);
         // let stack_safe = check_stack(stack_result, &irmap, &locals_analyzer);
     }
@@ -102,6 +108,7 @@ pub fn run(config: Config) {
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     let func_signatures = config.executable_type.get_func_signatures(&program);
     // println!("{:?}", func_signatures);
+    let func_addrs_map = HashMap::from_iter(func_addrs.clone());
     for (addr, func_name) in func_addrs {
         if config.only_func.is_some() && func_name != config.only_func.as_ref().unwrap().as_str() {
             continue;
@@ -115,7 +122,7 @@ pub fn run(config: Config) {
 
         let locals_start = Instant::now();
         println!("Checking Locals Safety");
-        let locals_safe = run_locals(&func_signatures, &func_name, &cfg, &irmap);
+        let locals_safe = run_locals(&func_addrs_map, &func_signatures, &func_name, &cfg, &irmap);
         if !locals_safe {
             panic!("Not Locals Safe");
         }
