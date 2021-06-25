@@ -1,11 +1,13 @@
 use crate::{analyses, checkers, ir, loaders, utils};
 
 use crate::{IRMap, VW_Metadata, VW_CFG};
+use loaders::utils::{VwFuncInfo, to_system_v};
 use analyses::call_analyzer::CallAnalyzer;
 use analyses::heap_analyzer::HeapAnalyzer;
 use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
 use analyses::run_worklist;
 use analyses::stack_analyzer::StackAnalyzer;
+use analyses::locals_analyzer::LocalsAnalyzer;
 use checkers::call_checker::check_calls;
 use checkers::heap_checker::check_heap;
 use checkers::stack_checker::check_stack;
@@ -13,6 +15,7 @@ use ir::utils::has_indirect_calls;
 use ir::VwArch;
 use loaders::ExecutableType;
 use utils::utils::{fully_resolved_cfg, get_data};
+use std::convert::TryFrom;
 
 use loaders::Loadable;
 use serde_json;
@@ -38,6 +41,17 @@ pub struct Config {
     pub executable_type: ExecutableType,
     pub active_passes: PassConfig,
     pub architecture: VwArch,
+}
+
+fn run_locals(func_signatures: &VwFuncInfo, func_name: &String, cfg: &VW_CFG, irmap: &IRMap) -> bool {
+    if let Some(fun_type) = func_signatures.indexes.get(func_name)
+        .and_then(|index| func_signatures.signatures.get(usize::try_from(*index).unwrap()))
+        .map(to_system_v) {
+        let locals_analyzer = LocalsAnalyzer { fun_type };
+        let locals_result = run_worklist(&cfg, &irmap, &locals_analyzer);
+        // let stack_safe = check_stack(stack_result, &irmap, &locals_analyzer);
+    }
+    false
 }
 
 fn run_stack(cfg: &VW_CFG, irmap: &IRMap) -> bool {
@@ -86,7 +100,7 @@ pub fn run(config: Config) {
     let mut func_counter = 0;
     let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64)> = vec![];
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
-    // let func_signatures = config.executable_type.get_func_signatures(&program);
+    let func_signatures = config.executable_type.get_func_signatures(&program);
     // println!("{:?}", func_signatures);
     for (addr, func_name) in func_addrs {
         if config.only_func.is_some() && func_name != config.only_func.as_ref().unwrap().as_str() {
@@ -98,6 +112,13 @@ pub fn run(config: Config) {
         func_counter += 1;
         println!("Analyzing: {:?}", func_name);
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
+
+        let locals_start = Instant::now();
+        println!("Checking Locals Safety");
+        let locals_safe = run_locals(&func_signatures, &func_name, &cfg, &irmap);
+        if !locals_safe {
+            panic!("Not Locals Safe");
+        }
 
         let stack_start = Instant::now();
         if config.active_passes.stack {
@@ -131,7 +152,7 @@ pub fn run(config: Config) {
         info.push((
             func_name.to_string(),
             cfg.blocks.len(),
-            (stack_start - start).as_secs_f64(),
+            (stack_start - locals_start).as_secs_f64(),
             (heap_start - stack_start).as_secs_f64(),
             (call_start - heap_start).as_secs_f64(),
             (end - call_start).as_secs_f64(),
@@ -140,7 +161,7 @@ pub fn run(config: Config) {
             "Verified {:?} at {:?} blocks. CFG: {:?}s Stack: {:?}s Heap: {:?}s Calls: {:?}s",
             func_name,
             cfg.blocks.len(),
-            (stack_start - start).as_secs_f64(),
+            (stack_start - locals_start).as_secs_f64(),
             (heap_start - stack_start).as_secs_f64(),
             (call_start - heap_start).as_secs_f64(),
             (end - call_start).as_secs_f64()

@@ -8,7 +8,7 @@ use crate::lattices::{VariableState, VarState, Lattice, VarIndex};
 use SlotVal::*;
 
 pub struct LocalsAnalyzer {
-    fun_type: Vec<(VarIndex, ValSize)>
+    pub fun_type: Vec<(VarIndex, ValSize)>
 }
 
 impl LocalsAnalyzer {
