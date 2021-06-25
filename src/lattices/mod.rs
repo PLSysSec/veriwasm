@@ -20,7 +20,7 @@ pub trait Lattice: PartialOrd + Eq + Default + Debug {
 
 pub trait VarState {
     type Var;
-    fn get(&mut self, index: &Value) -> Option<Self::Var>;
+    fn get(&self, index: &Value) -> Option<Self::Var>;
     fn set(&mut self, index: &Value, v: Self::Var) -> ();
     fn set_to_bot(&mut self, index: &Value) -> ();
     fn on_call(&mut self) -> ();
@@ -116,6 +116,31 @@ pub struct VariableState<T: Lattice + Clone> {
     pub stack: StackLattice<T>,
 }
 
+// offset from current stack pointer
+// returns None if points to heap
+fn mem_to_stack_offset(memargs: &MemArgs) -> Option<i64> {
+    match memargs {
+        MemArgs::Mem1Arg(arg) => {
+            if let MemArg::Reg(regnum, _) = arg {
+                if *regnum == 4 {
+                    return Some(0);
+                }
+            }
+        }
+        MemArgs::Mem2Args(arg1, arg2) => {
+            if let MemArg::Reg(regnum, _) = arg1 {
+                if *regnum == 4 {
+                    if let MemArg::Imm(_, _, offset) = arg2 {
+                        return Some(*offset);
+                    }
+                }
+            }
+        }
+        _ => (),
+    }
+    return None;
+}
+
 impl<T: Lattice + Clone> Lattice for VariableState<T> {
     fn meet(&self, other: &Self, loc_idx: &LocIdx) -> Self {
         VariableState {
@@ -129,24 +154,10 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
     type Var = T;
     fn set(&mut self, index: &Value, value: T) -> () {
         match index {
-            Value::Mem(memsize, memargs) => match memargs {
-                MemArgs::Mem1Arg(arg) => {
-                    if let MemArg::Reg(regnum, _) = arg {
-                        if *regnum == 4 {
-                            self.stack.update(0, value, memsize.to_u32() / 8)
-                        }
-                    }
+            Value::Mem(memsize, memargs) => {
+                if let Some(offset) = mem_to_stack_offset(memargs) {
+                    self.stack.update(offset, value, memsize.to_u32() / 8)
                 }
-                MemArgs::Mem2Args(arg1, arg2) => {
-                    if let MemArg::Reg(regnum, _) = arg1 {
-                        if *regnum == 4 {
-                            if let MemArg::Imm(_, _, offset) = arg2 {
-                                self.stack.update(*offset, value, memsize.to_u32() / 8)
-                            }
-                        }
-                    }
-                }
-                _ => (),
             },
             Value::Reg(regnum, s2) => {
                 if let ValSize::SizeOther = s2 {
@@ -159,28 +170,10 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
         }
     }
 
-    fn get(&mut self, index: &Value) -> Option<T> {
+    fn get(&self, index: &Value) -> Option<T> {
         match index {
-            Value::Mem(memsize, memargs) => match memargs {
-                MemArgs::Mem1Arg(arg) => {
-                    if let MemArg::Reg(regnum, _) = arg {
-                        if *regnum == 4 {
-                            return Some(self.stack.get(0, memsize.to_u32() / 8));
-                        }
-                    }
-                    None
-                }
-                MemArgs::Mem2Args(arg1, arg2) => {
-                    if let MemArg::Reg(regnum, _) = arg1 {
-                        if *regnum == 4 {
-                            if let MemArg::Imm(_, _, offset) = arg2 {
-                                return Some(self.stack.get(*offset, memsize.to_u32() / 8));
-                            }
-                        }
-                    }
-                    None
-                }
-                _ => None,
+            Value::Mem(memsize, memargs) => {
+                mem_to_stack_offset(memargs).map(|offset| self.stack.get(offset, memsize.to_u32() / 8))
             },
             Value::Reg(regnum, s2) => Some(self.regs.get(regnum, s2)),
             Value::Imm(_, _, _) => None,

@@ -12,7 +12,7 @@ pub type StackGrowthLattice = ConstLattice<(i64, i64, i64)>;
 
 impl VarState for StackGrowthLattice {
     type Var = i64;
-    fn get(&mut self, _index: &Value) -> Option<Self::Var> {
+    fn get(&self, _index: &Value) -> Option<Self::Var> {
         unimplemented!()
     }
     fn set(&mut self, _index: &Value, _v: Self::Var) -> () {
