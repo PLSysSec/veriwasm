@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::convert::TryFrom;
 
 #[derive(Debug, Clone)]
 pub enum ImmType {
@@ -16,10 +15,8 @@ pub enum ValSize {
     SizeOther,
 }
 
-impl TryFrom<u32> for ValSize {
-    type Error = std::string::String;
-
-    fn try_from(value: u32) -> Result<Self, Self::Error> {
+impl ValSize {
+    pub fn try_from_bits(value: u32) -> Result<Self, String> {
         match value {
             8 => Ok(ValSize::Size8),
             16 => Ok(ValSize::Size16),
@@ -28,16 +25,34 @@ impl TryFrom<u32> for ValSize {
             _ => Err(format!("Unknown size: {:?}", value)),
         }
     }
-}
 
-impl From<ValSize> for u32 {
-    fn from(value: ValSize) -> Self {
-        match value {
+    pub fn into_bits(self) -> u32 {
+        match self {
             ValSize::Size8 => 8,
             ValSize::Size16 => 16,
             ValSize::Size32 => 32,
             ValSize::Size64 => 64,
             ValSize::SizeOther => 64, // TODO?: panic!("unknown size? {:?}")
+        }
+    }
+
+    pub fn try_from_bytes(value: u32) -> Result<Self, String> {
+        match value {
+            1 => Ok(ValSize::Size8),
+            2 => Ok(ValSize::Size16),
+            4 => Ok(ValSize::Size32),
+            8 => Ok(ValSize::Size64),
+            _ => Err(format!("Unknown size: {:?}", value)),
+        }
+    }
+
+    pub fn into_bytes(self) -> u32 {
+        match self {
+            ValSize::Size8 => 1,
+            ValSize::Size16 => 2,
+            ValSize::Size32 => 4,
+            ValSize::Size64 => 8,
+            ValSize::SizeOther => 8, // TODO?: panic!("unknown size? {:?}")
         }
     }
 }

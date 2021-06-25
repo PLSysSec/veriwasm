@@ -16,7 +16,7 @@ impl LocalsAnalyzer {
         match value {
             Value::Mem(memsize, memargs) => {
                 if let Some(offset) = mem_to_stack_offset(memargs) {
-                    state.stack.get(offset, u32::from(*memsize))
+                    state.stack.get(offset, memsize.into_bytes())
                 } else {
                     Init
                 }
@@ -44,7 +44,7 @@ impl AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer {
         for arg in self.fun_type.iter() {
             match arg {
                 (VarIndex::Stack(offset), size) => {
-                    lattice.stack.update(i64::from(*offset), Init, u32::from(*size))
+                    lattice.stack.update(i64::from(*offset), Init, size.into_bytes())
                 },
                 (VarIndex::Reg(reg_num), size) => {
                     lattice.regs.set_reg(*reg_num, *size, Init)

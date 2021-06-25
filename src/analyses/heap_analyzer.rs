@@ -109,7 +109,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
 pub fn is_globalbase_access(in_state: &HeapLattice, memargs: &MemArgs) -> bool {
     if let MemArgs::Mem2Args(arg1, _arg2) = memargs {
         if let MemArg::Reg(regnum, size) = arg1 {
-            assert_eq!(u32::from(*size), 64);
+            assert_eq!(size.into_bits(), 64);
             let base = in_state.regs.get_reg_index(*regnum, *size);
             if let Some(v) = base.v {
                 if let HeapValue::HeapBase = v {
@@ -130,7 +130,7 @@ impl HeapAnalyzer {
                 }
                 if is_stack_access(value) {
                     let offset = extract_stack_offset(memargs);
-                    let v = in_state.stack.get(offset, u32::from(*memsize) / 8);
+                    let v = in_state.stack.get(offset, memsize.into_bytes());
                     return v;
                 }
             }
@@ -139,7 +139,7 @@ impl HeapAnalyzer {
                 if let ValSize::SizeOther = size {
                     return Default::default();
                 };
-                if u32::from(*size) <= 32 {
+                if size.into_bits() <= 32 {
                     return HeapValueLattice::new(HeapValue::Bounded4GB);
                 } else {
                     return in_state.regs.get_reg_index(*regnum, ValSize::Size64);

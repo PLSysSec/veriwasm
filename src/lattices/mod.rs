@@ -328,7 +328,7 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
         match index {
             Value::Mem(memsize, memargs) => {
                 if let Some(offset) = mem_to_stack_offset(memargs) {
-                    self.stack.update(offset, value, u32::from(*memsize) / 8)
+                    self.stack.update(offset, value, memsize.into_bytes())
                 }
             },
             Value::Reg(regnum, s2) => {
@@ -345,7 +345,7 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
     fn get(&self, index: &Value) -> Option<T> {
         match index {
             Value::Mem(memsize, memargs) => {
-                mem_to_stack_offset(memargs).map(|offset| self.stack.get(offset, u32::from(*memsize) / 8))
+                mem_to_stack_offset(memargs).map(|offset| self.stack.get(offset, memsize.into_bytes()))
             },
             Value::Reg(regnum, s2) => Some(self.regs.get_reg_index(*regnum, *s2)),
             Value::Imm(_, _, _) => None,

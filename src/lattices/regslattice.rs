@@ -65,7 +65,7 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
         if let ValSize::SizeOther = size {
             return; // TODO: what is happening here
         }
-        self.map.insert(index, VarSlot { size: u32::from(size), value });
+        self.map.insert(index, VarSlot { size: size.into_bits(), value });
     }
 
     pub fn set_reg_index(&mut self, index: &u8, size: &ValSize, value: T) -> () {

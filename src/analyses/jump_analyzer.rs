@@ -144,7 +144,7 @@ impl SwitchAnalyzer {
         memsize: &ValSize,
     ) -> SwitchValueLattice {
         if let Some(offset) = get_rsp_offset(memargs) {
-            return in_state.stack.get(offset, u32::from(*memsize) / 8);
+            return in_state.stack.get(offset, memsize.into_bytes());
         }
         if let MemArgs::MemScale(
             MemArg::Reg(regnum1, size1),

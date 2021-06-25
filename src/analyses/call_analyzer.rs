@@ -268,7 +268,7 @@ impl CallAnalyzer {
                     };
                 } else if is_stack_access(value) {
                     let offset = extract_stack_offset(memargs);
-                    return in_state.stack.get(offset, u32::from(*memsize) / 8);
+                    return in_state.stack.get(offset, memsize.into_bytes());
                 }
             }
 
