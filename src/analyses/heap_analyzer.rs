@@ -4,6 +4,7 @@ use crate::ir::utils::{extract_stack_offset, is_stack_access};
 use crate::lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{ConstLattice, VarState};
+use crate::lattices::X86Regs::*;
 use crate::loaders::utils::VW_Metadata;
 use std::default::Default;
 
@@ -14,7 +15,7 @@ pub struct HeapAnalyzer {
 impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     fn init_state(&self) -> HeapLattice {
         let mut result: HeapLattice = Default::default();
-        result.regs.rdi = HeapValueLattice::new(HeapValue::HeapBase);
+        result.regs.set_reg(Rdi, ValSize::Size64, HeapValueLattice::new(HeapValue::HeapBase));
         result
     }
 
@@ -29,7 +30,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         // Any write to a 32-bit register will clear the upper 32 bits of the containing 64-bit
         // register.
         if let &Value::Reg(rd, ValSize::Size32) = dst {
-            in_state.regs.set(
+            in_state.regs.set_reg_index(
                 &rd,
                 &ValSize::Size64,
                 ConstLattice {
@@ -67,12 +68,12 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
                     &Value::Reg(rs2, ValSize::Size64),
                 ) = (dst, src1, src2)
                 {
-                    let rs1_val = in_state.regs.get(&rs1, &ValSize::Size64).v;
-                    let rs2_val = in_state.regs.get(&rs2, &ValSize::Size64).v;
+                    let rs1_val = in_state.regs.get_reg_index(rs1, ValSize::Size64).v;
+                    let rs2_val = in_state.regs.get_reg_index(rs2, ValSize::Size64).v;
                     match (rs1_val, rs2_val) {
                         (Some(HeapValue::HeapBase), Some(HeapValue::Bounded4GB))
                         | (Some(HeapValue::Bounded4GB), Some(HeapValue::HeapBase)) => {
-                            in_state.regs.set(
+                            in_state.regs.set_reg_index(
                                 &rd,
                                 &ValSize::Size64,
                                 ConstLattice {
@@ -91,7 +92,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         // Any write to a 32-bit register will clear the upper 32 bits of the containing 64-bit
         // register.
         if let &Value::Reg(rd, ValSize::Size32) = dst {
-            in_state.regs.set(
+            in_state.regs.set_reg_index(
                 &rd,
                 &ValSize::Size64,
                 ConstLattice {
@@ -108,8 +109,8 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
 pub fn is_globalbase_access(in_state: &HeapLattice, memargs: &MemArgs) -> bool {
     if let MemArgs::Mem2Args(arg1, _arg2) = memargs {
         if let MemArg::Reg(regnum, size) = arg1 {
-            assert_eq!(size.to_u32(), 64);
-            let base = in_state.regs.get(regnum, size);
+            assert_eq!(u32::from(*size), 64);
+            let base = in_state.regs.get_reg_index(*regnum, *size);
             if let Some(v) = base.v {
                 if let HeapValue::HeapBase = v {
                     return true;
@@ -129,7 +130,7 @@ impl HeapAnalyzer {
                 }
                 if is_stack_access(value) {
                     let offset = extract_stack_offset(memargs);
-                    let v = in_state.stack.get(offset, memsize.to_u32() / 8);
+                    let v = in_state.stack.get(offset, u32::from(*memsize) / 8);
                     return v;
                 }
             }
@@ -138,10 +139,10 @@ impl HeapAnalyzer {
                 if let ValSize::SizeOther = size {
                     return Default::default();
                 };
-                if size.to_u32() <= 32 {
+                if u32::from(*size) <= 32 {
                     return HeapValueLattice::new(HeapValue::Bounded4GB);
                 } else {
-                    return in_state.regs.get(regnum, &ValSize::Size64);
+                    return in_state.regs.get_reg_index(*regnum, ValSize::Size64);
                 }
             }
 

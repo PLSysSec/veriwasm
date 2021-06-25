@@ -1,11 +1,13 @@
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 #[derive(Debug, Clone)]
 pub enum ImmType {
     Signed,
     Unsigned,
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub enum ValSize {
     Size8,
     Size16,
@@ -14,14 +16,28 @@ pub enum ValSize {
     SizeOther,
 }
 
-impl ValSize {
-    pub fn to_u32(&self) -> u32 {
-        match self {
+impl TryFrom<u32> for ValSize {
+    type Error = std::string::String;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            8 => Ok(ValSize::Size8),
+            16 => Ok(ValSize::Size16),
+            32 => Ok(ValSize::Size32),
+            64 => Ok(ValSize::Size64),
+            _ => Err(format!("Unknown size: {:?}", value)),
+        }
+    }
+}
+
+impl From<ValSize> for u32 {
+    fn from(value: ValSize) -> Self {
+        match value {
             ValSize::Size8 => 8,
             ValSize::Size16 => 16,
             ValSize::Size32 => 32,
             ValSize::Size64 => 64,
-            ValSize::SizeOther => 64, //panic!("unknown size? {:?}")
+            ValSize::SizeOther => 64, // TODO?: panic!("unknown size? {:?}")
         }
     }
 }
@@ -35,13 +51,13 @@ pub enum MemArgs {
 }
 #[derive(Debug, Clone)]
 pub enum MemArg {
-    Reg(u8, ValSize), // register mappings captured in `crate::lattices::regslattice`
+    Reg(u8, ValSize), // register mappings captured in `crate::lattices`
     Imm(ImmType, ValSize, i64), // signed, size, const
 }
 #[derive(Debug, Clone)]
 pub enum Value {
     Mem(ValSize, MemArgs),      // mem[memargs]
-    Reg(u8, ValSize),           // register mappings captured in `crate::lattices::regslattice`
+    Reg(u8, ValSize),           // register mappings captured in `crate::lattices`
     Imm(ImmType, ValSize, i64), // signed, size, const
     RIPConst,
 }
