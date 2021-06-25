@@ -1,4 +1,3 @@
-use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use crate::lattices::{ConstLattice, VariableState};
 

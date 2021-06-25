@@ -18,7 +18,6 @@ use loaders::Loadable;
 use serde_json;
 use std::fs;
 use std::panic;
-use std::str::FromStr;
 use std::time::Instant;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
 

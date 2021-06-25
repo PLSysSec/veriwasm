@@ -12,12 +12,12 @@ pub mod utils;
 use analyses::heap_analyzer::HeapAnalyzer;
 use analyses::run_worklist;
 use checkers::heap_checker::check_heap;
-use ir::types::{IRMap, MemArg, MemArgs};
+use ir::types::IRMap;
 use ir::x64::lift_cfg;
 use loaders::utils::VW_Metadata;
 use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;
-use yaxpeax_core::analyses::control_flow::{get_cfg, VW_Block, VW_CFG};
+use yaxpeax_core::analyses::control_flow::{VW_Block, VW_CFG};
 use yaxpeax_core::memory::repr::process::{ModuleData, ModuleInfo, Segment};
 
 #[derive(Clone, Copy, Debug)]

@@ -5,7 +5,6 @@ use crate::loaders::lucet::*;
 use crate::loaders::utils::{VW_Metadata, VwFuncInfo};
 use crate::loaders::wasmtime::*;
 use core::str::FromStr;
-use std::string::ParseError;
 use yaxpeax_core::memory::repr::process::ModuleData;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

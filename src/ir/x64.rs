@@ -1,6 +1,5 @@
 use crate::ir::types::*;
 use crate::loaders::utils::VW_Metadata;
-use std::collections::HashMap;
 use yaxpeax_arch::{AddressBase, Arch, LengthedInstruction};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_core::arch::x86_64::analyses::data_flow::Location;

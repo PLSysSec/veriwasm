@@ -1,15 +1,14 @@
-use crate::{analyses, checkers, ir, loaders, utils};
+use crate::{analyses, checkers, ir, loaders};
 use analyses::jump_analyzer::analyze_jumps;
 use analyses::jump_analyzer::SwitchAnalyzer;
 use analyses::reaching_defs::analyze_reaching_defs;
 use analyses::reaching_defs::ReachingDefnAnalyzer;
 use checkers::jump_resolver::resolve_jumps;
-use ir::types::{IRMap, MemArg, MemArgs};
+use ir::types::IRMap;
 use ir::utils::has_indirect_jumps;
 use ir::x64::lift_cfg;
 use loaders::utils::VW_Metadata;
 use loaders::{ExecutableType, Loadable};
-use std::path::Path;
 use yaxpeax_arch::Arch;
 use yaxpeax_core::analyses::control_flow::{get_cfg, VW_CFG};
 use yaxpeax_core::arch::x86_64::{x86_64Data, MergedContextTable};
@@ -18,7 +17,6 @@ use yaxpeax_core::goblin::elf::program_header::ProgramHeader;
 use yaxpeax_core::memory::repr::process::{
     ELFExport, ELFImport, ELFSection, ELFSymbol, ModuleData, ModuleInfo,
 };
-use yaxpeax_core::memory::repr::FileRepr;
 use yaxpeax_core::memory::MemoryRepr;
 use yaxpeax_core::ContextWrite;
 use yaxpeax_x86::long_mode::Arch as AMD64;

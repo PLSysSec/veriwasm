@@ -1,20 +1,11 @@
-use std::path::Path;
-use yaxpeax_core::memory::reader;
-use yaxpeax_core::memory::repr::process::{
-    ELFExport, ELFImport, ELFSymbol, ModuleData, ModuleInfo,
-};
-use yaxpeax_core::memory::repr::FileRepr;
-
-use crate::loaders::utils::*;
-use crate::utils::utils::deconstruct_elf;
-use std::env;
+use crate::{loaders, utils};
+use loaders::utils::*;
 use std::fs;
+use utils::utils::deconstruct_elf;
 use wasmtime::*;
-use yaxpeax_arch::Arch;
 use yaxpeax_core::goblin::Object;
+use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_core::memory::repr::process::Segment;
-use yaxpeax_core::memory::MemoryRepr;
-use yaxpeax_x86::long_mode::Arch as AMD64;
 
 //yaxpeax doesnt load .o files correctly, so this code
 // manually adds memory regions corresponding to ELF sections

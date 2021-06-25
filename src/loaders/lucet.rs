@@ -1,22 +1,14 @@
-use crate::loaders::utils::*;
-use crate::utils::utils::deconstruct_elf;
-use crate::utils::utils::get_symbol_addr;
-use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
+use crate::{loaders, utils};
+use byteorder::{LittleEndian, ReadBytesExt};
+use loaders::utils::*;
 use lucet_module;
 use std::collections::HashMap;
-use std::io::{Cursor, Read};
+use std::io::Cursor;
 use std::mem;
 use std::path::Path;
-use yaxpeax_arch::Address;
-use yaxpeax_arch::Arch;
-use yaxpeax_core::memory::reader;
-use yaxpeax_core::memory::repr::process::{
-    ELFExport, ELFImport, ELFSymbol, ModuleData, ModuleInfo, Segment,
-};
+use utils::utils::{deconstruct_elf, get_symbol_addr};
+use yaxpeax_core::memory::repr::process::{ModuleData, Segment};
 use yaxpeax_core::memory::repr::FileRepr;
-use yaxpeax_core::memory::MemoryRange;
-use yaxpeax_core::memory::MemoryRepr;
-use yaxpeax_x86::long_mode::Arch as AMD64;
 
 pub fn load_lucet_program(binpath: &str) -> ModuleData {
     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
