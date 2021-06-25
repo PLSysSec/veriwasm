@@ -3,6 +3,11 @@ name = "veriwasm"
 version = "0.1.0"
 authors = ["enjhnsn2 <e5johnso@eng.ucsd.edu>"]
 edition = "2018"
+license-file = "LICENSE"
+readme = "README.md"
+repository = "https://github.com/PLSysSec/veriwasm"
+description = "A safety verifier for native-compiled WebAssembly code"
+keywords = ["verification", "WebAssembly", "security", "static-analysis", "binary-analysis"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
