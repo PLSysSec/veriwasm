@@ -131,7 +131,7 @@ fn func_body_and_bbs_to_cfg(
         lucet_probestack: 0x123456789abcdef0,
     };
 
-    let irmap = lift_cfg(&data, &cfg, &lucet);
+    let irmap = lift_cfg(&data, &cfg, &lucet, false);
 
     (cfg, irmap, lucet)
 

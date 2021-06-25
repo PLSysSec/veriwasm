@@ -103,7 +103,7 @@ fn try_resolve_jumps(
 
     let (new_cfg, still_unresolved) =
         get_cfg(program, contexts, cfg.entrypoint, Some(&switch_targets));
-    let irmap = lift_cfg(&program, &new_cfg, &metadata);
+    let irmap = lift_cfg(&program, &new_cfg, &metadata, true);
     let num_targets = switch_targets.len();
     return (new_cfg, irmap, num_targets as i32, still_unresolved);
 }
@@ -141,7 +141,7 @@ pub fn fully_resolved_cfg(
     addr: u64,
 ) -> (VW_CFG, IRMap) {
     let (cfg, _) = get_cfg(program, contexts, addr, None);
-    let irmap = lift_cfg(&program, &cfg, &metadata);
+    let irmap = lift_cfg(&program, &cfg, &metadata, true);
     if !has_indirect_jumps(&irmap) {
         return (cfg, irmap);
     }

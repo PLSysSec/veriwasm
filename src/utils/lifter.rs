@@ -394,6 +394,7 @@ pub fn lift(
     instr: &yaxpeax_x86::long_mode::Instruction,
     addr: &u64,
     metadata: &LucetMetadata,
+    strict: bool,
 ) -> Vec<Stmt> {
     log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
     let mut instrs = Vec::new();
@@ -725,7 +726,11 @@ pub fn lift(
         | Opcode::ANDPD
         | Opcode::ORPD => instrs.extend(clear_dst(instr)),
 
-        _ => unimplemented!(),/*instrs.extend(generic_clear(instr)),*/
+        _ => if strict{
+                unimplemented!()
+            } else {
+                instrs.extend(generic_clear(instr))
+            },
     };
     instrs
 }
@@ -783,7 +788,12 @@ fn check_probestack_suffix(instr: &yaxpeax_x86::long_mode::Instruction) -> bool 
     panic!("Broken Probestack?")
 }
 
-pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &LucetMetadata) -> IRMap {
+pub fn lift_cfg(
+    program: &ModuleData,
+    cfg: &VW_CFG,
+    metadata: &LucetMetadata,
+    strict: bool,
+) -> IRMap {
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
     for block_addr in g.nodes() {
@@ -816,7 +826,7 @@ pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &LucetMetadata) ->
                     None => panic!("probestack broken"),
                 }
             }
-            let ir = (addr, lift(instr, &addr, metadata));
+            let ir = (addr, lift(instr, &addr, metadata, strict));
             block_ir.push(ir);
             x = extract_probestack_arg(instr);
             if instr.opcode() == Opcode::JMP {
