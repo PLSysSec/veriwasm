@@ -1,6 +1,6 @@
 [package]
 name = "veriwasm"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["enjhnsn2 <e5johnso@eng.ucsd.edu>"]
 edition = "2018"
 license-file = "LICENSE"
@@ -12,7 +12,7 @@ keywords = ["verification", "WebAssembly", "security", "static-analysis", "binar
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-yaxpeax-core = { version = "0.0.1-vw-tweaks" }
+yaxpeax-core = { version = "0.0.2-vw-tweaks" }
 yaxpeax-arch = { version = "0.0.4", features = ["use-serde"] }
 yaxpeax-x86 = "0.2.0"
 "petgraph" = "0.4.13"
