@@ -250,6 +250,32 @@ pub fn is_fn_ptr(in_state: &CallCheckLattice, memargs: &MemArgs) -> bool {
     false
 }
 
+// returns none if not a typeof op
+// returns Some(regnum) if result is type of regnum
+pub fn is_typeof(in_state: &CallCheckLattice, memargs: &MemArgs) -> Option<u8> {
+    if let MemArgs::Mem2Args(
+        MemArg::Reg(regnum1, size1),
+        MemArg::Reg(regnum2, size2),
+    ) = memargs
+    {
+        match (
+            in_state.regs.get_reg_index(*regnum1, *size1).v,
+            in_state.regs.get_reg_index(*regnum2, *size2).v,
+        ) {
+            (
+                Some(CallCheckValue::GuestTableBase),
+                Some(CallCheckValue::PtrOffset(DAV::Checked)),
+            ) => return Some(*regnum2),
+            (
+                Some(CallCheckValue::PtrOffset(DAV::Checked)),
+                Some(CallCheckValue::GuestTableBase),
+            ) => return Some(*regnum1),
+            _ => return None,
+        }
+    }
+    None
+}
+
 impl CallAnalyzer {
     fn is_func_start(&self, addr: u64) -> bool {
         self.funcs.contains(&addr)
@@ -265,6 +291,11 @@ impl CallAnalyzer {
                 } else if is_fn_ptr(in_state, memargs) {
                     return CallCheckValueLattice {
                         v: Some(CallCheckValue::FnPtr),
+                    };
+                } else if is_typeof(in_state, memargs).is_some() {
+                    let reg = is_typeof(in_state, memargs).unwrap();
+                    return CallCheckValueLattice {
+                        v: Some(CallCheckValue::TypeOf(reg)),
                     };
                 } else if is_stack_access(value) {
                     let offset = extract_stack_offset(memargs);

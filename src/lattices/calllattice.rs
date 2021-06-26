@@ -8,10 +8,13 @@ pub enum CallCheckValue {
     GuestTableBase,
     LucetTablesBase,
     TableSize,
+    TypeOf(u8),//regnum
     PtrOffset(DAV),
-    FnPtr,
+    //TypedPtrOffset(u32),
+    FnPtr,//type
     CheckedVal,
     CheckFlag(u32, u8),
+    //TypeCheckFlag(u32, u8, u32),//addr, regnum, typeidx
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
