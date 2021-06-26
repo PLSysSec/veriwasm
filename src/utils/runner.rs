@@ -102,6 +102,7 @@ pub fn run(config: Config) {
     let program = config.executable_type.load_program(&config.module_path);
     let metadata = config.executable_type.load_metadata(&program);
     let (x86_64_data, func_addrs, plt, all_addrs) = get_data(&program, &config.executable_type);
+    println!("plt: {:?}", plt);
 
     let mut func_counter = 0;
     let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64)> = vec![];

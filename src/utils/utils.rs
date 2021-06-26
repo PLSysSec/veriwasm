@@ -190,7 +190,7 @@ pub fn get_data(
 
     let mut addrs: Vec<(u64, std::string::String)> = Vec::new();
     let mut all_addrs: Vec<(u64, std::string::String)> = Vec::new();
-
+    
     while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
         if let Some(symbol) = x86_64_data.symbol_for(addr) {
             all_addrs.push((addr, symbol.1.clone()));

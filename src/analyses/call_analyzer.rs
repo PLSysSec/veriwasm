@@ -199,7 +199,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     }
                 }
             }
-            //HandleTypeCheck
+            //Handle TypeCheck
             if let Some(CallCheckValue::TypeCheckFlag(regnum, c)) = not_branch_state.regs.get_reg(Zf, ValSize::Size64).v {
                 log::debug!("branch at 0x{:x}: TypeCheckFlag for reg {}", addr, regnum);
                 let new_val = CallCheckValueLattice {
@@ -209,12 +209,6 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     .regs
                     .set_reg_index(&regnum, &ValSize::Size64, new_val.clone());
             }
-
-
-
-
-
-
 
             branch_state.regs.set_reg(Zf, ValSize::Size64, Default::default());
             not_branch_state.regs.set_reg(Zf, ValSize::Size64, Default::default());
@@ -260,7 +254,7 @@ pub fn is_table_size(in_state: &CallCheckLattice, memargs: &MemArgs) -> bool {
     false
 }
 
-pub fn is_fn_ptr(in_state: &CallCheckLattice, memargs: &MemArgs) -> bool {
+pub fn is_fn_ptr(in_state: &CallCheckLattice, memargs: &MemArgs) -> Option<u32> {
     if let MemArgs::Mem3Args(
         MemArg::Reg(regnum1, size1),
         MemArg::Reg(regnum2, size2),
@@ -274,18 +268,19 @@ pub fn is_fn_ptr(in_state: &CallCheckLattice, memargs: &MemArgs) -> bool {
         ) {
             (
                 Some(CallCheckValue::GuestTableBase),
-                Some(CallCheckValue::PtrOffset(DAV::Checked)),
+                Some(CallCheckValue::TypedPtrOffset(c)),
+                // Some(CallCheckValue::PtrOffset(DAV::Checked)),
                 8,
-            ) => return true,
+            ) => return Some(c),
             (
-                Some(CallCheckValue::PtrOffset(DAV::Checked)),
+                Some(CallCheckValue::TypedPtrOffset(c)),
                 Some(CallCheckValue::GuestTableBase),
                 8,
-            ) => return true,
-            _ => return false,
+            ) => return Some(c),
+            _ => return None,
         }
     }
-    false
+    None
 }
 
 // returns none if not a typeof op
@@ -326,9 +321,10 @@ impl CallAnalyzer {
                     return CallCheckValueLattice {
                         v: Some(CallCheckValue::TableSize),
                     };
-                } else if is_fn_ptr(in_state, memargs) {
+                } else if is_fn_ptr(in_state, memargs).is_some() {
+                    let ty = is_fn_ptr(in_state, memargs).unwrap();
                     return CallCheckValueLattice {
-                        v: Some(CallCheckValue::FnPtr),
+                        v: Some(CallCheckValue::FnPtr(ty)),
                     };
                 } else if is_typeof(in_state, memargs).is_some() {
                     let reg = is_typeof(in_state, memargs).unwrap();
@@ -354,7 +350,7 @@ impl CallAnalyzer {
                     };
                 } else if self.is_func_start(*immval as u64) {
                     return CallCheckValueLattice {
-                        v: Some(CallCheckValue::FnPtr),
+                        v: Some(CallCheckValue::FnPtr(1337)),//dummy value, TODO remove
                     };
                 }
             }
@@ -362,7 +358,7 @@ impl CallAnalyzer {
             Value::RIPConst => {
                 // The backend uses rip-relative data to embed constant function pointers.
                 return CallCheckValueLattice {
-                    v: Some(CallCheckValue::FnPtr),
+                    v: Some(CallCheckValue::FnPtr(1337)),//Dummy value, TODO remove
                 };
             }
         }

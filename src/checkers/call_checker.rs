@@ -76,7 +76,7 @@ impl CallChecker<'_> {
     ) -> bool {
         match target {
             Value::Reg(regnum, size) => {
-                if let Some(CallCheckValue::FnPtr) = state.regs.get_reg_index(*regnum, *size).v {
+                if let Some(CallCheckValue::FnPtr(c)) = state.regs.get_reg_index(*regnum, *size).v {
                     return true;
                 } else {
                     log::debug!("{:?}", state.regs.get_reg_index(*regnum, *size).v)

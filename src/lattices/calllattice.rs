@@ -11,7 +11,7 @@ pub enum CallCheckValue {
     TypeOf(u8),//regnum
     PtrOffset(DAV),
     TypedPtrOffset(u32),
-    FnPtr,//type
+    FnPtr(u32),//type
     CheckedVal,
     CheckFlag(u32, u8),
     TypeCheckFlag(u8, u32),//addr, regnum, typeidx
