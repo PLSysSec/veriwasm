@@ -66,28 +66,49 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         src2: &Value,
         loc_idx: &LocIdx,
     ) -> () {
-        if let Binopcode::Cmp = opcode {
-            match (src1, src2) {
-                (Value::Reg(regnum1, size1), Value::Reg(regnum2, size2)) => {
-                    if let Some(CallCheckValue::TableSize) = in_state.regs.get_reg_index(*regnum2, *size2).v {
-                        in_state.regs.set_reg(Zf, ValSize::Size64,
-                            CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum1)))
+        match (opcode,src1,src2) {
+            (Binopcode::Cmp, Value::Reg(regnum1, size1), Value::Reg(regnum2, size2)) => {
+                if let Some(CallCheckValue::TableSize) = in_state.regs.get_reg_index(*regnum2, *size2).v {
+                    in_state.regs.set_reg(Zf, ValSize::Size64,
+                        CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum1)))
                     }
-                    if let Some(CallCheckValue::TableSize) = in_state.regs.get_reg_index(*regnum1, *size1).v {
-                        in_state.regs.set_reg(Zf, ValSize::Size64,
-                            CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum2)))
+                if let Some(CallCheckValue::TableSize) = in_state.regs.get_reg_index(*regnum1, *size1).v {
+                    in_state.regs.set_reg(Zf, ValSize::Size64,
+                        CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum2)))
                     }
                 }
-                _ => (),
+            (Binopcode::Cmp, Value::Reg(regnum, size), Value::Imm(_,_,c)) => {
+                if let Some(CallCheckValue::TypeOf(r)) = in_state.regs.get_reg_index(*regnum, *size).v {
+                    in_state.regs.set_reg(Zf, ValSize::Size64,
+                        CallCheckValueLattice::new(CallCheckValue::TypeCheckFlag(r, *c as u32)))
+                    }
             }
-        }
-
-        match opcode {
-            Binopcode::Cmp => (),
-            Binopcode::Test => (),
+            (Binopcode::Test,_,_) => (),
             _ => in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2, loc_idx)),
+            } 
         }
-    }
+        // if let Binopcode::Cmp = opcode {
+        //     match (src1, src2) {
+        //         (Value::Reg(regnum1, size1), Value::Reg(regnum2, size2)) => {
+        //             if let Some(CallCheckValue::TableSize) = in_state.regs.get_reg_index(*regnum2, *size2).v {
+        //                 in_state.regs.set_reg(Zf, ValSize::Size64,
+        //                     CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum1)))
+        //             }
+        //             if let Some(CallCheckValue::TableSize) = in_state.regs.get_reg_index(*regnum1, *size1).v {
+        //                 in_state.regs.set_reg(Zf, ValSize::Size64,
+        //                     CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum2)))
+        //             }
+        //         }
+        //         _ => (),
+        //     }
+        // }
+
+        // match opcode {
+        //     Binopcode::Cmp => (),
+        //     Binopcode::Test => (),
+        //     _ => in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2, loc_idx)),
+        // }
+    // }
 
     fn process_branch(
         &self,
@@ -178,6 +199,23 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     }
                 }
             }
+            //HandleTypeCheck
+            if let Some(CallCheckValue::TypeCheckFlag(regnum, c)) = not_branch_state.regs.get_reg(Zf, ValSize::Size64).v {
+                log::debug!("branch at 0x{:x}: TypeCheckFlag for reg {}", addr, regnum);
+                let new_val = CallCheckValueLattice {
+                    v: Some(CallCheckValue::TypedPtrOffset(c)),
+                };
+                branch_state
+                    .regs
+                    .set_reg_index(&regnum, &ValSize::Size64, new_val.clone());
+            }
+
+
+
+
+
+
+
             branch_state.regs.set_reg(Zf, ValSize::Size64, Default::default());
             not_branch_state.regs.set_reg(Zf, ValSize::Size64, Default::default());
 

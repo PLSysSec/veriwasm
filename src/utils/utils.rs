@@ -173,7 +173,7 @@ pub fn fully_resolved_cfg(
 pub fn get_data(
     program: &ModuleData,
     format: &ExecutableType,
-) -> (x86_64Data, Vec<(u64, std::string::String)>, (u64, u64)) {
+) -> (x86_64Data, Vec<(u64, std::string::String)>, (u64, u64), Vec<(u64, std::string::String)>) {
     let (_, sections, entrypoint, imports, exports, symbols) = deconstruct_elf(program);
     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
     let mut x86_64_data =
@@ -189,7 +189,12 @@ pub fn get_data(
     let text_section = sections.get(text_section_idx).unwrap();
 
     let mut addrs: Vec<(u64, std::string::String)> = Vec::new();
+    let mut all_addrs: Vec<(u64, std::string::String)> = Vec::new();
+
     while let Some(addr) = x86_64_data.contexts.function_hints.pop() {
+        if let Some(symbol) = x86_64_data.symbol_for(addr) {
+            all_addrs.push((addr, symbol.1.clone()));
+        }
         if !((addr >= text_section.start) && (addr < (text_section.start + text_section.size))) {
             continue;
         }
@@ -199,7 +204,7 @@ pub fn get_data(
             }
         }
     }
-    (x86_64_data, addrs, plt_bounds)
+    (x86_64_data, addrs, plt_bounds, all_addrs)
 }
 
 pub fn get_one_resolved_cfg(
