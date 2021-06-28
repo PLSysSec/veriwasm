@@ -11,7 +11,6 @@ pub struct CallChecker<'a> {
     analyzer: &'a CallAnalyzer,
     funcs: &'a Vec<u64>,
     plt: &'a (u64, u64),
-    // x86_64_data: &x86_64Data,
 }
 
 pub fn check_calls(
@@ -20,13 +19,12 @@ pub fn check_calls(
     analyzer: &CallAnalyzer,
     funcs: &Vec<u64>,
     plt: &(u64, u64),
-    // x86_64_data: &x86_64Data,
 ) -> bool {
     CallChecker {
         irmap,
         analyzer,
         funcs,
-        plt, // x86_64_data,
+        plt, 
     }
     .check(result)
 }
