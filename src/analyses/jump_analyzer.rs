@@ -1,24 +1,15 @@
-use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
-use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
-use crate::ir::types::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value};
-use crate::ir::utils::get_rsp_offset;
-use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice};
-use crate::lattices::VarSlot;
-use crate::lattices::X86Regs::*;
-use crate::lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
-use crate::lattices::VarState;
-use crate::loaders::utils::VW_Metadata;
+use crate::{analyses, ir, lattices, loaders};
+use analyses::reaching_defs::ReachingDefnAnalyzer;
+use analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
+use ir::types::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value};
+use ir::utils::get_rsp_offset;
+use lattices::reachingdefslattice::{LocIdx, ReachLattice};
+use lattices::{VarSlot, VarState};
+use lattices::X86Regs::*;
+use lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
+use loaders::utils::VW_Metadata;
 use std::default::Default;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
-
-//Top level function
-pub fn analyze_jumps(
-    cfg: &VW_CFG,
-    irmap: &IRMap,
-    switch_analyzer: &SwitchAnalyzer,
-) -> AnalysisResult<SwitchLattice> {
-    run_worklist(cfg, irmap, switch_analyzer)
-}
 
 pub struct SwitchAnalyzer {
     pub metadata: VW_Metadata,

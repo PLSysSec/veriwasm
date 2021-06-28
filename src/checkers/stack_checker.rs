@@ -1,10 +1,11 @@
-use crate::analyses::stack_analyzer::StackAnalyzer;
-use crate::analyses::{AbstractAnalyzer, AnalysisResult};
-use crate::checkers::Checker;
-use crate::ir::types::{IRMap, MemArgs, Stmt, Value};
-use crate::ir::utils::{get_imm_mem_offset, is_bp_access, is_stack_access};
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::stackgrowthlattice::StackGrowthLattice;
+use crate::{analyses, checkers, ir, lattices};
+use analyses::StackAnalyzer;
+use analyses::{AbstractAnalyzer, AnalysisResult};
+use checkers::Checker;
+use ir::types::{IRMap, MemArgs, Stmt, Value};
+use ir::utils::{get_imm_mem_offset, is_bp_access, is_stack_access};
+use lattices::reachingdefslattice::LocIdx;
+use lattices::stackgrowthlattice::StackGrowthLattice;
 
 pub struct StackChecker<'a> {
     irmap: &'a IRMap,

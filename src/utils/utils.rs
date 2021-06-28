@@ -1,12 +1,11 @@
 use crate::{analyses, checkers, ir, loaders};
-use analyses::jump_analyzer::analyze_jumps;
-use analyses::jump_analyzer::SwitchAnalyzer;
+use analyses::{SwitchAnalyzer, run_worklist};
 use analyses::reaching_defs::analyze_reaching_defs;
 use analyses::reaching_defs::ReachingDefnAnalyzer;
-use checkers::jump_resolver::resolve_jumps;
+use checkers::resolve_jumps;
 use ir::types::IRMap;
 use ir::utils::has_indirect_jumps;
-use ir::x64::lift_cfg;
+use ir::lift_cfg;
 use loaders::utils::VW_Metadata;
 use loaders::{ExecutableType, Loadable};
 use yaxpeax_arch::Arch;
@@ -120,7 +119,7 @@ fn try_resolve_jumps(
             irmap: irmap.clone(),
         },
     };
-    let switch_results = analyze_jumps(cfg, &irmap, &switch_analyzer);
+    let switch_results = run_worklist(cfg, irmap, &switch_analyzer);
     let switch_targets = resolve_jumps(program, switch_results, &irmap, &switch_analyzer);
 
     let (new_cfg, still_unresolved) =

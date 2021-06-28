@@ -1,17 +1,16 @@
-use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
-use crate::analyses::AbstractAnalyzer;
-use crate::analyses::AnalysisResult;
-use crate::ir::types::{
+use crate::{analyses, ir, lattices, loaders};
+use analyses::reaching_defs::ReachingDefnAnalyzer;
+use analyses::{AbstractAnalyzer, AnalysisResult};
+use ir::types::{
     Binopcode, IRBlock, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value,
 };
-use crate::ir::utils::{extract_stack_offset, is_stack_access};
-use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
-use crate::lattices::davlattice::DAV;
-use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice};
-use crate::lattices::VarSlot;
-use crate::lattices::X86Regs::*;
-use crate::lattices::VarState;
-use crate::loaders::utils::VW_Metadata;
+use ir::utils::{extract_stack_offset, is_stack_access};
+use lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
+use lattices::davlattice::DAV;
+use lattices::reachingdefslattice::{LocIdx, ReachLattice};
+use lattices::{VarSlot, VarState};
+use lattices::X86Regs::*;
+use loaders::utils::VW_Metadata;
 use std::default::Default;
 use yaxpeax_x86::long_mode::Opcode;
 

@@ -1,11 +1,14 @@
-pub mod aarch64;
+mod aarch64;
 pub mod types;
 pub mod utils;
-pub mod x64;
+mod x64;
 
 use crate::ir::types::Stmt;
 use crate::VW_Metadata;
 use core::str::FromStr;
+use self::types::IRMap;
+pub use self::x64::lift_cfg;
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VwArch {
@@ -47,3 +50,6 @@ impl FromStr for VwArch {
         }
     }
 }
+
+
+// pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &VW_Metadata) -> IRMap;

@@ -1,11 +1,12 @@
-use crate::analyses::AbstractAnalyzer;
-use crate::ir::types::{Binopcode, MemArg, MemArgs, Unopcode, ValSize, Value};
-use crate::ir::utils::{extract_stack_offset, is_stack_access};
-use crate::lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::{ConstLattice, VarState};
-use crate::lattices::X86Regs::*;
-use crate::loaders::utils::VW_Metadata;
+use crate::{analyses, ir, lattices, loaders};
+use analyses::AbstractAnalyzer;
+use ir::types::{Binopcode, MemArg, MemArgs, Unopcode, ValSize, Value};
+use ir::utils::{extract_stack_offset, is_stack_access};
+use lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
+use lattices::reachingdefslattice::LocIdx;
+use lattices::{ConstLattice, VarState};
+use lattices::X86Regs::*;
+use loaders::utils::VW_Metadata;
 use std::default::Default;
 
 pub struct HeapAnalyzer {

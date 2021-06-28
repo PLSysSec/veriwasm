@@ -1,12 +1,19 @@
-use crate::analyses::AnalysisResult;
-use crate::ir::types::{IRMap, Stmt};
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::Lattice;
+use crate::{analyses, ir, lattices};
+use analyses::AnalysisResult;
+use ir::types::{IRMap, Stmt};
+use lattices::reachingdefslattice::LocIdx;
+use lattices::Lattice;
 
-pub mod call_checker;
-pub mod heap_checker;
-pub mod jump_resolver;
-pub mod stack_checker;
+mod call_checker;
+mod heap_checker;
+mod jump_resolver;
+mod stack_checker;
+
+/*      Public API for checker submodule      */
+pub use self::call_checker::check_calls;
+pub use self::heap_checker::check_heap;
+pub use self::stack_checker::check_stack;
+pub use self::jump_resolver::resolve_jumps;
 
 pub trait Checker<State: Lattice + Clone> {
     fn check(&self, result: AnalysisResult<State>) -> bool;

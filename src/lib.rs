@@ -9,11 +9,11 @@ pub mod lattices;
 pub mod loaders;
 pub mod utils;
 
-use analyses::heap_analyzer::HeapAnalyzer;
+use analyses::HeapAnalyzer;
 use analyses::run_worklist;
-use checkers::heap_checker::check_heap;
+use checkers::check_heap;
 use ir::types::IRMap;
-use ir::x64::lift_cfg;
+use ir::lift_cfg;
 use loaders::utils::VW_Metadata;
 use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;

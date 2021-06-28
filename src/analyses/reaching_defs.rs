@@ -1,10 +1,10 @@
-use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
-use crate::ir::types::ValSize;
-use crate::ir::types::{Binopcode, IRMap, Stmt, Unopcode};
-use crate::lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
-use crate::lattices::VarState;
-use crate::lattices::X86Regs::*;
-use crate::loaders::utils::VW_Metadata;
+use crate::{analyses, ir, lattices, loaders};
+use analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
+use ir::types::{Binopcode, IRMap, Stmt, Unopcode, ValSize};
+use lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
+use lattices::VarState;
+use lattices::X86Regs::*;
+use loaders::utils::VW_Metadata;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 
 //Top level function

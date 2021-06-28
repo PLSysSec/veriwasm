@@ -2,15 +2,11 @@ use crate::{analyses, checkers, ir, loaders, utils};
 
 use crate::{IRMap, VW_Metadata, VW_CFG};
 use loaders::utils::{VwFuncInfo, to_system_v};
-use analyses::call_analyzer::CallAnalyzer;
-use analyses::heap_analyzer::HeapAnalyzer;
+use analyses::{StackAnalyzer, HeapAnalyzer, CallAnalyzer};
 use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
 use analyses::run_worklist;
-use analyses::stack_analyzer::StackAnalyzer;
 use analyses::locals_analyzer::LocalsAnalyzer;
-use checkers::call_checker::check_calls;
-use checkers::heap_checker::check_heap;
-use checkers::stack_checker::check_stack;
+use checkers::{check_calls,check_heap,check_stack};
 use ir::utils::has_indirect_calls;
 use ir::VwArch;
 use loaders::ExecutableType;

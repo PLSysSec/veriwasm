@@ -1,9 +1,10 @@
-pub mod lucet;
+mod lucet;
 pub mod utils;
-pub mod wasmtime;
-use crate::loaders::lucet::*;
-use crate::loaders::utils::{VW_Metadata, VwFuncInfo};
-use crate::loaders::wasmtime::*;
+mod wasmtime;
+use crate::loaders;
+use loaders::lucet::*;
+use loaders::utils::{VW_Metadata, VwFuncInfo};
+use loaders::wasmtime::*;
 use core::str::FromStr;
 use yaxpeax_core::memory::repr::process::ModuleData;
 

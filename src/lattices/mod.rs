@@ -7,14 +7,17 @@ pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod switchlattice;
 pub mod localslattice;
-use crate::ir::types::{Binopcode, MemArg, MemArgs, ValSize, Value};
-use crate::ir::utils::{get_imm_offset, is_rsp};
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::regslattice::X86RegsLattice;
-use crate::lattices::stacklattice::StackLattice;
+use crate::{ir, lattices};
+use ir::types::{Binopcode, MemArg, MemArgs, ValSize, Value};
+use ir::utils::{get_imm_offset, is_rsp};
+use lattices::reachingdefslattice::LocIdx;
+use lattices::regslattice::X86RegsLattice;
+use lattices::stacklattice::StackLattice;
 use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::fmt::Debug;
+
+/*  Basically everything is public for lattices */
 
 #[derive(PartialEq, Clone, Eq, Debug, Copy, Hash)]
 pub enum X86Regs {
