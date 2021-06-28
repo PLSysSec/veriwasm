@@ -9,26 +9,6 @@ use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_x86::long_mode::Opcode::*;
 use yaxpeax_x86::long_mode::{register_class, Arch as AMD64, Opcode, Operand, RegSpec};
 
-pub fn valsize(num: u32) -> ValSize {
-    match num {
-        8 => ValSize::Size8,
-        16 => ValSize::Size16,
-        32 => ValSize::Size32,
-        64 => ValSize::Size64,
-        _ => unimplemented!("{:?}", num),
-    }
-}
-
-pub fn mk_value_i64(num: i64) -> Value {
-    Value::Imm(ImmType::Signed, ValSize::Size64, num)
-}
-
-impl Stmt {
-    pub fn width(&self) -> u32 {
-        unimplemented!("Width not implemented")
-    }
-}
-
 fn get_reg_size(reg: yaxpeax_x86::long_mode::RegSpec) -> ValSize {
     let size = match reg.class() {
         register_class::Q => ValSize::Size64,
@@ -407,12 +387,12 @@ pub fn lift(
                 Binopcode::Sub,
                 Value::Reg(4, ValSize::Size64),
                 Value::Reg(4, ValSize::Size64),
-                mk_value_i64(width.into()),
+                (width as i64).into(),
             ));
             instrs.push(Stmt::Unop(
                 Unopcode::Mov,
                 Value::Mem(
-                    valsize((width * 8) as u32),
+                    ValSize::try_from_bytes(width as u32).unwrap(),
                     MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)),
                 ),
                 convert_operand(instr.operand(0), ValSize::SizeOther),
@@ -425,7 +405,7 @@ pub fn lift(
                 Unopcode::Mov,
                 convert_operand(instr.operand(0), ValSize::SizeOther),
                 Value::Mem(
-                    valsize((width * 8) as u32),
+                    ValSize::try_from_bytes(width as u32).unwrap(),
                     MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)),
                 ),
             ));
@@ -433,7 +413,7 @@ pub fn lift(
                 Binopcode::Add,
                 Value::Reg(4, ValSize::Size64),
                 Value::Reg(4, ValSize::Size64),
-                mk_value_i64(width.into()),
+                (width as i64).into(),
             ))
         }
 

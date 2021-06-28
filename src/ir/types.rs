@@ -77,6 +77,12 @@ pub enum Value {
     RIPConst,
 }
 
+impl From<i64> for Value {
+    fn from(num: i64) -> Self {
+        Value::Imm(ImmType::Signed, ValSize::Size64, num)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Clear(Value, Vec<Value>),                      // clear v <- vs
