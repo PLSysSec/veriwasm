@@ -6,7 +6,7 @@ use crate::lattices::localslattice::*;
 use crate::lattices::mem_to_stack_offset;
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarIndex, VarState, VariableState};
-use crate::loaders::utils::VwFuncInfo;
+use crate::loaders::types::VwFuncInfo;
 
 use SlotVal::*;
 

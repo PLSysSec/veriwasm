@@ -7,7 +7,7 @@ mod x64;
 pub use self::cfg::{fully_resolved_cfg, get_one_resolved_cfg};
 pub use self::x64::lift_cfg;
 use crate::ir::types::Stmt;
-use crate::VW_Metadata;
+use crate::VwMetadata;
 use core::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -21,7 +21,7 @@ pub trait Liftable {
         &self,
         instr: &yaxpeax_x86::long_mode::Instruction,
         addr: &u64,
-        metadata: &VW_Metadata,
+        metadata: &VwMetadata,
     ) -> Vec<Stmt>;
 }
 // TODO: make static dispatch
@@ -30,7 +30,7 @@ impl Liftable for VwArch {
         &self,
         instr: &yaxpeax_x86::long_mode::Instruction,
         addr: &u64,
-        metadata: &VW_Metadata,
+        metadata: &VwMetadata,
     ) -> Vec<Stmt> {
         match self {
             VwArch::X64 => x64::lift(instr, addr, metadata),

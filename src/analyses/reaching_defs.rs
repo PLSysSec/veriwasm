@@ -4,14 +4,14 @@ use ir::types::{Binopcode, IRMap, Stmt, Unopcode, ValSize};
 use lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
 use lattices::VarState;
 use lattices::X86Regs::*;
-use loaders::utils::VW_Metadata;
+use loaders::types::VwMetadata;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 
 //Top level function
 pub fn analyze_reaching_defs(
     cfg: &VW_CFG,
     irmap: &IRMap,
-    _metadata: VW_Metadata,
+    _metadata: VwMetadata,
 ) -> AnalysisResult<ReachLattice> {
     run_worklist(
         cfg,

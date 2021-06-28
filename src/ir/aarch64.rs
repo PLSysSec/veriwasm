@@ -1,10 +1,10 @@
 use crate::ir::types::Stmt;
-use crate::VW_Metadata;
+use crate::VwMetadata;
 
 pub fn lift(
     instr: &yaxpeax_x86::long_mode::Instruction,
     addr: &u64,
-    metadata: &VW_Metadata,
+    metadata: &VwMetadata,
 ) -> Vec<Stmt> {
     unimplemented!()
 }

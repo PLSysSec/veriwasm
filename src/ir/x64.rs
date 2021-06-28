@@ -1,5 +1,5 @@
 use crate::ir::types::*;
-use crate::loaders::utils::VW_Metadata;
+use crate::loaders::types::VwMetadata;
 use yaxpeax_arch::{AddressBase, Arch, LengthedInstruction};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_core::arch::x86_64::analyses::data_flow::Location;
@@ -264,7 +264,7 @@ fn branch(instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     )
 }
 
-fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &VW_Metadata) -> Stmt {
+fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &VwMetadata) -> Stmt {
     let dst = convert_operand(instr.operand(0), ValSize::Size64);
     Stmt::Call(dst)
 }
@@ -299,7 +299,7 @@ fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Vec<Stmt> {
 pub fn lift(
     instr: &yaxpeax_x86::long_mode::Instruction,
     addr: &u64,
-    metadata: &VW_Metadata,
+    metadata: &VwMetadata,
 ) -> Vec<Stmt> {
     log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
     let mut instrs = Vec::new();
@@ -639,7 +639,7 @@ pub fn lift(
 fn is_probestack(
     instr: &yaxpeax_x86::long_mode::Instruction,
     addr: &u64,
-    metadata: &VW_Metadata,
+    metadata: &VwMetadata,
 ) -> bool {
     if let Opcode::CALL = instr.opcode() {
         let op = convert_operand(instr.operand(0), ValSize::SizeOther);
@@ -686,13 +686,13 @@ fn check_probestack_suffix(instr: &yaxpeax_x86::long_mode::Instruction) -> bool 
     panic!("Broken Probestack?")
 }
 
-pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &VW_Metadata) -> IRMap {
+pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, metadata: &VwMetadata) -> IRMap {
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
     for block_addr in g.nodes() {
         let mut block_ir: Vec<(u64, Vec<Stmt>)> = Vec::new();
         let block = cfg.get_block(block_addr);
-        let mut iter = program.instructions_spanning(
+        let mut iter = module.program.instructions_spanning(
             <AMD64 as Arch>::Decoder::default(),
             block.start,
             block.end,

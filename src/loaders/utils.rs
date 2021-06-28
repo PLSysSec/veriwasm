@@ -6,7 +6,8 @@ use std::collections::HashMap;
 use crate::ir::types::ValSize;
 use crate::lattices::VarIndex;
 use crate::lattices::X86Regs::*;
-use crate::loaders::{ExecutableType, Loadable};
+use crate::loaders::Loadable;
+use crate::loaders::types::ExecutableType;
 
 use yaxpeax_arch::Arch;
 use yaxpeax_core::arch::x86_64::x86_64Data;
@@ -19,20 +20,7 @@ use yaxpeax_core::memory::MemoryRepr;
 use yaxpeax_core::ContextWrite;
 use yaxpeax_x86::long_mode::Arch as AMD64;
 
-#[derive(Clone, Debug)]
-pub struct VW_Metadata {
-    pub guest_table_0: u64,
-    pub lucet_tables: u64,
-    pub lucet_probestack: u64,
-}
 
-#[derive(Clone, Debug)]
-pub struct VwFuncInfo {
-    // Index -> Type
-    pub signatures: Vec<Signature>,
-    // Name -> Index
-    pub indexes: HashMap<String, u32>,
-}
 
 // TODO: unify this with other register and stack variable slot representations
 // RDI, RSI, RDX, RCX, R8, R9,

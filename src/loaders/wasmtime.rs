@@ -6,6 +6,7 @@ use wasmtime::*;
 use yaxpeax_core::goblin::Object;
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_core::memory::repr::process::Segment;
+use loaders::types::{VwMetadata, VwModule, VwFuncInfo};
 
 //yaxpeax doesnt load .o files correctly, so this code
 // manually adds memory regions corresponding to ELF sections
@@ -44,27 +45,9 @@ fn fixup_object_file(program: &mut ModuleData, obj: &[u8]) {
     }
 }
 
-pub fn load_wasmtime_program(path: &str) -> ModuleData {
-    let buffer = fs::read(path).expect("Something went wrong reading the file");
-    let store: Store<()> = Store::default();
-    // Deserialize wasmtime module
-    let module = unsafe { Module::deserialize(store.engine(), buffer).unwrap() };
-    let obj = module.obj();
-    // let types = module.types();
-    // println!("{:?}", types);
 
-    match ModuleData::load_from(&obj, path.to_string()) {
-        Some(mut program) => {
-            fixup_object_file(&mut program, &obj);
-            program
-        } //{ FileRepr::Executable(data) }
-        None => {
-            panic!("function:{} is not a valid path", path)
-        }
-    }
-}
 
-pub fn load_wasmtime_metadata(program: &ModuleData) -> VW_Metadata {
+fn load_wasmtime_metadata(program: &ModuleData) -> VwMetadata {
     let (_, sections, entrypoint, imports, exports, symbols) = deconstruct_elf(program);
 
     // unimplemented!();
@@ -76,10 +59,29 @@ pub fn load_wasmtime_metadata(program: &ModuleData) -> VW_Metadata {
     //     "guest_table_0 = {:x} lucet_tables = {:x} probestack = {:x}",
     //     guest_table_0, lucet_tables, lucet_probestack
     // );
-    VW_Metadata {
+    VwMetadata {
         guest_table_0: 0,
         lucet_tables: 0,
         lucet_probestack: 0,
+    }
+}
+
+pub fn load_wasmtime_program(path: &str) -> VwModule {
+    let buffer = fs::read(path).expect("Something went wrong reading the file");
+    let store: Store<()> = Store::default();
+    // Deserialize wasmtime module
+    let module = unsafe { Module::deserialize(store.engine(), buffer).unwrap() };
+    let obj = module.obj();
+
+    match ModuleData::load_from(&obj, path.to_string()) {
+        Some(mut program) => {
+            fixup_object_file(&mut program, &obj);
+            let metadata = load_wasmtime_metadata(program);
+            VwModule{ program, metadata }
+        } //{ FileRepr::Executable(data) }
+        None => {
+            panic!("function:{} is not a valid path", path)
+        }
     }
 }
 

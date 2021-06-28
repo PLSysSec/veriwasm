@@ -8,12 +8,12 @@ use lattices::davlattice::DAV;
 use lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use lattices::X86Regs::*;
 use lattices::{VarSlot, VarState};
-use loaders::utils::VW_Metadata;
+use loaders::types::VwMetadata;
 use std::default::Default;
 use yaxpeax_x86::long_mode::Opcode;
 
 pub struct CallAnalyzer {
-    pub metadata: VW_Metadata,
+    pub metadata: VwMetadata,
     pub reaching_defs: AnalysisResult<ReachLattice>,
     pub reaching_analyzer: ReachingDefnAnalyzer,
     pub funcs: Vec<u64>,

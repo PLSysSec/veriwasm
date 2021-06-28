@@ -6,11 +6,11 @@ use lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
 use lattices::reachingdefslattice::LocIdx;
 use lattices::X86Regs::*;
 use lattices::{ConstLattice, VarState};
-use loaders::utils::VW_Metadata;
+use loaders::types::VwMetadata;
 use std::default::Default;
 
 pub struct HeapAnalyzer {
-    pub metadata: VW_Metadata,
+    pub metadata: VwMetadata,
 }
 
 impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {

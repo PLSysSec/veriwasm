@@ -1,6 +1,6 @@
 use crate::{analyses, checkers, ir, loaders};
 
-use crate::{IRMap, VW_Metadata, VW_CFG};
+use crate::{IRMap, VwMetadata, VW_CFG};
 use analyses::locals_analyzer::LocalsAnalyzer;
 use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
 use analyses::run_worklist;
@@ -9,8 +9,8 @@ use checkers::{check_calls, check_heap, check_stack};
 use ir::fully_resolved_cfg;
 use ir::utils::has_indirect_calls;
 use ir::VwArch;
-use loaders::utils::{get_data, to_system_v, VwFuncInfo};
-use loaders::ExecutableType;
+use loaders::utils::{get_data, to_system_v};
+use loaders::types::{ExecutableType,VwFuncInfo};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::iter::FromIterator;
@@ -77,7 +77,7 @@ fn run_stack(cfg: &VW_CFG, irmap: &IRMap) -> bool {
     stack_safe
 }
 
-fn run_heap(cfg: &VW_CFG, irmap: &IRMap, metadata: &VW_Metadata) -> bool {
+fn run_heap(cfg: &VW_CFG, irmap: &IRMap, metadata: &VwMetadata) -> bool {
     let heap_analyzer = HeapAnalyzer {
         metadata: metadata.clone(),
     };
@@ -89,7 +89,7 @@ fn run_heap(cfg: &VW_CFG, irmap: &IRMap, metadata: &VW_Metadata) -> bool {
 fn run_calls(
     cfg: &VW_CFG,
     irmap: &IRMap,
-    metadata: &VW_Metadata,
+    metadata: &VwMetadata,
     valid_funcs: &Vec<u64>,
     plt: (u64, u64),
 ) -> bool {
@@ -125,7 +125,7 @@ pub fn run(config: Config) {
         }
         println!("Generating CFG for {:?}", func_name);
         let start = Instant::now();
-        let (cfg, irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
+        let (cfg, irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, addr);
         func_counter += 1;
         println!("Analyzing: {:?}", func_name);
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
