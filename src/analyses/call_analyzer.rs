@@ -1,15 +1,13 @@
 use crate::{analyses, ir, lattices, loaders};
 use analyses::reaching_defs::ReachingDefnAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
-use ir::types::{
-    Binopcode, IRBlock, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value,
-};
+use ir::types::{Binopcode, IRBlock, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value};
 use ir::utils::{extract_stack_offset, is_stack_access};
 use lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
 use lattices::davlattice::DAV;
 use lattices::reachingdefslattice::{LocIdx, ReachLattice};
-use lattices::{VarSlot, VarState};
 use lattices::X86Regs::*;
+use lattices::{VarSlot, VarState};
 use loaders::utils::VW_Metadata;
 use std::default::Default;
 use yaxpeax_x86::long_mode::Opcode;
@@ -68,13 +66,23 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         if let Binopcode::Cmp = opcode {
             match (src1, src2) {
                 (Value::Reg(regnum1, size1), Value::Reg(regnum2, size2)) => {
-                    if let Some(CallCheckValue::TableSize) = in_state.regs.get_reg_index(*regnum2, *size2).v {
-                        in_state.regs.set_reg(Zf, ValSize::Size64,
-                            CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum1)))
+                    if let Some(CallCheckValue::TableSize) =
+                        in_state.regs.get_reg_index(*regnum2, *size2).v
+                    {
+                        in_state.regs.set_reg(
+                            Zf,
+                            ValSize::Size64,
+                            CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum1)),
+                        )
                     }
-                    if let Some(CallCheckValue::TableSize) = in_state.regs.get_reg_index(*regnum1, *size1).v {
-                        in_state.regs.set_reg(Zf, ValSize::Size64,
-                            CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum2)))
+                    if let Some(CallCheckValue::TableSize) =
+                        in_state.regs.get_reg_index(*regnum1, *size1).v
+                    {
+                        in_state.regs.set_reg(
+                            Zf,
+                            ValSize::Size64,
+                            CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum2)),
+                        )
                     }
                 }
                 _ => (),
@@ -116,7 +124,9 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         if succ_addrs.len() == 2 && is_unsigned_cmp {
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
-            if let Some(CallCheckValue::CheckFlag(_, regnum)) = not_branch_state.regs.get_reg(Zf, ValSize::Size64).v {
+            if let Some(CallCheckValue::CheckFlag(_, regnum)) =
+                not_branch_state.regs.get_reg(Zf, ValSize::Size64).v
+            {
                 log::debug!("branch at 0x{:x}: CheckFlag for reg {}", addr, regnum);
                 let new_val = CallCheckValueLattice {
                     v: Some(CallCheckValue::CheckedVal),
@@ -156,9 +166,11 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     let reg_val = branch_state.regs.get_reg_index(idx, ValSize::Size64);
                     if let Some(CallCheckValue::PtrOffset(DAV::Unchecked(reg_def))) = reg_val.v {
                         if checked_defs.is_empty() && reg_def == checked_defs {
-                            branch_state
-                                .regs
-                                .set_reg_index(&idx, &ValSize::Size64, checked_ptr.clone());
+                            branch_state.regs.set_reg_index(
+                                &idx,
+                                &ValSize::Size64,
+                                checked_ptr.clone(),
+                            );
                         }
                     }
                 }
@@ -177,8 +189,12 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     }
                 }
             }
-            branch_state.regs.set_reg(Zf, ValSize::Size64, Default::default());
-            not_branch_state.regs.set_reg(Zf, ValSize::Size64, Default::default());
+            branch_state
+                .regs
+                .set_reg(Zf, ValSize::Size64, Default::default());
+            not_branch_state
+                .regs
+                .set_reg(Zf, ValSize::Size64, Default::default());
 
             log::debug!(
                 " ->     branch_state @ 0x{:x} = {:?}",
@@ -214,7 +230,9 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 // mem[LucetTableBase + 8]
 pub fn is_table_size(in_state: &CallCheckLattice, memargs: &MemArgs) -> bool {
     if let MemArgs::Mem2Args(MemArg::Reg(regnum1, size), MemArg::Imm(_, _, 8)) = memargs {
-        if let Some(CallCheckValue::LucetTablesBase) = in_state.regs.get_reg_index(*regnum1, *size).v {
+        if let Some(CallCheckValue::LucetTablesBase) =
+            in_state.regs.get_reg_index(*regnum1, *size).v
+        {
             return true;
         }
     }
@@ -310,7 +328,9 @@ impl CallAnalyzer {
     ) -> CallCheckValueLattice {
         if let Binopcode::Shl = opcode {
             if let (Value::Reg(regnum1, size1), Value::Imm(_, _, 4)) = (src1, src2) {
-                if let Some(CallCheckValue::CheckedVal) = in_state.regs.get_reg_index(*regnum1, *size1).v {
+                if let Some(CallCheckValue::CheckedVal) =
+                    in_state.regs.get_reg_index(*regnum1, *size1).v
+                {
                     return CallCheckValueLattice {
                         v: Some(CallCheckValue::PtrOffset(DAV::Checked)),
                     };

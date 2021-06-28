@@ -2,8 +2,8 @@ use clap::{App, Arg};
 use ir::VwArch;
 use loaders::ExecutableType;
 use std::str::FromStr;
-use utils::runner::*;
-use veriwasm::{ir, loaders, utils};
+use veriwasm::runner::*;
+use veriwasm::{ir, loaders};
 
 fn main() {
     let _ = env_logger::try_init();

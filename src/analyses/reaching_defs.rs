@@ -117,21 +117,51 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
                 in_state.set(dst, singleton(loc_idx.clone()))
             }
             Stmt::Call(_) => {
-                in_state.regs.set_reg(Rax, ValSize::Size64, loc(loc_idx.addr, 0));
-                in_state.regs.set_reg(Rcx, ValSize::Size64, loc(loc_idx.addr, 1));
-                in_state.regs.set_reg(Rdx, ValSize::Size64, loc(loc_idx.addr, 2));
-                in_state.regs.set_reg(Rbx, ValSize::Size64, loc(loc_idx.addr, 3));
-                in_state.regs.set_reg(Rbp, ValSize::Size64, loc(loc_idx.addr, 4));
-                in_state.regs.set_reg(Rsi, ValSize::Size64, loc(loc_idx.addr, 5));
-                in_state.regs.set_reg(Rdi, ValSize::Size64, loc(loc_idx.addr, 6));
-                in_state.regs.set_reg(R8,  ValSize::Size64, loc(loc_idx.addr, 7));
-                in_state.regs.set_reg(R9,  ValSize::Size64, loc(loc_idx.addr, 8));
-                in_state.regs.set_reg(R10, ValSize::Size64, loc(loc_idx.addr, 9));
-                in_state.regs.set_reg(R11, ValSize::Size64, loc(loc_idx.addr, 10));
-                in_state.regs.set_reg(R12, ValSize::Size64, loc(loc_idx.addr, 11));
-                in_state.regs.set_reg(R13, ValSize::Size64, loc(loc_idx.addr, 12));
-                in_state.regs.set_reg(R14, ValSize::Size64, loc(loc_idx.addr, 13));
-                in_state.regs.set_reg(R15, ValSize::Size64, loc(loc_idx.addr, 14));
+                in_state
+                    .regs
+                    .set_reg(Rax, ValSize::Size64, loc(loc_idx.addr, 0));
+                in_state
+                    .regs
+                    .set_reg(Rcx, ValSize::Size64, loc(loc_idx.addr, 1));
+                in_state
+                    .regs
+                    .set_reg(Rdx, ValSize::Size64, loc(loc_idx.addr, 2));
+                in_state
+                    .regs
+                    .set_reg(Rbx, ValSize::Size64, loc(loc_idx.addr, 3));
+                in_state
+                    .regs
+                    .set_reg(Rbp, ValSize::Size64, loc(loc_idx.addr, 4));
+                in_state
+                    .regs
+                    .set_reg(Rsi, ValSize::Size64, loc(loc_idx.addr, 5));
+                in_state
+                    .regs
+                    .set_reg(Rdi, ValSize::Size64, loc(loc_idx.addr, 6));
+                in_state
+                    .regs
+                    .set_reg(R8, ValSize::Size64, loc(loc_idx.addr, 7));
+                in_state
+                    .regs
+                    .set_reg(R9, ValSize::Size64, loc(loc_idx.addr, 8));
+                in_state
+                    .regs
+                    .set_reg(R10, ValSize::Size64, loc(loc_idx.addr, 9));
+                in_state
+                    .regs
+                    .set_reg(R11, ValSize::Size64, loc(loc_idx.addr, 10));
+                in_state
+                    .regs
+                    .set_reg(R12, ValSize::Size64, loc(loc_idx.addr, 11));
+                in_state
+                    .regs
+                    .set_reg(R13, ValSize::Size64, loc(loc_idx.addr, 12));
+                in_state
+                    .regs
+                    .set_reg(R14, ValSize::Size64, loc(loc_idx.addr, 13));
+                in_state
+                    .regs
+                    .set_reg(R15, ValSize::Size64, loc(loc_idx.addr, 14));
             }
             _ => (),
         }

@@ -1,12 +1,12 @@
 pub mod calllattice;
 pub mod davlattice;
 pub mod heaplattice;
+pub mod localslattice;
 pub mod reachingdefslattice;
 pub mod regslattice;
 pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod switchlattice;
-pub mod localslattice;
 use crate::{ir, lattices};
 use ir::types::{Binopcode, MemArg, MemArgs, ValSize, Value};
 use ir::utils::{get_imm_offset, is_rsp};
@@ -43,12 +43,14 @@ pub enum X86Regs {
 use self::X86Regs::*;
 
 struct X86RegsIterator {
-    current_reg: Option<X86Regs>
+    current_reg: Option<X86Regs>,
 }
 
 impl X86Regs {
     fn iter() -> X86RegsIterator {
-        X86RegsIterator { current_reg: Some(Rax) }
+        X86RegsIterator {
+            current_reg: Some(Rax),
+        }
     }
 }
 
@@ -58,78 +60,76 @@ impl Iterator for X86RegsIterator {
     fn next(&mut self) -> Option<Self::Item> {
         match self.current_reg {
             None => None,
-            Some(reg) => {
-                match reg {
-                    Rax => {
-                        self.current_reg = Some(Rcx);
-                        return Some(Rax);
-                    }
-                    Rcx => {
-                        self.current_reg = Some(Rdx);
-                        return Some(Rcx);
-                    }
-                    Rdx => {
-                        self.current_reg = Some(Rbx);
-                        return Some(Rdx);
-                    }
-                    Rbx => {
-                        self.current_reg = Some(Rsp);
-                        return Some(Rbx);
-                    }
-                    Rsp => {
-                        self.current_reg = Some(Rbp);
-                        return Some(Rsp);
-                    }
-                    Rbp => {
-                        self.current_reg = Some(Rsi);
-                        return Some(Rbp);
-                    }
-                    Rsi => {
-                        self.current_reg = Some(Rdi);
-                        return Some(Rsi);
-                    }
-                    Rdi => {
-                        self.current_reg = Some(R8);
-                        return Some(Rdi);
-                    }
-                    R8 => {
-                        self.current_reg = Some(R9);
-                        return Some(R8);
-                    }
-                    R9 => {
-                        self.current_reg = Some(R10);
-                        return Some(R9);
-                    }
-                    R10 => {
-                        self.current_reg = Some(R11);
-                        return Some(R10);
-                    }
-                    R11 => {
-                        self.current_reg = Some(R12);
-                        return Some(R11);
-                    }
-                    R12 => {
-                        self.current_reg = Some(R13);
-                        return Some(R12);
-                    }
-                    R13 => {
-                        self.current_reg = Some(R14);
-                        return Some(R13);
-                    }
-                    R14 => {
-                        self.current_reg = Some(R15);
-                        return Some(R14);
-                    }
-                    R15 => {
-                        self.current_reg = Some(Zf);
-                        return Some(R15);
-                    }
-                    Zf => {
-                        self.current_reg = None;
-                        return Some(Zf);
-                    }
+            Some(reg) => match reg {
+                Rax => {
+                    self.current_reg = Some(Rcx);
+                    return Some(Rax);
                 }
-            }
+                Rcx => {
+                    self.current_reg = Some(Rdx);
+                    return Some(Rcx);
+                }
+                Rdx => {
+                    self.current_reg = Some(Rbx);
+                    return Some(Rdx);
+                }
+                Rbx => {
+                    self.current_reg = Some(Rsp);
+                    return Some(Rbx);
+                }
+                Rsp => {
+                    self.current_reg = Some(Rbp);
+                    return Some(Rsp);
+                }
+                Rbp => {
+                    self.current_reg = Some(Rsi);
+                    return Some(Rbp);
+                }
+                Rsi => {
+                    self.current_reg = Some(Rdi);
+                    return Some(Rsi);
+                }
+                Rdi => {
+                    self.current_reg = Some(R8);
+                    return Some(Rdi);
+                }
+                R8 => {
+                    self.current_reg = Some(R9);
+                    return Some(R8);
+                }
+                R9 => {
+                    self.current_reg = Some(R10);
+                    return Some(R9);
+                }
+                R10 => {
+                    self.current_reg = Some(R11);
+                    return Some(R10);
+                }
+                R11 => {
+                    self.current_reg = Some(R12);
+                    return Some(R11);
+                }
+                R12 => {
+                    self.current_reg = Some(R13);
+                    return Some(R12);
+                }
+                R13 => {
+                    self.current_reg = Some(R14);
+                    return Some(R13);
+                }
+                R14 => {
+                    self.current_reg = Some(R15);
+                    return Some(R14);
+                }
+                R15 => {
+                    self.current_reg = Some(Zf);
+                    return Some(R15);
+                }
+                Zf => {
+                    self.current_reg = None;
+                    return Some(Zf);
+                }
+            },
         }
     }
 }
@@ -169,7 +169,7 @@ impl From<X86Regs> for u8 {
 
 pub enum VarIndex {
     Reg(X86Regs),
-    Stack(i64)
+    Stack(i64),
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
@@ -187,7 +187,6 @@ impl<T: PartialOrd> PartialOrd for VarSlot<T> {
         }
     }
 }
-
 
 pub trait Lattice: PartialOrd + Eq + Default + Debug {
     fn meet(&self, other: &Self, loc: &LocIdx) -> Self;
@@ -333,7 +332,7 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
                 if let Some(offset) = mem_to_stack_offset(memargs) {
                     self.stack.update(offset, value, memsize.into_bytes())
                 }
-            },
+            }
             Value::Reg(regnum, s2) => {
                 if let ValSize::SizeOther = s2 {
                 } else {
@@ -347,9 +346,8 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
 
     fn get(&self, index: &Value) -> Option<T> {
         match index {
-            Value::Mem(memsize, memargs) => {
-                mem_to_stack_offset(memargs).map(|offset| self.stack.get(offset, memsize.into_bytes()))
-            },
+            Value::Mem(memsize, memargs) => mem_to_stack_offset(memargs)
+                .map(|offset| self.stack.get(offset, memsize.into_bytes())),
             Value::Reg(regnum, s2) => Some(self.regs.get_reg_index(*regnum, *s2)),
             Value::Imm(_, _, _) => None,
             Value::RIPConst => None,

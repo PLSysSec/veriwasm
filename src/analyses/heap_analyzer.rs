@@ -4,8 +4,8 @@ use ir::types::{Binopcode, MemArg, MemArgs, Unopcode, ValSize, Value};
 use ir::utils::{extract_stack_offset, is_stack_access};
 use lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
 use lattices::reachingdefslattice::LocIdx;
-use lattices::{ConstLattice, VarState};
 use lattices::X86Regs::*;
+use lattices::{ConstLattice, VarState};
 use loaders::utils::VW_Metadata;
 use std::default::Default;
 
@@ -16,7 +16,11 @@ pub struct HeapAnalyzer {
 impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     fn init_state(&self) -> HeapLattice {
         let mut result: HeapLattice = Default::default();
-        result.regs.set_reg(Rdi, ValSize::Size64, HeapValueLattice::new(HeapValue::HeapBase));
+        result.regs.set_reg(
+            Rdi,
+            ValSize::Size64,
+            HeapValueLattice::new(HeapValue::HeapBase),
+        );
         result
     }
 

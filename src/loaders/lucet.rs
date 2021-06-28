@@ -1,12 +1,12 @@
-use crate::{loaders, utils};
+use crate::loaders;
 use byteorder::{LittleEndian, ReadBytesExt};
 use loaders::utils::*;
+use loaders::utils::{deconstruct_elf, get_symbol_addr};
 use lucet_module;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::mem;
 use std::path::Path;
-use utils::utils::{deconstruct_elf, get_symbol_addr};
 use yaxpeax_core::memory::repr::process::{ModuleData, Segment};
 use yaxpeax_core::memory::repr::FileRepr;
 

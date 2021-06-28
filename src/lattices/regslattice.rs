@@ -1,16 +1,16 @@
-use std::convert::TryFrom;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 use crate::ir::types::ValSize;
 use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::{Lattice, X86Regs, VarSlot};
+use crate::lattices::{Lattice, VarSlot, X86Regs};
 
 use self::X86Regs::*;
 
 #[derive(Default, PartialEq, Eq, Clone, Debug)]
 pub struct X86RegsLattice<T> {
-    pub map: HashMap<X86Regs, VarSlot<T>>
+    pub map: HashMap<X86Regs, VarSlot<T>>,
 }
 
 fn hashmap_le<T: PartialOrd>(s1: &X86RegsLattice<T>, s2: &X86RegsLattice<T>) -> bool {
@@ -65,7 +65,13 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
         if let ValSize::SizeOther = size {
             return; // TODO: what is happening here
         }
-        self.map.insert(index, VarSlot { size: size.into_bits(), value });
+        self.map.insert(
+            index,
+            VarSlot {
+                size: size.into_bits(),
+                value,
+            },
+        );
     }
 
     pub fn set_reg_index(&mut self, index: &u8, size: &ValSize, value: T) -> () {
@@ -123,7 +129,7 @@ impl<T: Lattice + Clone> Lattice for X86RegsLattice<T> {
                         newmap.insert(*var_index, newslot);
                     }
                 }
-                None => () // this means v2 = ⊥ so v1 ∧ v2 = ⊥
+                None => (), // this means v2 = ⊥ so v1 ∧ v2 = ⊥
             }
         }
         X86RegsLattice { map: newmap }

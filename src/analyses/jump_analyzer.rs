@@ -1,15 +1,14 @@
 use crate::{analyses, ir, lattices, loaders};
 use analyses::reaching_defs::ReachingDefnAnalyzer;
-use analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
+use analyses::{AbstractAnalyzer, AnalysisResult};
 use ir::types::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value};
 use ir::utils::get_rsp_offset;
 use lattices::reachingdefslattice::{LocIdx, ReachLattice};
-use lattices::{VarSlot, VarState};
-use lattices::X86Regs::*;
 use lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
+use lattices::X86Regs::*;
+use lattices::{VarSlot, VarState};
 use loaders::utils::VW_Metadata;
 use std::default::Default;
-use yaxpeax_core::analyses::control_flow::VW_CFG;
 
 pub struct SwitchAnalyzer {
     pub metadata: VW_Metadata,
@@ -46,8 +45,11 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                         .reaching_analyzer
                         .fetch_def(&self.reaching_defs, loc_idx);
                     let src_loc = reg_def.regs.get_reg_index(*regnum, ValSize::Size64);
-                    in_state.regs.set_reg(Zf, ValSize::Size64,
-                        SwitchValueLattice::new(SwitchValue::ZF(*imm as u32, *regnum, src_loc)));
+                    in_state.regs.set_reg(
+                        Zf,
+                        ValSize::Size64,
+                        SwitchValueLattice::new(SwitchValue::ZF(*imm as u32, *regnum, src_loc)),
+                    );
                 }
                 _ => (),
             }
@@ -56,7 +58,9 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         match opcode {
             Binopcode::Cmp => (),
             Binopcode::Test => {
-                in_state.regs.set_reg(Zf, ValSize::Size64, Default::default());
+                in_state
+                    .regs
+                    .set_reg(Zf, ValSize::Size64, Default::default());
             }
             _ => in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2)),
         }
@@ -72,7 +76,9 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         if succ_addrs.len() == 2 {
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
-            if let Some(SwitchValue::ZF(bound, regnum, checked_defs)) = &in_state.regs.get_reg(Zf, ValSize::Size64).v {
+            if let Some(SwitchValue::ZF(bound, regnum, checked_defs)) =
+                &in_state.regs.get_reg(Zf, ValSize::Size64).v
+            {
                 not_branch_state.regs.set_reg_index(
                     regnum,
                     &ValSize::Size64,
@@ -112,8 +118,12 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                     }
                 }
             }
-            branch_state.regs.set_reg(Zf, ValSize::Size64, Default::default());
-            not_branch_state.regs.set_reg(Zf, ValSize::Size64, Default::default());
+            branch_state
+                .regs
+                .set_reg(Zf, ValSize::Size64, Default::default());
+            not_branch_state
+                .regs
+                .set_reg(Zf, ValSize::Size64, Default::default());
             vec![
                 (succ_addrs[0].clone(), not_branch_state),
                 (succ_addrs[1].clone(), branch_state),

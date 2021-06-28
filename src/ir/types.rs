@@ -66,7 +66,7 @@ pub enum MemArgs {
 }
 #[derive(Debug, Clone)]
 pub enum MemArg {
-    Reg(u8, ValSize), // register mappings captured in `crate::lattices`
+    Reg(u8, ValSize),           // register mappings captured in `crate::lattices`
     Imm(ImmType, ValSize, i64), // signed, size, const
 }
 #[derive(Debug, Clone)]

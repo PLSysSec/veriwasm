@@ -1,7 +1,7 @@
-use crate::{loaders, utils};
+use crate::loaders;
+use loaders::utils::deconstruct_elf;
 use loaders::utils::*;
 use std::fs;
-use utils::utils::deconstruct_elf;
 use wasmtime::*;
 use yaxpeax_core::goblin::Object;
 use yaxpeax_core::memory::repr::process::ModuleData;

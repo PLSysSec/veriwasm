@@ -7,13 +7,13 @@ pub mod checkers;
 pub mod ir;
 pub mod lattices;
 pub mod loaders;
-pub mod utils;
+pub mod runner;
 
-use analyses::HeapAnalyzer;
 use analyses::run_worklist;
+use analyses::HeapAnalyzer;
 use checkers::check_heap;
-use ir::types::IRMap;
 use ir::lift_cfg;
+use ir::types::IRMap;
 use loaders::utils::VW_Metadata;
 use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;

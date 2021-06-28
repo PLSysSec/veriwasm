@@ -1,8 +1,7 @@
-use std::convert::TryFrom;
-use crate::lattices::Lattice;
 use crate::lattices::reachingdefslattice::LocIdx;
-pub use crate::lattices::{VariableState, VarState};
-
+use crate::lattices::Lattice;
+pub use crate::lattices::{VarState, VariableState};
+use std::convert::TryFrom;
 
 #[derive(PartialEq, Clone, Eq, Debug, Copy, Hash)]
 pub enum X86Regs {

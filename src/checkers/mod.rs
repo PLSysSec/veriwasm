@@ -12,8 +12,8 @@ mod stack_checker;
 /*      Public API for checker submodule      */
 pub use self::call_checker::check_calls;
 pub use self::heap_checker::check_heap;
-pub use self::stack_checker::check_stack;
 pub use self::jump_resolver::resolve_jumps;
+pub use self::stack_checker::check_stack;
 
 pub trait Checker<State: Lattice + Clone> {
     fn check(&self, result: AnalysisResult<State>) -> bool;

@@ -1,18 +1,15 @@
 #![allow(dead_code, unused_imports, unused_variables)]
+use veriwasm::{analyses, checkers, ir, loaders};
 
-use analyses::call_analyzer::CallAnalyzer;
-use analyses::heap_analyzer::HeapAnalyzer;
 use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
 use analyses::run_worklist;
-use analyses::stack_analyzer::StackAnalyzer;
-use checkers::call_checker::check_calls;
-use checkers::heap_checker::check_heap;
-use checkers::stack_checker::check_stack;
+use analyses::{CallAnalyzer, HeapAnalyzer, StackAnalyzer};
+use checkers::{check_calls, check_heap, check_stack};
 use ir::utils::has_indirect_calls;
+use ir::{fully_resolved_cfg, get_one_resolved_cfg};
+use loaders::utils::get_data;
 use loaders::{ExecutableType, Loadable};
 use std::panic;
-use utils::utils::{fully_resolved_cfg, get_data, get_one_resolved_cfg};
-use veriwasm::{analyses, checkers, ir, loaders, utils};
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
 
 fn full_test_helper(path: &str, format: ExecutableType) {

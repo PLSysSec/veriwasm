@@ -1,9 +1,9 @@
 mod call_analyzer;
 mod heap_analyzer;
 mod jump_analyzer;
+pub mod locals_analyzer;
 pub mod reaching_defs;
 mod stack_analyzer;
-pub mod locals_analyzer;
 use crate::ir::types::{Binopcode, IRBlock, IRMap, Stmt, Unopcode, Value};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarState};
@@ -11,13 +11,10 @@ use std::collections::{HashMap, VecDeque};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 
 /*     Public API     */
-pub use self::stack_analyzer::StackAnalyzer;
-pub use self::heap_analyzer::HeapAnalyzer;
 pub use self::call_analyzer::CallAnalyzer;
+pub use self::heap_analyzer::HeapAnalyzer;
 pub use self::jump_analyzer::SwitchAnalyzer;
-
-
-
+pub use self::stack_analyzer::StackAnalyzer;
 
 pub type AnalysisResult<T> = HashMap<u64, T>;
 

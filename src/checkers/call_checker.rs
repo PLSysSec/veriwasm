@@ -24,7 +24,7 @@ pub fn check_calls(
         irmap,
         analyzer,
         funcs,
-        plt, 
+        plt,
     }
     .check(result)
 }
@@ -124,7 +124,11 @@ impl CallChecker<'_> {
 
 pub fn memarg_repr(state: &CallCheckLattice, memarg: &MemArg) -> String {
     match memarg {
-        MemArg::Reg(regnum, size) => format!("r{:?}: {:?}", regnum, state.regs.get_reg_index(*regnum, *size).v),
+        MemArg::Reg(regnum, size) => format!(
+            "r{:?}: {:?}",
+            regnum,
+            state.regs.get_reg_index(*regnum, *size).v
+        ),
         MemArg::Imm(_, _, x) => format!("{:?}", x),
     }
 }

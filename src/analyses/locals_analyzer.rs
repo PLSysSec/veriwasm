@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
 use crate::analyses::AbstractAnalyzer;
-use crate::loaders::utils::VwFuncInfo;
-use crate::lattices::mem_to_stack_offset;
-use crate::ir::types::{Value, Binopcode, Stmt, IRMap, ValSize};
-use crate::lattices::reachingdefslattice::LocIdx;
+use crate::ir::types::{Binopcode, IRMap, Stmt, ValSize, Value};
 use crate::lattices::localslattice::*;
-use crate::lattices::{VariableState, VarState, Lattice, VarIndex};
+use crate::lattices::mem_to_stack_offset;
+use crate::lattices::reachingdefslattice::LocIdx;
+use crate::lattices::{Lattice, VarIndex, VarState, VariableState};
+use crate::loaders::utils::VwFuncInfo;
 
 use SlotVal::*;
 
@@ -25,7 +25,7 @@ impl<'a> LocalsAnalyzer<'a> {
                 } else {
                     Init
                 }
-            },
+            }
             Value::Reg(_, _) => state.get(value).unwrap_or(Uninit),
             Value::Imm(_, _, _) => Init,
             Value::RIPConst => todo!(),
@@ -39,7 +39,8 @@ impl<'a> LocalsAnalyzer<'a> {
                 Init
             } else {
                 Uninit
-            }})
+            }
+        })
     }
 }
 
@@ -49,11 +50,11 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
         for arg in self.fun_type.iter() {
             match arg {
                 (VarIndex::Stack(offset), size) => {
-                    lattice.stack.update(i64::from(*offset), Init, size.into_bytes())
-                },
-                (VarIndex::Reg(reg_num), size) => {
-                    lattice.regs.set_reg(*reg_num, *size, Init)
-                },
+                    lattice
+                        .stack
+                        .update(i64::from(*offset), Init, size.into_bytes())
+                }
+                (VarIndex::Reg(reg_num), size) => lattice.regs.set_reg(*reg_num, *size, Init),
             }
         }
         lattice
@@ -61,14 +62,12 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
 
     fn aexec(&self, in_state: &mut LocalsLattice, ir_instr: &Stmt, loc_idx: &LocIdx) -> () {
         match ir_instr {
-            Stmt::Clear(dst, srcs) => {
-                in_state.set(dst, self.aeval_vals(in_state, srcs))
-            }
-            Stmt::Unop(_, dst, src) => {
-                in_state.set(dst, self.aeval_val(in_state, src))
-            }
+            Stmt::Clear(dst, srcs) => in_state.set(dst, self.aeval_vals(in_state, srcs)),
+            Stmt::Unop(_, dst, src) => in_state.set(dst, self.aeval_val(in_state, src)),
             Stmt::Binop(_, dst, src1, src2) => {
-                let dst_val = self.aeval_val(in_state, src1).meet(&self.aeval_val(in_state, src2), loc_idx);
+                let dst_val = self
+                    .aeval_val(in_state, src1)
+                    .meet(&self.aeval_val(in_state, src2), loc_idx);
                 in_state.set(dst, dst_val)
             }
             Stmt::Call(Value::Imm(_, _, dst)) => {
@@ -76,8 +75,8 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
                 println!("{:?}: {:?}", loc_idx, dst);
                 println!("name: {:?}", self.name_addr_map.get(&target));
                 todo!();
-            },
-            _ => todo!()
+            }
+            _ => todo!(),
         }
     }
 
