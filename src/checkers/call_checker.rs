@@ -115,6 +115,14 @@ impl CallChecker<'_> {
                     Some(CallCheckValue::PtrOffset(DAV::Checked)),
                     Some(CallCheckValue::GuestTableBase),
                 ) => return true,
+                (
+                    Some(CallCheckValue::TypedPtrOffset(_)),
+                    Some(CallCheckValue::GuestTableBase),
+                ) => return true,
+                (
+                    Some(CallCheckValue::GuestTableBase),
+                    Some(CallCheckValue::TypedPtrOffset(_)),
+                ) => return true,
                 (_x, Some(CallCheckValue::GuestTableBase))
                 | (Some(CallCheckValue::GuestTableBase), _x) => return false,
                 (_x, _y) => return true, // not a calltable lookup
