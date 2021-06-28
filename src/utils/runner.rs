@@ -31,6 +31,7 @@ pub struct PassConfig {
     pub stack: bool,
     pub linear_mem: bool,
     pub call: bool,
+    pub zero_cost: bool, 
 }
 
 pub struct Config {
@@ -121,10 +122,12 @@ pub fn run(config: Config) {
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
 
         let locals_start = Instant::now();
-        println!("Checking Locals Safety");
-        let locals_safe = run_locals(&func_addrs_map, &func_signatures, &func_name, &cfg, &irmap);
-        if !locals_safe {
-            panic!("Not Locals Safe");
+        if config.active_passes.zero_cost {
+            println!("Checking Locals Safety");
+            let locals_safe = run_locals(&func_addrs_map, &func_signatures, &func_name, &cfg, &irmap);
+            if !locals_safe {
+                panic!("Not Locals Safe");
+            }
         }
 
         let stack_start = Instant::now();
