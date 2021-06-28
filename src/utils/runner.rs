@@ -92,6 +92,8 @@ fn run_calls(
             irmap: irmap.clone(),
         },
         funcs: valid_funcs.clone(),
+        irmap: irmap.clone(),
+        cfg: cfg.clone(),
     };
     let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
     let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs, &plt);

@@ -16,13 +16,54 @@ use crate::loaders::utils::VW_Metadata;
 use std::default::Default;
 use yaxpeax_x86::long_mode::Opcode;
 use std::convert::TryFrom;
+use yaxpeax_core::analyses::control_flow::VW_CFG;
+
 
 pub struct CallAnalyzer {
     pub metadata: VW_Metadata,
     pub reaching_defs: AnalysisResult<ReachLattice>,
     pub reaching_analyzer: ReachingDefnAnalyzer,
     pub funcs: Vec<u64>,
+    pub irmap: IRMap,
+    pub cfg: VW_CFG,
 }
+
+
+impl CallAnalyzer {
+    //1. get enclosing block addr
+    //2. get result for that block start
+    //3. get result for specific addr
+    pub fn fetch_result(
+        &self,
+        result: &AnalysisResult<CallCheckLattice>,
+        loc_idx: &LocIdx,
+    ) -> CallCheckLattice {
+        if self.cfg.blocks.contains_key(&loc_idx.addr) {
+            return result.get(&loc_idx.addr).unwrap().clone();
+        }
+        let block_addr = self.cfg.prev_block(loc_idx.addr).unwrap().start;
+        let irblock = self.irmap.get(&block_addr).unwrap();
+        let mut a_state = result.get(&block_addr).unwrap().clone();
+        for (addr, instruction) in irblock.iter() {
+            for (idx, ir_insn) in instruction.iter().enumerate() {
+                if &loc_idx.addr == addr && (loc_idx.idx as usize) == idx {
+                    return a_state;
+                }
+                self.aexec(
+                    &mut a_state,
+                    ir_insn,
+                    &LocIdx {
+                        addr: *addr,
+                        idx: idx as u32,
+                    },
+                );
+            }
+        }
+        unimplemented!()
+    }
+}
+
+
 
 impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
     fn analyze_block(&self, state: &CallCheckLattice, irblock: &IRBlock) -> CallCheckLattice {
