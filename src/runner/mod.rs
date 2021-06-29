@@ -8,8 +8,8 @@ use analyses::{CallAnalyzer, HeapAnalyzer, StackAnalyzer};
 use checkers::{check_calls, check_heap, check_stack};
 use ir::fully_resolved_cfg;
 use ir::utils::has_indirect_calls;
-use ir::VwArch;
-use loaders::types::{ExecutableType, VwFuncInfo};
+use loaders::load_program;
+use loaders::types::{ExecutableType, VwArch, VwFuncInfo};
 use loaders::utils::{get_data, to_system_v};
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -35,11 +35,10 @@ pub struct Config {
     pub _num_jobs: u32,
     pub output_path: String,
     pub has_output: bool,
-    pub _quiet: bool,
     pub only_func: Option<String>,
     pub executable_type: ExecutableType,
     pub active_passes: PassConfig,
-    pub architecture: VwArch,
+    pub arch: VwArch,
 }
 
 fn run_locals(
@@ -109,16 +108,16 @@ fn run_calls(
 }
 
 pub fn run(config: Config) {
-    let module = config.executable_type.load_program(&config.module_path);
+    let module = load_program(&config);
     // let metadata = config.executable_type.load_metadata(&module.program);
     let (x86_64_data, func_addrs, plt) = get_data(&module.program, &config.executable_type);
 
     let mut func_counter = 0;
     let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64)> = vec![];
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
-    let func_signatures = config.executable_type.get_func_signatures(&module.program);
+    // let func_signatures = config.executable_type.get_func_signatures(&module.program);
     // println!("{:?}", func_signatures);
-    let func_addrs_map = HashMap::from_iter(func_addrs.clone());
+    // let func_addrs_map = HashMap::from_iter(func_addrs.clone());
     for (addr, func_name) in func_addrs {
         if config.only_func.is_some() && func_name != config.only_func.as_ref().unwrap().as_str() {
             continue;
@@ -131,14 +130,14 @@ pub fn run(config: Config) {
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
 
         let locals_start = Instant::now();
-        if config.active_passes.zero_cost {
-            println!("Checking Locals Safety");
-            let locals_safe =
-                run_locals(&func_addrs_map, &func_signatures, &func_name, &cfg, &irmap);
-            if !locals_safe {
-                panic!("Not Locals Safe");
-            }
-        }
+        // if config.active_passes.zero_cost {
+        //     println!("Checking Locals Safety");
+        //     let locals_safe =
+        //         run_locals(&func_addrs_map, &func_signatures, &func_name, &cfg, &irmap);
+        //     if !locals_safe {
+        //         panic!("Not Locals Safe");
+        //     }
+        // }
 
         let stack_start = Instant::now();
         if config.active_passes.stack {

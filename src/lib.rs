@@ -14,7 +14,7 @@ use analyses::HeapAnalyzer;
 use checkers::check_heap;
 use ir::lift_cfg;
 use ir::types::IRMap;
-use loaders::types::{VwMetadata, VwModule};
+use loaders::types::{ExecutableType, VwArch, VwMetadata, VwModule};
 use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;
 use yaxpeax_core::analyses::control_flow::{VW_Block, VW_CFG};
@@ -136,6 +136,8 @@ fn func_body_and_bbs_to_cfg(
     let module = VwModule {
         program: data,
         metadata: lucet,
+        format: ExecutableType::Lucet,
+        arch: VwArch::X64,
     };
 
     let irmap = lift_cfg(&module, &cfg);

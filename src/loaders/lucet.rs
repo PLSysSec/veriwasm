@@ -1,4 +1,4 @@
-use crate::loaders;
+use crate::{loaders, runner};
 use byteorder::{LittleEndian, ReadBytesExt};
 // use loaders::utils::*;
 use loaders::types::{VwFuncInfo, VwMetadata, VwModule};
@@ -24,13 +24,19 @@ fn load_lucet_metadata(program: &ModuleData) -> VwMetadata {
     }
 }
 
-pub fn load_lucet_program(binpath: &str) -> VwModule {
-    let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
+pub fn load_lucet_program(config: &runner::Config) -> VwModule {
+    let program =
+        yaxpeax_core::memory::reader::load_from_path(Path::new(&config.module_path)).unwrap();
     if let FileRepr::Executable(program) = program {
         let metadata = load_lucet_metadata(&program);
-        VwModule { program, metadata }
+        VwModule {
+            program,
+            metadata,
+            format: config.executable_type,
+            arch: config.arch,
+        }
     } else {
-        panic!("function:{} is not a valid path", binpath)
+        panic!("function:{} is not a valid path", config.module_path)
     }
 }
 

@@ -1,9 +1,8 @@
 use clap::{App, Arg};
-use ir::VwArch;
-use loaders::types::ExecutableType;
+use loaders::types::{ExecutableType, VwArch};
 use std::str::FromStr;
+use veriwasm::loaders;
 use veriwasm::runner::*;
-use veriwasm::{ir, loaders};
 
 fn main() {
     let _ = env_logger::try_init();
@@ -51,7 +50,6 @@ fn main() {
                 .takes_value(true)
                 .help("Architecture of the executable (x64 | aarch64)"),
         )
-        .arg(Arg::with_name("quiet").short("q").long("quiet"))
         .arg(Arg::with_name("disable_stack_checks").long("disable_stack_checks"))
         .arg(Arg::with_name("disable_linear_mem_checks").long("disable_linear_mem_checks"))
         .arg(Arg::with_name("disable_call_checks").long("disable_call_checks"))
@@ -64,7 +62,6 @@ fn main() {
     let num_jobs = num_jobs_opt
         .map(|s| s.parse::<u32>().unwrap_or(1))
         .unwrap_or(1);
-    let quiet = matches.is_present("quiet");
     let disable_stack_checks = matches.is_present("disable_stack_checks");
     let disable_linear_mem_checks = matches.is_present("disable_linear_mem_checks");
     let disable_call_checks = matches.is_present("disable_call_checks");
@@ -72,7 +69,7 @@ fn main() {
     let only_func = matches.value_of("one function").map(|s| s.to_owned());
     let executable_type =
         ExecutableType::from_str(matches.value_of("executable type").unwrap_or("lucet")).unwrap();
-    let architecture = VwArch::from_str(matches.value_of("architecture").unwrap_or("x64")).unwrap();
+    let arch = VwArch::from_str(matches.value_of("architecture").unwrap_or("x64")).unwrap();
 
     let has_output = if output_path == "" { false } else { true };
 
@@ -88,11 +85,10 @@ fn main() {
         _num_jobs: num_jobs,
         output_path: output_path.to_string(),
         has_output: has_output,
-        _quiet: quiet,
         only_func,
         executable_type,
         active_passes,
-        architecture,
+        arch,
     };
 
     run(config);

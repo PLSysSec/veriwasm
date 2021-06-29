@@ -5,6 +5,12 @@ use yaxpeax_core::memory::repr::process::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VwArch {
+    X64,
+    Aarch64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExecutableType {
     Lucet,
     Wasmtime,
@@ -14,6 +20,8 @@ pub enum ExecutableType {
 pub struct VwModule {
     pub program: ModuleData,
     pub metadata: VwMetadata,
+    pub format: ExecutableType,
+    pub arch: VwArch,
 }
 
 #[derive(Clone, Debug)]

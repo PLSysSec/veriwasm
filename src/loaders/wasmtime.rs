@@ -1,4 +1,5 @@
-use crate::loaders;
+use crate::runner::Config;
+use crate::{loaders, runner};
 use loaders::types::{VwFuncInfo, VwMetadata, VwModule};
 use loaders::utils::deconstruct_elf;
 use loaders::utils::*;
@@ -64,7 +65,8 @@ fn load_wasmtime_metadata(program: &ModuleData) -> VwMetadata {
     }
 }
 
-pub fn load_wasmtime_program(path: &str) -> VwModule {
+pub fn load_wasmtime_program(config: &runner::Config) -> VwModule {
+    let path = &config.module_path;
     let buffer = fs::read(path).expect("Something went wrong reading the file");
     let store: Store<()> = Store::default();
     // Deserialize wasmtime module
@@ -75,7 +77,12 @@ pub fn load_wasmtime_program(path: &str) -> VwModule {
         Some(mut program) => {
             fixup_object_file(&mut program, &obj);
             let metadata = load_wasmtime_metadata(&program);
-            VwModule { program, metadata }
+            VwModule {
+                program,
+                metadata,
+                format: config.executable_type,
+                arch: config.arch,
+            }
         } //{ FileRepr::Executable(data) }
         None => {
             panic!("function:{} is not a valid path", path)

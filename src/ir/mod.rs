@@ -4,17 +4,12 @@ pub mod types;
 pub mod utils;
 mod x64;
 
-pub use self::cfg::{fully_resolved_cfg, get_one_resolved_cfg};
+pub use self::cfg::fully_resolved_cfg;
 pub use self::x64::lift_cfg;
 use crate::ir::types::Stmt;
+use crate::loaders::types::VwArch;
 use crate::VwMetadata;
 use core::str::FromStr;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VwArch {
-    X64,
-    Aarch64,
-}
 
 pub trait Liftable {
     fn lift(
