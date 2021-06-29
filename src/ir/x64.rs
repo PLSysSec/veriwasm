@@ -23,12 +23,6 @@ pub fn mk_value_i64(num: i64) -> Value {
     Value::Imm(ImmType::Signed, ValSize::Size64, num)
 }
 
-impl Stmt {
-    pub fn width(&self) -> u32 {
-        unimplemented!("Width not implemented")
-    }
-}
-
 fn get_reg_size(reg: yaxpeax_x86::long_mode::RegSpec) -> ValSize {
     let size = match reg.class() {
         register_class::Q => ValSize::Size64,

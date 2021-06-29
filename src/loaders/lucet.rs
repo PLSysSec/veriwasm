@@ -5,14 +5,40 @@ use lucet_module;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::mem;
-use std::path::Path;
 use utils::utils::{deconstruct_elf, get_symbol_addr};
 use yaxpeax_core::memory::repr::process::{ModuleData, Segment};
 use yaxpeax_core::memory::repr::FileRepr;
+use goblin::Object;
+use std::fs::File;
+use std::path::Path;
+use std::io::Read;
+
+
+pub fn get_plt_data(binpath: &str){
+    let path = Path::new(binpath);
+    let mut fd = File::open(path).unwrap();
+    let mut buffer = Vec::new();
+    fd.read_to_end(&mut buffer).unwrap();
+    match Object::parse(&buffer).unwrap() {
+        Object::Elf(elf) => {
+            println!("Dynamic: {:?}", elf.dynamic);
+            for plt_reloc in elf.pltrelocs.iter(){
+                println!("reloc: {:?}", plt_reloc);
+            }
+            for dynsym in elf.dynsyms.iter(){
+                println!("import: {} {:x} {:?}", elf.dynstrtab.get(dynsym.st_name).unwrap().unwrap().to_string(), dynsym.st_value, dynsym);
+            }
+            unimplemented!();
+            //println!("elf: {:#?}", &elf);
+            },
+        _ => unimplemented!(),
+        }
+}
 
 pub fn load_lucet_program(binpath: &str) -> ModuleData {
     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
     if let FileRepr::Executable(program) = program {
+        // get_plt_data(binpath);
         program
     } else {
         panic!("function:{} is not a valid path", binpath)
