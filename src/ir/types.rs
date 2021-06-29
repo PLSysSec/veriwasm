@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::lattices::{VarIndex, X86Regs};
 
 #[derive(Debug, Clone)]
 pub enum ImmType {
@@ -107,3 +108,10 @@ pub enum Binopcode {
 
 pub type IRBlock = Vec<(u64, Vec<Stmt>)>;
 pub type IRMap = HashMap<u64, IRBlock>;
+
+
+#[derive(Debug, Clone)]
+pub struct FunType {
+    pub args: Vec<(VarIndex, ValSize)>,
+    pub ret: Option<(X86Regs, ValSize)>,
+}

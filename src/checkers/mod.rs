@@ -7,6 +7,7 @@ pub mod call_checker;
 pub mod heap_checker;
 pub mod jump_resolver;
 pub mod stack_checker;
+pub mod locals_checker;
 
 pub trait Checker<State: Lattice + Clone> {
     fn check(&self, result: AnalysisResult<State>) -> bool;
