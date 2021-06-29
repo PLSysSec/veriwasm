@@ -5,7 +5,6 @@ use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_core::arch::x86_64::analyses::data_flow::Location;
 use yaxpeax_core::arch::InstructionSpan;
 use yaxpeax_core::data::{Direction, ValueLocations};
-use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_x86::long_mode::Opcode::*;
 use yaxpeax_x86::long_mode::{register_class, Arch as AMD64, Opcode, Operand, RegSpec};
 

@@ -6,12 +6,9 @@ use checkers::resolve_jumps;
 use ir::lift_cfg;
 use ir::types::IRMap;
 use ir::utils::has_indirect_jumps;
-use loaders::types::{ExecutableType, VwMetadata, VwModule};
-use loaders::utils::{deconstruct_elf, get_function_starts, get_symbol_addr};
-use loaders::Loadable;
+use loaders::types::VwModule;
 use yaxpeax_core::analyses::control_flow::{get_cfg, VW_CFG};
-use yaxpeax_core::arch::x86_64::{x86_64Data, MergedContextTable};
-use yaxpeax_core::memory::repr::process::ModuleData;
+use yaxpeax_core::arch::x86_64::MergedContextTable;
 
 fn try_resolve_jumps(
     module: &VwModule,
@@ -82,21 +79,3 @@ pub fn fully_resolved_cfg(
     }
     return resolve_cfg(module, contexts, &cfg, &irmap, addr);
 }
-
-// pub fn get_one_resolved_cfg(
-//     func: &str,
-//     module: &VwModule,
-//     format: &ExecutableType,
-// ) -> ((VW_CFG, IRMap), x86_64Data) {
-//     let (_, sections, entrypoint, imports, exports, symbols) = deconstruct_elf(&module.program);
-//     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
-//     let x86_64_data = get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
-
-//     let addr = get_symbol_addr(symbols, func).unwrap();
-//     assert!(format.is_valid_func_name(&String::from(func)));
-//     println!("Generating CFG for: {:?}", func);
-//     return (
-//         fully_resolved_cfg(module, &x86_64_data.contexts, addr),
-//         x86_64_data,
-//     );
-// }

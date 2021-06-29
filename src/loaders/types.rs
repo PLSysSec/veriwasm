@@ -1,3 +1,4 @@
+use core::str::FromStr;
 use lucet_module::Signature;
 use std::collections::HashMap;
 use yaxpeax_core::memory::repr::process::{
@@ -10,10 +11,33 @@ pub enum VwArch {
     Aarch64,
 }
 
+impl FromStr for VwArch {
+    type Err = &'static str;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match &s.to_string().to_lowercase()[..] {
+            "x86_64" => Ok(VwArch::X64),
+            "x64" => Ok(VwArch::X64),
+            "aarch64" => Ok(VwArch::Aarch64),
+            _ => Err("Unknown architecture"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExecutableType {
     Lucet,
     Wasmtime,
+}
+
+impl FromStr for ExecutableType {
+    type Err = &'static str;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match &s.to_string().to_lowercase()[..] {
+            "lucet" => Ok(ExecutableType::Lucet),
+            "wasmtime" => Ok(ExecutableType::Wasmtime),
+            _ => Err("Unknown executable type"),
+        }
+    }
 }
 
 //TODO: remove public fields

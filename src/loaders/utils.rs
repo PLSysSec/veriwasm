@@ -24,44 +24,44 @@ use yaxpeax_x86::long_mode::Arch as AMD64;
 // RDI, RSI, RDX, RCX, R8, R9,
 // 7,   6,   3,   2,   8,  9,    then stack slots
 
-pub fn to_system_v(sig: &Signature) -> Vec<(VarIndex, ValSize)> {
-    let mut arg_locs = Vec::new();
-    let mut i_ctr = 0; // integer arg #
-    let mut f_ctr = 0; // floating point arg #
-    let mut stack_offset = 0;
-    for arg in &sig.params {
-        match arg {
-            ValueType::I32 | ValueType::I64 => {
-                let index = match i_ctr {
-                    0 => VarIndex::Reg(Rdi),
-                    1 => VarIndex::Reg(Rsi),
-                    2 => VarIndex::Reg(Rdx),
-                    3 => VarIndex::Reg(Rcx),
-                    4 => VarIndex::Reg(R8),
-                    5 => VarIndex::Reg(R9),
-                    _ => {
-                        if let ValueType::I32 = arg {
-                            stack_offset += 4;
-                        } else {
-                            stack_offset += 8;
-                        };
-                        VarIndex::Stack(stack_offset)
-                    }
-                };
-                i_ctr += 1;
-                match arg {
-                    ValueType::I32 => arg_locs.push((index, ValSize::Size32)),
-                    ValueType::I64 => arg_locs.push((index, ValSize::Size64)),
-                    _ => (),
-                };
-            }
-            ValueType::F32 | ValueType::F64 => {
-                f_ctr += 1;
-            }
-        }
-    }
-    return arg_locs;
-}
+// pub fn to_system_v(sig: &Signature) -> Vec<(VarIndex, ValSize)> {
+//     let mut arg_locs = Vec::new();
+//     let mut i_ctr = 0; // integer arg #
+//     let mut f_ctr = 0; // floating point arg #
+//     let mut stack_offset = 0;
+//     for arg in &sig.params {
+//         match arg {
+//             ValueType::I32 | ValueType::I64 => {
+//                 let index = match i_ctr {
+//                     0 => VarIndex::Reg(Rdi),
+//                     1 => VarIndex::Reg(Rsi),
+//                     2 => VarIndex::Reg(Rdx),
+//                     3 => VarIndex::Reg(Rcx),
+//                     4 => VarIndex::Reg(R8),
+//                     5 => VarIndex::Reg(R9),
+//                     _ => {
+//                         if let ValueType::I32 = arg {
+//                             stack_offset += 4;
+//                         } else {
+//                             stack_offset += 8;
+//                         };
+//                         VarIndex::Stack(stack_offset)
+//                     }
+//                 };
+//                 i_ctr += 1;
+//                 match arg {
+//                     ValueType::I32 => arg_locs.push((index, ValSize::Size32)),
+//                     ValueType::I64 => arg_locs.push((index, ValSize::Size64)),
+//                     _ => (),
+//                 };
+//             }
+//             ValueType::F32 | ValueType::F64 => {
+//                 f_ctr += 1;
+//             }
+//         }
+//     }
+//     return arg_locs;
+// }
 
 //return addr of symbol if present, else None
 pub fn get_symbol_addr(symbols: &Vec<ELFSymbol>, name: &str) -> Option<u64> {

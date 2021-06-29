@@ -33,15 +33,3 @@ impl Liftable for VwArch {
         }
     }
 }
-
-impl FromStr for VwArch {
-    type Err = &'static str;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match &s.to_string().to_lowercase()[..] {
-            "x86_64" => Ok(VwArch::X64),
-            "x64" => Ok(VwArch::X64),
-            "aarch64" => Ok(VwArch::Aarch64),
-            _ => Err("Unknown architecture"),
-        }
-    }
-}

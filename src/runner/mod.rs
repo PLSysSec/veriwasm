@@ -10,7 +10,7 @@ use ir::fully_resolved_cfg;
 use ir::utils::has_indirect_calls;
 use loaders::load_program;
 use loaders::types::{ExecutableType, VwArch, VwFuncInfo};
-use loaders::utils::{get_data, to_system_v};
+use loaders::utils::get_data;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::iter::FromIterator;
@@ -41,33 +41,33 @@ pub struct Config {
     pub arch: VwArch,
 }
 
-fn run_locals(
-    func_addrs_map: &HashMap<u64, String>,
-    func_signatures: &VwFuncInfo,
-    func_name: &String,
-    cfg: &VW_CFG,
-    irmap: &IRMap,
-) -> bool {
-    if let Some(fun_type) = func_signatures
-        .indexes
-        .get(func_name)
-        .and_then(|index| {
-            func_signatures
-                .signatures
-                .get(usize::try_from(*index).unwrap())
-        })
-        .map(to_system_v)
-    {
-        let locals_analyzer = LocalsAnalyzer {
-            fun_type,
-            symbol_table: func_signatures,
-            name_addr_map: func_addrs_map,
-        };
-        let locals_result = run_worklist(&cfg, &irmap, &locals_analyzer);
-        // let stack_safe = check_stack(stack_result, &irmap, &locals_analyzer);
-    }
-    false
-}
+// fn run_locals(
+//     func_addrs_map: &HashMap<u64, String>,
+//     func_signatures: &VwFuncInfo,
+//     func_name: &String,
+//     cfg: &VW_CFG,
+//     irmap: &IRMap,
+// ) -> bool {
+//     if let Some(fun_type) = func_signatures
+//         .indexes
+//         .get(func_name)
+//         .and_then(|index| {
+//             func_signatures
+//                 .signatures
+//                 .get(usize::try_from(*index).unwrap())
+//         })
+//         .map(to_system_v)
+//     {
+//         let locals_analyzer = LocalsAnalyzer {
+//             fun_type,
+//             symbol_table: func_signatures,
+//             name_addr_map: func_addrs_map,
+//         };
+//         let locals_result = run_worklist(&cfg, &irmap, &locals_analyzer);
+//         // let stack_safe = check_stack(stack_result, &irmap, &locals_analyzer);
+//     }
+//     false
+// }
 
 fn run_stack(cfg: &VW_CFG, irmap: &IRMap) -> bool {
     let stack_analyzer = StackAnalyzer {};
