@@ -1,3 +1,5 @@
+use std::mem::discriminant;
+
 use crate::ir::types::*;
 use crate::loaders::utils::VW_Metadata;
 use crate::lattices::X86Regs::*;
@@ -707,101 +709,137 @@ pub fn lift(
     instrs
 }
 
-fn is_probestack(
-    instr: &yaxpeax_x86::long_mode::Instruction,
-    addr: &u64,
+fn parse_probestack_arg<'a>(
+    instrs: BlockInstrs<'a>,
     metadata: &VW_Metadata,
-) -> bool {
-    if let Opcode::CALL = instr.opcode() {
-        let op = convert_operand(instr.operand(0), ValSize::SizeOther);
-        if let Value::Imm(_, _, offset) = op {
-            // 5 = size of call instruction
-            if 5 + offset + (*addr as i64) == metadata.lucet_probestack as i64 {
-                return true;
-            }
-        }
+) -> IResult<'a, (u64, StmtResult)> {
+    let (rest, (addr, move_instr)) = parse_single_instr(instrs, metadata)?;
+    if move_instr.len() != 1 {
+        return Err(ParseErr::Error(instrs));
     }
-    false
+    if let Stmt::Unop(Unopcode::Mov, Value::Reg(0, ValSize::Size32), Value::Imm(_, _, x)) = move_instr[0] {
+        return Ok((rest, (x as u64, (addr, move_instr))));
+    }
+    Err(ParseErr::Error(instrs))
 }
 
-fn extract_probestack_arg(instr: &yaxpeax_x86::long_mode::Instruction) -> Option<u64> {
-    if let Opcode::MOV = instr.opcode() {
-        if let Value::Reg(0, ValSize::Size32) =
-            convert_operand(instr.operand(0), ValSize::SizeOther)
-        {
-            if let Value::Imm(_, _, x) = convert_operand(instr.operand(1), ValSize::SizeOther) {
-                if instr.operand_count() == 2 {
-                    return Some(x as u64);
-                }
-            }
+fn parse_probestack_call<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VW_Metadata,
+) -> IResult<'a, StmtResult> {
+    let (rest, (addr, call_instr)) = parse_single_instr(instrs, metadata)?;
+    if call_instr.len() != 1 {
+        return Err(ParseErr::Error(instrs));
+    }
+    if let Stmt::Call(Value::Imm(_, _, offset)) = call_instr[0] {
+        if 5 + offset + (addr as i64) == metadata.lucet_probestack as i64 {
+            return Ok((rest, (addr, call_instr)));
         }
     }
-    None
+    Err(ParseErr::Error(instrs))
 }
 
-fn check_probestack_suffix(instr: &yaxpeax_x86::long_mode::Instruction) -> bool {
-    if let Opcode::SUB = instr.opcode() {
-        if let Value::Reg(4, ValSize::Size64) =
-            convert_operand(instr.operand(0), ValSize::SizeOther)
-        {
-            //size is dummy
-            if let Value::Reg(0, ValSize::Size64) =
-                convert_operand(instr.operand(1), ValSize::SizeOther)
-            {
-                if instr.operand_count() == 2 {
-                    return true;
-                }
+fn parse_probestack_suffix<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VW_Metadata,
+) -> IResult<'a, StmtResult> {
+    let (rest, (addr, sub_instr)) = parse_single_instr(instrs, metadata)?;
+    if sub_instr.len() != 1 {
+        return Err(ParseErr::Error(instrs));
+    }
+    if let Stmt::Binop(Binopcode::Sub, Value::Reg(4, ValSize::Size64), Value::Reg(0, ValSize::Size64), _) = sub_instr[0] {
+        return Ok((rest, (addr, sub_instr)))
+    }
+    Err(ParseErr::Error(instrs))
+}
+
+fn parse_probestack<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VW_Metadata,
+) -> IResult<'a, StmtResult> {
+    let (rest, (probestack_arg, (addr, mov_instr))) = parse_probestack_arg(instrs, metadata)?;
+    let (rest, (_, call_instr)) = parse_probestack_call(rest, metadata)?;
+    let (rest, (_, suffix_instr)) = parse_probestack_suffix(rest, metadata)?;
+    let mut stmts = Vec::new();
+    stmts.extend(mov_instr);
+    stmts.push(Stmt::ProbeStack(probestack_arg));
+    Ok((rest, (addr, stmts)))
+}
+
+fn parse_single_instr<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VW_Metadata,
+) -> IResult<'a, StmtResult> {
+    if let Some(((addr, instr), rest)) = instrs.split_first() {
+        Ok((rest, (*addr, lift(instr, addr, metadata))))
+    } else {
+        Err(ParseErr::Incomplete)
+    }
+
+}
+
+fn parse_instr<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VW_Metadata,
+) -> IResult<'a, StmtResult> {
+    if let Ok((rest, stmt)) = parse_probestack(instrs, metadata) {
+        Ok((rest, stmt))
+    } else {
+        parse_single_instr(instrs, metadata)
+    }
+}
+
+fn parse_instrs<'a>(
+    instrs: BlockInstrs,
+    metadata: &VW_Metadata,
+) -> Vec<(u64, Vec<Stmt>)> {
+    let mut block_ir: Vec<(u64, Vec<Stmt>)> = Vec::new();
+    let mut rest = instrs;
+    while let Ok((more, (addr, stmts))) = parse_instr(rest, metadata) {
+        rest = more;
+        if stmts.len() == 1 {
+            if let Stmt::Branch(Opcode::JMP, _) = stmts[0] {
+                // Don't continue past an unconditional jump --
+                // Cranelift's new backend embeds constants in the
+                // code stream at points (e.g. jump tables) and we
+                // should not disassemble them as code.
+                block_ir.push((addr, stmts));
+                break;
             }
         }
+        block_ir.push((addr, stmts));
     }
-    panic!("Broken Probestack?")
+    block_ir
 }
 
 pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &VW_Metadata) -> IRMap {
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
     for block_addr in g.nodes() {
-        let mut block_ir: Vec<(u64, Vec<Stmt>)> = Vec::new();
         let block = cfg.get_block(block_addr);
-        let mut iter = program.instructions_spanning(
+
+        let instrs_vec: Vec<(u64, yaxpeax_x86::long_mode::Instruction)> = program.instructions_spanning(
             <AMD64 as Arch>::Decoder::default(),
             block.start,
             block.end,
-        );
-        let mut probestack_suffix = false;
-        let mut x: Option<u64> = None;
-        while let Some((addr, instr)) = iter.next() {
-            if probestack_suffix {
-                //1. fail if it isnt sub, rsp, rax
-                //2. skip
-                probestack_suffix = false;
-                check_probestack_suffix(instr);
+        ).collect();
+        let instrs = instrs_vec.as_slice();
+        let block_ir = parse_instrs(instrs, &metadata);
 
-                continue;
-            }
-            if is_probestack(instr, &addr, &metadata) {
-                match x {
-                    Some(v) => {
-                        let ir = (addr, vec![Stmt::ProbeStack(v)]);
-                        block_ir.push(ir);
-                        probestack_suffix = true;
-                        continue;
-                    }
-                    None => panic!("probestack broken"),
-                }
-            }
-            let ir = (addr, lift(instr, &addr, metadata));
-            block_ir.push(ir);
-            x = extract_probestack_arg(instr);
-            if instr.opcode() == Opcode::JMP {
-                // Don't continue past an unconditional jump --
-                // Cranelift's new backend embeds constants in the
-                // code stream at points (e.g. jump tables) and we
-                // should not disassemble them as code.
-                break;
-            }
-        }
         irmap.insert(block_addr, block_ir);
     }
     irmap
 }
+
+// TODO: baby version of nom, resolve crate incompatibilities later
+
+type IResult<'a, O> = Result<(BlockInstrs<'a>, O), ParseErr<BlockInstrs<'a>>>;
+type StmtResult = (u64, Vec<Stmt>);
+
+enum ParseErr<E> {
+    Incomplete, // input too short
+    Error(E),   // recoverable
+    Failure(E), // unrecoverable
+}
+
+type BlockInstrs<'a> = &'a[(u64, yaxpeax_x86::long_mode::Instruction)];
