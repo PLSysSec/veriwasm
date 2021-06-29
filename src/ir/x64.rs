@@ -292,7 +292,7 @@ fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &VW_Metadata) ->
     Stmt::Call(dst)
 }
 
-fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Vec<Stmt> {
+fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &Addr) -> Vec<Stmt> {
     let dst = instr.operand(0);
     let src1 = instr.operand(1);
     if let Operand::RegDisp(reg, disp) = src1 {
@@ -321,7 +321,7 @@ fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Vec<Stmt> {
 
 pub fn lift(
     instr: &yaxpeax_x86::long_mode::Instruction,
-    addr: &u64,
+    addr: &Addr,
     metadata: &VW_Metadata,
 ) -> Vec<Stmt> {
     log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
@@ -499,7 +499,6 @@ pub fn lift(
             ));
         },
 
-        // TODO: "IF SRC = 0 THEN DEST is undefined"
         Opcode::BSF => {
             instrs.push(Stmt::Clear(
                 Value::Reg(u8::from(Zf), ValSize::Size8),
@@ -766,6 +765,60 @@ fn parse_probestack<'a>(
     Ok((rest, (addr, stmts)))
 }
 
+// returns (addr, operand(0), operand(1))
+fn parse_bsf<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value, Value)> {
+    if let Some(((addr, instr), rest)) = instrs.split_first() {
+        if let Opcode::BSF = instr.opcode() {
+            return Ok((rest,
+                (
+                    *addr,
+                    convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap()),
+                    convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap()),
+                )
+            ));
+        }
+    }
+    Err(ParseErr::Incomplete)
+}
+
+// returns src of the cmove (dst must be the same)
+fn parse_cmovez<'a>(instrs: BlockInstrs<'a>, bsf_dst: &Value) -> IResult<'a, (Addr, Value)> {
+    if let Some(((addr, instr), rest)) = instrs.split_first() {
+        if let Opcode::CMOVZ = instr.opcode() {
+            let mov_dst = convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap());
+            if let (Value::Reg(bsf_dst_reg, _), Value::Reg(mov_dst_reg, _)) = (bsf_dst, mov_dst) {
+                if *bsf_dst_reg == mov_dst_reg {
+                    return Ok((rest,
+                               (
+                                   *addr,
+                                   convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap()),
+                               )
+                    ))
+                }
+            }
+        }
+    }
+    Err(ParseErr::Error(instrs))
+}
+
+fn parse_bsf_cmove<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VW_Metadata,
+) -> IResult<'a, StmtResult> {
+    let (rest, (addr, bsf_dst, bsf_src)) = parse_bsf(instrs)?;
+    let (rest, (_addr, mov_src)) = parse_cmovez(rest, &bsf_dst)?;
+    let mut stmts = Vec::new();
+    stmts.push(Stmt::Clear(
+        Value::Reg(u8::from(Zf), ValSize::Size8),
+        vec![bsf_src.clone()],
+    ));
+    stmts.push(Stmt::Clear(
+        bsf_dst,
+        vec![bsf_src, mov_src],
+    ));
+    Ok((rest, (addr, stmts)))
+}
+
 fn parse_single_instr<'a>(
     instrs: BlockInstrs<'a>,
     metadata: &VW_Metadata,
@@ -782,7 +835,9 @@ fn parse_instr<'a>(
     instrs: BlockInstrs<'a>,
     metadata: &VW_Metadata,
 ) -> IResult<'a, StmtResult> {
-    if let Ok((rest, stmt)) = parse_probestack(instrs, metadata) {
+    if let Ok((rest, stmt)) = parse_bsf_cmove(instrs, metadata) {
+        Ok((rest, stmt))
+    } else if let Ok((rest, stmt)) = parse_probestack(instrs, metadata) {
         Ok((rest, stmt))
     } else {
         parse_single_instr(instrs, metadata)
@@ -792,8 +847,8 @@ fn parse_instr<'a>(
 fn parse_instrs<'a>(
     instrs: BlockInstrs,
     metadata: &VW_Metadata,
-) -> Vec<(u64, Vec<Stmt>)> {
-    let mut block_ir: Vec<(u64, Vec<Stmt>)> = Vec::new();
+) -> Vec<(Addr, Vec<Stmt>)> {
+    let mut block_ir: Vec<(Addr, Vec<Stmt>)> = Vec::new();
     let mut rest = instrs;
     while let Ok((more, (addr, stmts))) = parse_instr(rest, metadata) {
         rest = more;
@@ -834,7 +889,8 @@ pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &VW_Metadata) -> I
 // TODO: baby version of nom, resolve crate incompatibilities later
 
 type IResult<'a, O> = Result<(BlockInstrs<'a>, O), ParseErr<BlockInstrs<'a>>>;
-type StmtResult = (u64, Vec<Stmt>);
+type StmtResult = (Addr, Vec<Stmt>);
+type Addr = u64;
 
 enum ParseErr<E> {
     Incomplete, // input too short
@@ -842,4 +898,4 @@ enum ParseErr<E> {
     Failure(E), // unrecoverable
 }
 
-type BlockInstrs<'a> = &'a[(u64, yaxpeax_x86::long_mode::Instruction)];
+type BlockInstrs<'a> = &'a[(Addr, yaxpeax_x86::long_mode::Instruction)];
