@@ -7,20 +7,21 @@ use analyses::{CallAnalyzer, HeapAnalyzer, StackAnalyzer};
 use checkers::{check_calls, check_heap, check_stack};
 use ir::utils::has_indirect_calls;
 use ir::{fully_resolved_cfg, get_one_resolved_cfg};
+use loaders::types::ExecutableType;
 use loaders::utils::get_data;
-use loaders::{ExecutableType, Loadable};
+use loaders::Loadable;
 use std::panic;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
 
 fn full_test_helper(path: &str, format: ExecutableType) {
     let _ = env_logger::builder().is_test(true).try_init();
-    let program = format.load_program(&path);
+    let module = format.load_program(&path);
     println!("Loading Metadata");
-    let metadata = format.load_metadata(&program);
-    let (x86_64_data, func_addrs, plt) = get_data(&program, &format);
+    // let metadata = format.load_metadata(&program);
+    let (x86_64_data, func_addrs, plt) = get_data(&module.program, &format);
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     for (addr, func_name) in func_addrs {
-        let (cfg, irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
+        let (cfg, irmap) = fully_resolved_cfg(&module, &x86_64_data.contexts, addr);
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
         println!("Analyzing: {:?} @ {:x}", func_name, addr);
         println!("Checking Stack Safety");
@@ -30,16 +31,16 @@ fn full_test_helper(path: &str, format: ExecutableType) {
         assert!(stack_safe);
         println!("Checking Heap Safety");
         let heap_analyzer = HeapAnalyzer {
-            metadata: metadata.clone(),
+            metadata: module.metadata.clone(),
         };
         let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
         let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
         assert!(heap_safe);
         println!("Checking Call Safety");
         if has_indirect_calls(&irmap) {
-            let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
+            let reaching_defs = analyze_reaching_defs(&cfg, &irmap, module.metadata.clone());
             let call_analyzer = CallAnalyzer {
-                metadata: metadata.clone(),
+                metadata: module.metadata.clone(),
                 reaching_defs: reaching_defs.clone(),
                 reaching_analyzer: ReachingDefnAnalyzer {
                     cfg: cfg.clone(),
@@ -57,12 +58,12 @@ fn full_test_helper(path: &str, format: ExecutableType) {
 
 fn negative_test_helper(path: &str, func_name: &str, format: ExecutableType) {
     let _ = env_logger::builder().is_test(true).try_init();
-    let program = format.load_program(&path);
-    let (x86_64_data, func_addrs, plt) = get_data(&program, &format);
+    let module = format.load_program(&path);
+    let (x86_64_data, func_addrs, plt) = get_data(&module.program, &format);
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
-    println!("Loading Metadata");
-    let metadata = format.load_metadata(&program);
-    let ((cfg, irmap), x86_64_data) = get_one_resolved_cfg(path, func_name, &program, &format);
+    // println!("Loading Metadata");
+    // let metadata = format.load_metadata(&program);
+    let ((cfg, irmap), x86_64_data) = get_one_resolved_cfg(func_name, &module, &format);
     println!("Analyzing: {:?}", func_name);
     check_cfg_integrity(&cfg.blocks, &cfg.graph);
     println!("Checking Stack Safety");
@@ -72,16 +73,16 @@ fn negative_test_helper(path: &str, func_name: &str, format: ExecutableType) {
     assert!(stack_safe);
     println!("Checking Heap Safety");
     let heap_analyzer = HeapAnalyzer {
-        metadata: metadata.clone(),
+        metadata: module.metadata.clone(),
     };
     let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
     let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
     assert!(heap_safe);
     println!("Checking Call Safety");
     if has_indirect_calls(&irmap) {
-        let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
+        let reaching_defs = analyze_reaching_defs(&cfg, &irmap, module.metadata.clone());
         let call_analyzer = CallAnalyzer {
-            metadata: metadata.clone(),
+            metadata: module.metadata.clone(),
             reaching_defs: reaching_defs.clone(),
             reaching_analyzer: ReachingDefnAnalyzer {
                 cfg: cfg.clone(),

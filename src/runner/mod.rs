@@ -9,8 +9,8 @@ use checkers::{check_calls, check_heap, check_stack};
 use ir::fully_resolved_cfg;
 use ir::utils::has_indirect_calls;
 use ir::VwArch;
+use loaders::types::{ExecutableType, VwFuncInfo};
 use loaders::utils::{get_data, to_system_v};
-use loaders::types::{ExecutableType,VwFuncInfo};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::iter::FromIterator;
@@ -109,14 +109,14 @@ fn run_calls(
 }
 
 pub fn run(config: Config) {
-    let program = config.executable_type.load_program(&config.module_path);
-    let metadata = config.executable_type.load_metadata(&program);
-    let (x86_64_data, func_addrs, plt) = get_data(&program, &config.executable_type);
+    let module = config.executable_type.load_program(&config.module_path);
+    // let metadata = config.executable_type.load_metadata(&module.program);
+    let (x86_64_data, func_addrs, plt) = get_data(&module.program, &config.executable_type);
 
     let mut func_counter = 0;
     let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64)> = vec![];
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
-    let func_signatures = config.executable_type.get_func_signatures(&program);
+    let func_signatures = config.executable_type.get_func_signatures(&module.program);
     // println!("{:?}", func_signatures);
     let func_addrs_map = HashMap::from_iter(func_addrs.clone());
     for (addr, func_name) in func_addrs {
@@ -125,7 +125,7 @@ pub fn run(config: Config) {
         }
         println!("Generating CFG for {:?}", func_name);
         let start = Instant::now();
-        let (cfg, irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, addr);
+        let (cfg, irmap) = fully_resolved_cfg(&module, &x86_64_data.contexts, addr);
         func_counter += 1;
         println!("Analyzing: {:?}", func_name);
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
@@ -152,7 +152,7 @@ pub fn run(config: Config) {
         let heap_start = Instant::now();
         if config.active_passes.linear_mem {
             println!("Checking Heap Safety");
-            let heap_safe = run_heap(&cfg, &irmap, &metadata);
+            let heap_safe = run_heap(&cfg, &irmap, &module.metadata);
             if !heap_safe {
                 panic!("Not Heap Safe");
             }
@@ -162,7 +162,7 @@ pub fn run(config: Config) {
         if config.active_passes.linear_mem {
             println!("Checking Call Safety");
             if has_indirect_calls(&irmap) {
-                let call_safe = run_calls(&cfg, &irmap, &metadata, &valid_funcs, plt);
+                let call_safe = run_calls(&cfg, &irmap, &module.metadata, &valid_funcs, plt);
                 if !call_safe {
                     panic!("Not Call Safe");
                 }

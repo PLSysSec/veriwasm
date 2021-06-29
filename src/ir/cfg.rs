@@ -6,8 +6,8 @@ use checkers::resolve_jumps;
 use ir::lift_cfg;
 use ir::types::IRMap;
 use ir::utils::has_indirect_jumps;
+use loaders::types::{ExecutableType, VwMetadata, VwModule};
 use loaders::utils::{deconstruct_elf, get_function_starts, get_symbol_addr};
-use loaders::types::{VwMetadata, ExecutableType, VwModule};
 use loaders::Loadable;
 use yaxpeax_core::analyses::control_flow::{get_cfg, VW_CFG};
 use yaxpeax_core::arch::x86_64::{x86_64Data, MergedContextTable};
@@ -21,7 +21,7 @@ fn try_resolve_jumps(
     _addr: u64,
 ) -> (VW_CFG, IRMap, i32, u32) {
     println!("Performing a reaching defs pass");
-    let reaching_defs = analyze_reaching_defs(cfg, &irmap, metadata.clone());
+    let reaching_defs = analyze_reaching_defs(cfg, &irmap, module.metadata.clone());
     println!("Performing a jump resolution pass");
     let switch_analyzer = SwitchAnalyzer {
         metadata: module.metadata.clone(),
@@ -32,11 +32,15 @@ fn try_resolve_jumps(
         },
     };
     let switch_results = run_worklist(cfg, irmap, &switch_analyzer);
-    let switch_targets = resolve_jumps(module, switch_results, &irmap, &switch_analyzer);
+    let switch_targets = resolve_jumps(&module.program, switch_results, &irmap, &switch_analyzer);
 
-    let (new_cfg, still_unresolved) =
-        get_cfg(module, contexts, cfg.entrypoint, Some(&switch_targets));
-    let irmap = lift_cfg(module, &new_cfg, &metadata);
+    let (new_cfg, still_unresolved) = get_cfg(
+        &module.program,
+        contexts,
+        cfg.entrypoint,
+        Some(&switch_targets),
+    );
+    let irmap = lift_cfg(module, &new_cfg);
     let num_targets = switch_targets.len();
     return (new_cfg, irmap, num_targets as i32, still_unresolved);
 }
@@ -71,12 +75,12 @@ pub fn fully_resolved_cfg(
     contexts: &MergedContextTable,
     addr: u64,
 ) -> (VW_CFG, IRMap) {
-    let (cfg, _) = get_cfg(module, contexts, addr, None);
+    let (cfg, _) = get_cfg(&module.program, contexts, addr, None);
     let irmap = lift_cfg(module, &cfg);
     if !has_indirect_jumps(&irmap) {
         return (cfg, irmap);
     }
-    return resolve_cfg(module, contexts, &cfg, metadata, &irmap, addr);
+    return resolve_cfg(module, contexts, &cfg, &irmap, addr);
 }
 
 pub fn get_one_resolved_cfg(
@@ -84,7 +88,7 @@ pub fn get_one_resolved_cfg(
     module: &VwModule,
     format: &ExecutableType,
 ) -> ((VW_CFG, IRMap), x86_64Data) {
-    let (_, sections, entrypoint, imports, exports, symbols) = module.deconstruct_elf();
+    let (_, sections, entrypoint, imports, exports, symbols) = deconstruct_elf(&module.program);
     let text_section_idx = sections.iter().position(|x| x.name == ".text").unwrap();
     let x86_64_data = get_function_starts(entrypoint, symbols, imports, exports, text_section_idx);
 
@@ -92,7 +96,7 @@ pub fn get_one_resolved_cfg(
     assert!(format.is_valid_func_name(&String::from(func)));
     println!("Generating CFG for: {:?}", func);
     return (
-        fully_resolved_cfg(module, &x86_64_data.contexts, &metadata, addr),
+        fully_resolved_cfg(module, &x86_64_data.contexts, addr),
         x86_64_data,
     );
 }

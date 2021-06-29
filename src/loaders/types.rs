@@ -11,7 +11,7 @@ pub enum ExecutableType {
 }
 
 //TODO: remove public fields
-pub struct VwModule{
+pub struct VwModule {
     pub program: ModuleData,
     pub metadata: VwMetadata,
 }

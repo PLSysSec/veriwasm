@@ -1,6 +1,6 @@
 use clap::{App, Arg};
 use ir::VwArch;
-use loaders::ExecutableType;
+use loaders::types::ExecutableType;
 use std::str::FromStr;
 use veriwasm::runner::*;
 use veriwasm::{ir, loaders};

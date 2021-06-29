@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use crate::ir::types::ValSize;
 use crate::lattices::VarIndex;
 use crate::lattices::X86Regs::*;
-use crate::loaders::Loadable;
 use crate::loaders::types::ExecutableType;
+use crate::loaders::Loadable;
 
 use yaxpeax_arch::Arch;
 use yaxpeax_core::arch::x86_64::x86_64Data;
@@ -19,8 +19,6 @@ use yaxpeax_core::memory::repr::process::{
 use yaxpeax_core::memory::MemoryRepr;
 use yaxpeax_core::ContextWrite;
 use yaxpeax_x86::long_mode::Arch as AMD64;
-
-
 
 // TODO: unify this with other register and stack variable slot representations
 // RDI, RSI, RDX, RCX, R8, R9,

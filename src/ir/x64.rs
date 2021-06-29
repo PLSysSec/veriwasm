@@ -1,5 +1,5 @@
 use crate::ir::types::*;
-use crate::loaders::types::VwMetadata;
+use crate::loaders::types::{VwMetadata, VwModule};
 use yaxpeax_arch::{AddressBase, Arch, LengthedInstruction};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_core::arch::x86_64::analyses::data_flow::Location;
@@ -686,7 +686,7 @@ fn check_probestack_suffix(instr: &yaxpeax_x86::long_mode::Instruction) -> bool 
     panic!("Broken Probestack?")
 }
 
-pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, metadata: &VwMetadata) -> IRMap {
+pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG) -> IRMap {
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
     for block_addr in g.nodes() {
@@ -708,7 +708,7 @@ pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, metadata: &VwMetadata) -> IRMap
 
                 continue;
             }
-            if is_probestack(instr, &addr, &metadata) {
+            if is_probestack(instr, &addr, &module.metadata) {
                 match x {
                     Some(v) => {
                         let ir = (addr, vec![Stmt::ProbeStack(v)]);
@@ -719,7 +719,7 @@ pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, metadata: &VwMetadata) -> IRMap
                     None => panic!("probestack broken"),
                 }
             }
-            let ir = (addr, lift(instr, &addr, metadata));
+            let ir = (addr, lift(instr, &addr, &module.metadata));
             block_ir.push(ir);
             x = extract_probestack_arg(instr);
             if instr.opcode() == Opcode::JMP {

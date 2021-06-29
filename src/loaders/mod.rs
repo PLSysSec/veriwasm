@@ -1,16 +1,14 @@
 mod lucet;
+pub mod types;
 pub mod utils;
 mod wasmtime;
-pub mod types;
 use crate::loaders;
 use core::str::FromStr;
 use loaders::lucet::*;
-use loaders::types::{VwMetadata, VwFuncInfo};
+use loaders::types::*;
+use loaders::types::{VwFuncInfo, VwMetadata};
 use loaders::wasmtime::*;
 use yaxpeax_core::memory::repr::process::ModuleData;
-use loaders::types::*;
-
-
 
 // TODO: this should be static dispatch, not dynamic dispatch
 // not performance critical, but static dispatch is more rusty

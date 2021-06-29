@@ -14,7 +14,7 @@ use analyses::HeapAnalyzer;
 use checkers::check_heap;
 use ir::lift_cfg;
 use ir::types::IRMap;
-use loaders::types::VwMetadata;
+use loaders::types::{VwMetadata, VwModule};
 use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;
 use yaxpeax_core::analyses::control_flow::{VW_Block, VW_CFG};
@@ -60,7 +60,7 @@ fn func_body_and_bbs_to_cfg(
     code: &[u8],
     basic_blocks: &[usize],
     cfg_edges: &[(usize, usize)],
-) -> (VW_CFG, IRMap, VwMetadata) {
+) -> (VW_CFG, IRMap, VwModule) {
     // We build the VW_CFG manually; we skip the CFG-recovery
     // algorithm that has to analyze the machine code and compute
     // reaching-defs in a fixpoint loop.
@@ -133,11 +133,14 @@ fn func_body_and_bbs_to_cfg(
         lucet_probestack: 0x123456789abcdef0,
     };
 
-    let module = VwModule{ModuleData, VwMetadata};
+    let module = VwModule {
+        program: data,
+        metadata: lucet,
+    };
 
     let irmap = lift_cfg(&module, &cfg);
 
-    (cfg, irmap, lucet)
+    (cfg, irmap, module)
 
     // TODO: regalloc checker from Lucet too.
     // TODO: audit opcodes. Fallback to just clear dest(s) on unknown?
@@ -169,7 +172,7 @@ pub fn validate_heap(
         }
     }
 
-    let (cfg, irmap, metadata) = func_body_and_bbs_to_cfg(code, basic_blocks, cfg_edges);
+    let (cfg, irmap, module) = func_body_and_bbs_to_cfg(code, basic_blocks, cfg_edges);
 
     // This entry point is designed to allow checking of a single
     // function body, just after it has been generated in memory,
@@ -199,7 +202,7 @@ pub fn validate_heap(
     // that goes through the compilation pipeline with opt passes like
     // all other code. It's also the fastest and simplest to check.
     let heap_analyzer = HeapAnalyzer {
-        metadata: metadata.clone(),
+        metadata: module.metadata.clone(),
     };
     let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
     let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
