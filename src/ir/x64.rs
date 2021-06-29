@@ -1,5 +1,6 @@
 use crate::ir::types::*;
 use crate::loaders::utils::VW_Metadata;
+use crate::lattices::X86Regs::*;
 use yaxpeax_arch::{AddressBase, Arch, LengthedInstruction};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_core::arch::x86_64::analyses::data_flow::Location;
@@ -339,7 +340,24 @@ pub fn lift(
         Opcode::LEA => instrs.extend(lea(instr, addr)),
 
         Opcode::TEST => instrs.push(binop(Binopcode::Test, instr)),
-        Opcode::CMP => instrs.push(binop(Binopcode::Cmp, instr)),
+        // Opcode::CMP => instrs.push(binop(Binopcode::Cmp, instr)),
+        Opcode::CMP => {
+            let memsize = match (
+                get_operand_size(instr.operand(0)),
+                get_operand_size(instr.operand(1)),
+            ) {
+                (None, None) => panic!("Two Memory Args?"),
+                (Some(x), None) => x,
+                (None, Some(x)) => x,
+                (Some(x), Some(_y)) => x,
+            };
+            instrs.push(Stmt::Binop(
+                Binopcode::Cmp,
+                Value::Reg(u8::from(Zf), ValSize::Size8),
+                convert_operand(instr.operand(0), memsize),
+                convert_operand(instr.operand(1), memsize),
+            ))
+        },
 
         Opcode::AND => {
             instrs.push(binop(Binopcode::And, instr));
@@ -472,6 +490,40 @@ pub fn lift(
             instrs.push(Stmt::Clear(Value::Reg(2, ValSize::Size64), vec![]));
         }
 
+        SETNZ => {
+            instrs.push(Stmt::Clear(
+                convert_operand(instr.operand(0), ValSize::Size8),
+                vec![Value::Reg(u8::from(Zf), ValSize::Size8)],
+            ));
+        },
+
+        // TODO: "IF SRC = 0 THEN DEST is undefined"
+        Opcode::BSF => {
+            instrs.push(Stmt::Clear(
+                Value::Reg(u8::from(Zf), ValSize::Size8),
+                vec![convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap())],
+            ));
+            instrs.push(Stmt::Clear(
+                convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap()),
+                vec![
+                    convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap()),
+                    convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap()),
+                ],
+            ));
+        }
+        Opcode::LZCNT => {
+            instrs.push(Stmt::Clear(
+                Value::Reg(u8::from(Zf), ValSize::Size8),
+                vec![convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap())],
+            ));
+            instrs.push(Stmt::Clear(
+                convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap()),
+                vec![
+                    convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap()),
+                ],
+            ));
+        }
+
         Opcode::OR
         | Opcode::SHR
         | Opcode::RCL
@@ -499,7 +551,7 @@ pub fn lift(
         | SETB
         | SETAE
         | SETZ
-        | SETNZ
+        // | SETNZ
         | SETBE
         | SETA
         | SETS
@@ -541,7 +593,7 @@ pub fn lift(
         | Opcode::SUBSD
         | Opcode::MULSD
         | Opcode::DIVSS
-        | Opcode::LZCNT
+        // | Opcode::LZCNT
         | Opcode::DIVPD
         | Opcode::DIVPS
         | Opcode::BLENDVPS
@@ -647,7 +699,6 @@ pub fn lift(
         | Opcode::TZCNT
         | Opcode::SBB
         | Opcode::BSR
-        | Opcode::BSF
         | Opcode::ANDPD
         | Opcode::ORPD => instrs.extend(clear_dst(instr)),
 
