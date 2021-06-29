@@ -1,18 +1,192 @@
 pub mod calllattice;
 pub mod davlattice;
 pub mod heaplattice;
+pub mod localslattice;
 pub mod reachingdefslattice;
 pub mod regslattice;
 pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod switchlattice;
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::regslattice::X86RegsLattice;
-use crate::lattices::stacklattice::StackLattice;
-use crate::utils::ir_utils::{get_imm_offset, is_rsp};
-use crate::utils::lifter::{Binopcode, MemArg, MemArgs, ValSize, Value};
+use crate::{ir, lattices};
+use ir::types::{Binopcode, MemArg, MemArgs, ValSize, Value};
+use ir::utils::{get_imm_offset, is_rsp};
+use lattices::reachingdefslattice::LocIdx;
+use lattices::regslattice::X86RegsLattice;
+use lattices::stacklattice::StackLattice;
 use std::cmp::Ordering;
+use std::convert::TryFrom;
 use std::fmt::Debug;
+
+/*  Basically everything is public for lattices */
+
+#[derive(PartialEq, Clone, Eq, Debug, Copy, Hash)]
+pub enum X86Regs {
+    Rax,
+    Rcx,
+    Rdx,
+    Rbx,
+    Rsp,
+    Rbp,
+    Rsi,
+    Rdi,
+    R8,
+    R9,
+    R10,
+    R11,
+    R12,
+    R13,
+    R14,
+    R15,
+    Zf,
+}
+
+use self::X86Regs::*;
+
+struct X86RegsIterator {
+    current_reg: Option<X86Regs>,
+}
+
+impl X86Regs {
+    fn iter() -> X86RegsIterator {
+        X86RegsIterator {
+            current_reg: Some(Rax),
+        }
+    }
+}
+
+impl Iterator for X86RegsIterator {
+    type Item = X86Regs;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.current_reg {
+            None => None,
+            Some(reg) => match reg {
+                Rax => {
+                    self.current_reg = Some(Rcx);
+                    return Some(Rax);
+                }
+                Rcx => {
+                    self.current_reg = Some(Rdx);
+                    return Some(Rcx);
+                }
+                Rdx => {
+                    self.current_reg = Some(Rbx);
+                    return Some(Rdx);
+                }
+                Rbx => {
+                    self.current_reg = Some(Rsp);
+                    return Some(Rbx);
+                }
+                Rsp => {
+                    self.current_reg = Some(Rbp);
+                    return Some(Rsp);
+                }
+                Rbp => {
+                    self.current_reg = Some(Rsi);
+                    return Some(Rbp);
+                }
+                Rsi => {
+                    self.current_reg = Some(Rdi);
+                    return Some(Rsi);
+                }
+                Rdi => {
+                    self.current_reg = Some(R8);
+                    return Some(Rdi);
+                }
+                R8 => {
+                    self.current_reg = Some(R9);
+                    return Some(R8);
+                }
+                R9 => {
+                    self.current_reg = Some(R10);
+                    return Some(R9);
+                }
+                R10 => {
+                    self.current_reg = Some(R11);
+                    return Some(R10);
+                }
+                R11 => {
+                    self.current_reg = Some(R12);
+                    return Some(R11);
+                }
+                R12 => {
+                    self.current_reg = Some(R13);
+                    return Some(R12);
+                }
+                R13 => {
+                    self.current_reg = Some(R14);
+                    return Some(R13);
+                }
+                R14 => {
+                    self.current_reg = Some(R15);
+                    return Some(R14);
+                }
+                R15 => {
+                    self.current_reg = Some(Zf);
+                    return Some(R15);
+                }
+                Zf => {
+                    self.current_reg = None;
+                    return Some(Zf);
+                }
+            },
+        }
+    }
+}
+
+impl TryFrom<u8> for X86Regs {
+    type Error = std::string::String;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Rax),
+            1 => Ok(Rcx),
+            2 => Ok(Rdx),
+            3 => Ok(Rbx),
+            4 => Ok(Rsp),
+            5 => Ok(Rbp),
+            6 => Ok(Rsi),
+            7 => Ok(Rdi),
+            8 => Ok(R8),
+            9 => Ok(R9),
+            10 => Ok(R10),
+            11 => Ok(R11),
+            12 => Ok(R12),
+            13 => Ok(R13),
+            14 => Ok(R14),
+            15 => Ok(R15),
+            16 => Ok(Zf),
+            _ => Err(format!("Unknown register: index = {:?}", value)),
+        }
+    }
+}
+
+impl From<X86Regs> for u8 {
+    fn from(value: X86Regs) -> Self {
+        value as u8
+    }
+}
+
+pub enum VarIndex {
+    Reg(X86Regs),
+    Stack(i64),
+}
+
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct VarSlot<T> {
+    pub size: u32,
+    pub value: T,
+}
+
+impl<T: PartialOrd> PartialOrd for VarSlot<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.size != other.size {
+            None
+        } else {
+            self.value.partial_cmp(&other.value)
+        }
+    }
+}
 
 pub trait Lattice: PartialOrd + Eq + Default + Debug {
     fn meet(&self, other: &Self, loc: &LocIdx) -> Self;
@@ -20,7 +194,7 @@ pub trait Lattice: PartialOrd + Eq + Default + Debug {
 
 pub trait VarState {
     type Var;
-    fn get(&mut self, index: &Value) -> Option<Self::Var>;
+    fn get(&self, index: &Value) -> Option<Self::Var>;
     fn set(&mut self, index: &Value, v: Self::Var) -> ();
     fn set_to_bot(&mut self, index: &Value) -> ();
     fn on_call(&mut self) -> ();
@@ -116,6 +290,31 @@ pub struct VariableState<T: Lattice + Clone> {
     pub stack: StackLattice<T>,
 }
 
+// offset from current stack pointer
+// returns None if points to heap
+pub fn mem_to_stack_offset(memargs: &MemArgs) -> Option<i64> {
+    match memargs {
+        MemArgs::Mem1Arg(arg) => {
+            if let MemArg::Reg(regnum, _) = arg {
+                if *regnum == 4 {
+                    return Some(0);
+                }
+            }
+        }
+        MemArgs::Mem2Args(arg1, arg2) => {
+            if let MemArg::Reg(regnum, _) = arg1 {
+                if *regnum == 4 {
+                    if let MemArg::Imm(_, _, offset) = arg2 {
+                        return Some(*offset);
+                    }
+                }
+            }
+        }
+        _ => (),
+    }
+    return None;
+}
+
 impl<T: Lattice + Clone> Lattice for VariableState<T> {
     fn meet(&self, other: &Self, loc_idx: &LocIdx) -> Self {
         VariableState {
@@ -129,29 +328,15 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
     type Var = T;
     fn set(&mut self, index: &Value, value: T) -> () {
         match index {
-            Value::Mem(memsize, memargs) => match memargs {
-                MemArgs::Mem1Arg(arg) => {
-                    if let MemArg::Reg(regnum, _) = arg {
-                        if *regnum == 4 {
-                            self.stack.update(0, value, memsize.to_u32() / 8)
-                        }
-                    }
+            Value::Mem(memsize, memargs) => {
+                if let Some(offset) = mem_to_stack_offset(memargs) {
+                    self.stack.update(offset, value, memsize.into_bytes())
                 }
-                MemArgs::Mem2Args(arg1, arg2) => {
-                    if let MemArg::Reg(regnum, _) = arg1 {
-                        if *regnum == 4 {
-                            if let MemArg::Imm(_, _, offset) = arg2 {
-                                self.stack.update(*offset, value, memsize.to_u32() / 8)
-                            }
-                        }
-                    }
-                }
-                _ => (),
-            },
+            }
             Value::Reg(regnum, s2) => {
                 if let ValSize::SizeOther = s2 {
                 } else {
-                    self.regs.set(regnum, s2, value)
+                    self.regs.set_reg_index(regnum, s2, value)
                 }
             }
             Value::Imm(_, _, _) => panic!("Trying to write to an immediate value"),
@@ -159,30 +344,11 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
         }
     }
 
-    fn get(&mut self, index: &Value) -> Option<T> {
+    fn get(&self, index: &Value) -> Option<T> {
         match index {
-            Value::Mem(memsize, memargs) => match memargs {
-                MemArgs::Mem1Arg(arg) => {
-                    if let MemArg::Reg(regnum, _) = arg {
-                        if *regnum == 4 {
-                            return Some(self.stack.get(0, memsize.to_u32() / 8));
-                        }
-                    }
-                    None
-                }
-                MemArgs::Mem2Args(arg1, arg2) => {
-                    if let MemArg::Reg(regnum, _) = arg1 {
-                        if *regnum == 4 {
-                            if let MemArg::Imm(_, _, offset) = arg2 {
-                                return Some(self.stack.get(*offset, memsize.to_u32() / 8));
-                            }
-                        }
-                    }
-                    None
-                }
-                _ => None,
-            },
-            Value::Reg(regnum, s2) => Some(self.regs.get(regnum, s2)),
+            Value::Mem(memsize, memargs) => mem_to_stack_offset(memargs)
+                .map(|offset| self.stack.get(offset, memsize.into_bytes())),
+            Value::Reg(regnum, s2) => Some(self.regs.get_reg_index(*regnum, *s2)),
             Value::Imm(_, _, _) => None,
             Value::RIPConst => None,
         }

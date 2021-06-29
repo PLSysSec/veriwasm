@@ -1,6 +1,7 @@
-use crate::lattices::davlattice::DAV;
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::{Lattice, VariableState};
+use crate::lattices;
+use lattices::davlattice::DAV;
+use lattices::reachingdefslattice::LocIdx;
+use lattices::{Lattice, VariableState};
 use std::cmp::Ordering;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]

@@ -1,17 +1,16 @@
-use crate::analyses::call_analyzer::CallAnalyzer;
-use crate::analyses::{AbstractAnalyzer, AnalysisResult};
-use crate::checkers::Checker;
-use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue};
-use crate::lattices::davlattice::DAV;
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::utils::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
+use crate::{analyses, checkers, ir, lattices};
+use analyses::{AbstractAnalyzer, AnalysisResult, CallAnalyzer};
+use checkers::Checker;
+use ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
+use lattices::calllattice::{CallCheckLattice, CallCheckValue};
+use lattices::davlattice::DAV;
+use lattices::reachingdefslattice::LocIdx;
 
 pub struct CallChecker<'a> {
     irmap: &'a IRMap,
     analyzer: &'a CallAnalyzer,
     funcs: &'a Vec<u64>,
     plt: &'a (u64, u64),
-    // x86_64_data: &x86_64Data,
 }
 
 pub fn check_calls(
@@ -20,13 +19,12 @@ pub fn check_calls(
     analyzer: &CallAnalyzer,
     funcs: &Vec<u64>,
     plt: &(u64, u64),
-    // x86_64_data: &x86_64Data,
 ) -> bool {
     CallChecker {
         irmap,
         analyzer,
         funcs,
-        plt, // x86_64_data,
+        plt,
     }
     .check(result)
 }
@@ -76,10 +74,10 @@ impl CallChecker<'_> {
     ) -> bool {
         match target {
             Value::Reg(regnum, size) => {
-                if let Some(CallCheckValue::FnPtr) = state.regs.get(regnum, size).v {
+                if let Some(CallCheckValue::FnPtr) = state.regs.get_reg_index(*regnum, *size).v {
                     return true;
                 } else {
-                    log::debug!("{:?}", state.regs.get(regnum, size).v)
+                    log::debug!("{:?}", state.regs.get_reg_index(*regnum, *size).v)
                 }
             }
             Value::Mem(_, _) => return false,
@@ -104,8 +102,8 @@ impl CallChecker<'_> {
                 MemArg::Reg(regnum2, ValSize::Size64),
                 MemArg::Imm(_, _, 8),
             ) => match (
-                state.regs.get(regnum1, &ValSize::Size64).v,
-                state.regs.get(regnum2, &ValSize::Size64).v,
+                state.regs.get_reg_index(*regnum1, ValSize::Size64).v,
+                state.regs.get_reg_index(*regnum2, ValSize::Size64).v,
             ) {
                 (
                     Some(CallCheckValue::GuestTableBase),
@@ -126,7 +124,11 @@ impl CallChecker<'_> {
 
 pub fn memarg_repr(state: &CallCheckLattice, memarg: &MemArg) -> String {
     match memarg {
-        MemArg::Reg(regnum, size) => format!("r{:?}: {:?}", regnum, state.regs.get(regnum, size).v),
+        MemArg::Reg(regnum, size) => format!(
+            "r{:?}: {:?}",
+            regnum,
+            state.regs.get_reg_index(*regnum, *size).v
+        ),
         MemArg::Imm(_, _, x) => format!("{:?}", x),
     }
 }

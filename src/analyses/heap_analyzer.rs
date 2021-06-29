@@ -1,20 +1,26 @@
-use crate::analyses::AbstractAnalyzer;
-use crate::lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::{ConstLattice, VarState};
-use crate::utils::ir_utils::{extract_stack_offset, is_stack_access};
-use crate::utils::lifter::{Binopcode, MemArg, MemArgs, Unopcode, ValSize, Value};
-use crate::utils::utils::LucetMetadata;
+use crate::{analyses, ir, lattices, loaders};
+use analyses::AbstractAnalyzer;
+use ir::types::{Binopcode, MemArg, MemArgs, Unopcode, ValSize, Value};
+use ir::utils::{extract_stack_offset, is_stack_access};
+use lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
+use lattices::reachingdefslattice::LocIdx;
+use lattices::X86Regs::*;
+use lattices::{ConstLattice, VarState};
+use loaders::types::VwMetadata;
 use std::default::Default;
 
 pub struct HeapAnalyzer {
-    pub metadata: LucetMetadata,
+    pub metadata: VwMetadata,
 }
 
 impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     fn init_state(&self) -> HeapLattice {
         let mut result: HeapLattice = Default::default();
-        result.regs.rdi = HeapValueLattice::new(HeapValue::HeapBase);
+        result.regs.set_reg(
+            Rdi,
+            ValSize::Size64,
+            HeapValueLattice::new(HeapValue::HeapBase),
+        );
         result
     }
 
@@ -29,7 +35,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         // Any write to a 32-bit register will clear the upper 32 bits of the containing 64-bit
         // register.
         if let &Value::Reg(rd, ValSize::Size32) = dst {
-            in_state.regs.set(
+            in_state.regs.set_reg_index(
                 &rd,
                 &ValSize::Size64,
                 ConstLattice {
@@ -67,12 +73,12 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
                     &Value::Reg(rs2, ValSize::Size64),
                 ) = (dst, src1, src2)
                 {
-                    let rs1_val = in_state.regs.get(&rs1, &ValSize::Size64).v;
-                    let rs2_val = in_state.regs.get(&rs2, &ValSize::Size64).v;
+                    let rs1_val = in_state.regs.get_reg_index(rs1, ValSize::Size64).v;
+                    let rs2_val = in_state.regs.get_reg_index(rs2, ValSize::Size64).v;
                     match (rs1_val, rs2_val) {
                         (Some(HeapValue::HeapBase), Some(HeapValue::Bounded4GB))
                         | (Some(HeapValue::Bounded4GB), Some(HeapValue::HeapBase)) => {
-                            in_state.regs.set(
+                            in_state.regs.set_reg_index(
                                 &rd,
                                 &ValSize::Size64,
                                 ConstLattice {
@@ -91,7 +97,7 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         // Any write to a 32-bit register will clear the upper 32 bits of the containing 64-bit
         // register.
         if let &Value::Reg(rd, ValSize::Size32) = dst {
-            in_state.regs.set(
+            in_state.regs.set_reg_index(
                 &rd,
                 &ValSize::Size64,
                 ConstLattice {
@@ -108,8 +114,8 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
 pub fn is_globalbase_access(in_state: &HeapLattice, memargs: &MemArgs) -> bool {
     if let MemArgs::Mem2Args(arg1, _arg2) = memargs {
         if let MemArg::Reg(regnum, size) = arg1 {
-            assert_eq!(size.to_u32(), 64);
-            let base = in_state.regs.get(regnum, size);
+            assert_eq!(size.into_bits(), 64);
+            let base = in_state.regs.get_reg_index(*regnum, *size);
             if let Some(v) = base.v {
                 if let HeapValue::HeapBase = v {
                     return true;
@@ -129,7 +135,7 @@ impl HeapAnalyzer {
                 }
                 if is_stack_access(value) {
                     let offset = extract_stack_offset(memargs);
-                    let v = in_state.stack.get(offset, memsize.to_u32() / 8);
+                    let v = in_state.stack.get(offset, memsize.into_bytes());
                     return v;
                 }
             }
@@ -138,10 +144,10 @@ impl HeapAnalyzer {
                 if let ValSize::SizeOther = size {
                     return Default::default();
                 };
-                if size.to_u32() <= 32 {
+                if size.into_bits() <= 32 {
                     return HeapValueLattice::new(HeapValue::Bounded4GB);
                 } else {
-                    return in_state.regs.get(regnum, &ValSize::Size64);
+                    return in_state.regs.get_reg_index(*regnum, ValSize::Size64);
                 }
             }
 

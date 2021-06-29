@@ -24,3 +24,14 @@ serde_json = "1.0.59"
 log = "0.4.14"
 env_logger = "0.8.4"
 goblin = "0.4.1"
+
+# This should be an optional compile target
+wasmtime = "0.28.0"
+#wasmtime = {path = "../wasmtime/crates/wasmtime"}
+#wasmtime-jit = { path = "../wasmtime/crates/jit"}
+#wasmtime-jit = "0.28.0"
+#lucet-module = { path = "../lucet_sandbox_compiler/lucet-module", version = "0.1.1", package="lucet-module-wasmsbx" }
+lucet-module = "0.5.1"
+#capstone = { version = "0.8.0" }
+
+

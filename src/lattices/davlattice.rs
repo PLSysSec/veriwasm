@@ -1,6 +1,6 @@
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::reachingdefslattice::ReachingDefnLattice;
-use crate::lattices::Lattice;
+use crate::lattices;
+use lattices::reachingdefslattice::{LocIdx, ReachingDefnLattice};
+use lattices::Lattice;
 use std::cmp::Ordering;
 
 // Dependent Abstract Value

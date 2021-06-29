@@ -1,8 +1,8 @@
-use crate::analyses::jump_analyzer::SwitchAnalyzer;
-use crate::analyses::{AbstractAnalyzer, AnalysisResult};
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
-use crate::utils::lifter::{IRMap, Stmt, Value};
+use crate::{analyses, ir, lattices};
+use analyses::{AbstractAnalyzer, AnalysisResult, SwitchAnalyzer};
+use ir::types::{IRMap, Stmt, Value};
+use lattices::reachingdefslattice::LocIdx;
+use lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
 use std::collections::HashMap;
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_core::memory::MemoryRepr;
@@ -60,7 +60,7 @@ pub fn resolve_jumps(
             for (idx, ir_stmt) in ir_stmts.iter().enumerate() {
                 match ir_stmt {
                     Stmt::Branch(_, Value::Reg(regnum, regsize)) => {
-                        let aval = state.regs.get(regnum, regsize);
+                        let aval = state.regs.get_reg_index(*regnum, *regsize);
                         let targets = extract_jmp_targets(program, &aval);
                         switch_targets.insert(*addr, targets);
                     }

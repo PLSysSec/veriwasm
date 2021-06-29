@@ -1,107 +1,12 @@
-use crate::utils::utils::LucetMetadata;
-use std::collections::HashMap;
+use crate::ir::types::*;
+use crate::loaders::types::{VwMetadata, VwModule};
 use yaxpeax_arch::{AddressBase, Arch, LengthedInstruction};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_core::arch::x86_64::analyses::data_flow::Location;
 use yaxpeax_core::arch::InstructionSpan;
 use yaxpeax_core::data::{Direction, ValueLocations};
-use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_x86::long_mode::Opcode::*;
 use yaxpeax_x86::long_mode::{register_class, Arch as AMD64, Opcode, Operand, RegSpec};
-
-#[derive(Debug, Clone)]
-pub enum ImmType {
-    Signed,
-    Unsigned,
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ValSize {
-    Size8,
-    Size16,
-    Size32,
-    Size64,
-    SizeOther,
-}
-
-impl ValSize {
-    pub fn to_u32(&self) -> u32 {
-        match self {
-            ValSize::Size8 => 8,
-            ValSize::Size16 => 16,
-            ValSize::Size32 => 32,
-            ValSize::Size64 => 64,
-            ValSize::SizeOther => 64, //panic!("unknown size? {:?}")
-        }
-    }
-}
-
-pub fn valsize(num: u32) -> ValSize {
-    match num {
-        8 => ValSize::Size8,
-        16 => ValSize::Size16,
-        32 => ValSize::Size32,
-        64 => ValSize::Size64,
-        _ => unimplemented!("{:?}", num),
-    }
-}
-
-pub fn mk_value_i64(num: i64) -> Value {
-    Value::Imm(ImmType::Signed, ValSize::Size64, num)
-}
-
-#[derive(Debug, Clone)]
-pub enum MemArgs {
-    Mem1Arg(MemArg),                  // [arg]
-    Mem2Args(MemArg, MemArg),         // [arg1 + arg2]
-    Mem3Args(MemArg, MemArg, MemArg), // [arg1 + arg2 + arg3]
-    MemScale(MemArg, MemArg, MemArg), // [arg1 + arg2 * arg3]
-}
-#[derive(Debug, Clone)]
-pub enum MemArg {
-    Reg(u8, ValSize), // register mappings captured in `crate::lattices::regslattice`
-    Imm(ImmType, ValSize, i64), // signed, size, const
-}
-#[derive(Debug, Clone)]
-pub enum Value {
-    Mem(ValSize, MemArgs),      // mem[memargs]
-    Reg(u8, ValSize),           // register mappings captured in `crate::lattices::regslattice`
-    Imm(ImmType, ValSize, i64), // signed, size, const
-    RIPConst,
-}
-
-#[derive(Debug, Clone)]
-pub enum Stmt {
-    Clear(Value, Vec<Value>),                      // clear v <- vs
-    Unop(Unopcode, Value, Value),                  // v1 <- uop v2
-    Binop(Binopcode, Value, Value, Value),         // v1 <- bop v2 v3
-    Undefined,                                     // undefined
-    Ret,                                           // return
-    Branch(yaxpeax_x86::long_mode::Opcode, Value), // br branch-type v
-    Call(Value),                                   // call v
-    ProbeStack(u64),                               // probestack
-}
-
-impl Stmt {
-    pub fn width(&self) -> u32 {
-        unimplemented!("Width not implemented")
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum Unopcode {
-    Mov,
-    Movsx,
-}
-#[derive(Debug, Clone)]
-pub enum Binopcode {
-    Test,
-    Rol,
-    Cmp,
-    Shl,
-    And,
-    Add,
-    Sub,
-}
 
 fn get_reg_size(reg: yaxpeax_x86::long_mode::RegSpec) -> ValSize {
     let size = match reg.class() {
@@ -358,7 +263,7 @@ fn branch(instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     )
 }
 
-fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &LucetMetadata) -> Stmt {
+fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &VwMetadata) -> Stmt {
     let dst = convert_operand(instr.operand(0), ValSize::Size64);
     Stmt::Call(dst)
 }
@@ -393,7 +298,7 @@ fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Vec<Stmt> {
 pub fn lift(
     instr: &yaxpeax_x86::long_mode::Instruction,
     addr: &u64,
-    metadata: &LucetMetadata,
+    metadata: &VwMetadata,
     strict: bool,
 ) -> Vec<Stmt> {
     log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
@@ -482,12 +387,12 @@ pub fn lift(
                 Binopcode::Sub,
                 Value::Reg(4, ValSize::Size64),
                 Value::Reg(4, ValSize::Size64),
-                mk_value_i64(width.into()),
+                (width as i64).into(),
             ));
             instrs.push(Stmt::Unop(
                 Unopcode::Mov,
                 Value::Mem(
-                    valsize((width * 8) as u32),
+                    ValSize::try_from_bytes(width as u32).unwrap(),
                     MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)),
                 ),
                 convert_operand(instr.operand(0), ValSize::SizeOther),
@@ -500,7 +405,7 @@ pub fn lift(
                 Unopcode::Mov,
                 convert_operand(instr.operand(0), ValSize::SizeOther),
                 Value::Mem(
-                    valsize((width * 8) as u32),
+                    ValSize::try_from_bytes(width as u32).unwrap(),
                     MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)),
                 ),
             ));
@@ -508,7 +413,7 @@ pub fn lift(
                 Binopcode::Add,
                 Value::Reg(4, ValSize::Size64),
                 Value::Reg(4, ValSize::Size64),
-                mk_value_i64(width.into()),
+                (width as i64).into(),
             ))
         }
 
@@ -735,13 +640,10 @@ pub fn lift(
     instrs
 }
 
-pub type IRBlock = Vec<(u64, Vec<Stmt>)>;
-pub type IRMap = HashMap<u64, IRBlock>;
-
 fn is_probestack(
     instr: &yaxpeax_x86::long_mode::Instruction,
     addr: &u64,
-    metadata: &LucetMetadata,
+    metadata: &VwMetadata,
 ) -> bool {
     if let Opcode::CALL = instr.opcode() {
         let op = convert_operand(instr.operand(0), ValSize::SizeOther);
@@ -788,18 +690,13 @@ fn check_probestack_suffix(instr: &yaxpeax_x86::long_mode::Instruction) -> bool 
     panic!("Broken Probestack?")
 }
 
-pub fn lift_cfg(
-    program: &ModuleData,
-    cfg: &VW_CFG,
-    metadata: &LucetMetadata,
-    strict: bool,
-) -> IRMap {
+pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap {
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
     for block_addr in g.nodes() {
         let mut block_ir: Vec<(u64, Vec<Stmt>)> = Vec::new();
         let block = cfg.get_block(block_addr);
-        let mut iter = program.instructions_spanning(
+        let mut iter = module.program.instructions_spanning(
             <AMD64 as Arch>::Decoder::default(),
             block.start,
             block.end,
@@ -815,7 +712,7 @@ pub fn lift_cfg(
 
                 continue;
             }
-            if is_probestack(instr, &addr, &metadata) {
+            if is_probestack(instr, &addr, &module.metadata) {
                 match x {
                     Some(v) => {
                         let ir = (addr, vec![Stmt::ProbeStack(v)]);
@@ -826,7 +723,7 @@ pub fn lift_cfg(
                     None => panic!("probestack broken"),
                 }
             }
-            let ir = (addr, lift(instr, &addr, metadata, strict));
+            let ir = (addr, lift(instr, &addr, &module.metadata, strict));
             block_ir.push(ir);
             x = extract_probestack_arg(instr);
             if instr.opcode() == Opcode::JMP {

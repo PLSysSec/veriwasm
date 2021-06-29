@@ -1,137 +1,8 @@
-use veriwasm::{analyses, checkers, utils};
-
-use analyses::call_analyzer::CallAnalyzer;
-use analyses::heap_analyzer::HeapAnalyzer;
-use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
-use analyses::run_worklist;
-use analyses::stack_analyzer::StackAnalyzer;
-use checkers::call_checker::check_calls;
-use checkers::heap_checker::check_heap;
-use checkers::stack_checker::check_stack;
-use utils::ir_utils::has_indirect_calls;
-use utils::utils::{fully_resolved_cfg, get_data};
-
 use clap::{App, Arg};
-use serde_json;
-use std::fs;
-use std::panic;
-use std::time::Instant;
-use utils::utils::{load_metadata, load_program};
-use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
-
-pub struct Config {
-    module_path: String,
-    _num_jobs: u32,
-    output_path: String,
-    has_output: bool,
-    _quiet: bool,
-    only_func: Option<String>,
-}
-
-fn run(config: Config) {
-    let mut func_counter = 0;
-    let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64)> = vec![];
-    let program = load_program(&config.module_path);
-    println!("Loading Metadata");
-    let metadata = load_metadata(&config.module_path);
-    let (x86_64_data, func_addrs, plt) = get_data(&config.module_path, &program);
-    let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
-    for (addr, func_name) in func_addrs {
-        if config.only_func.is_some() && func_name != config.only_func.as_ref().unwrap().as_str() {
-            continue;
-        }
-        println!("Generating CFG for {:?}", func_name);
-        let start = Instant::now();
-        let (cfg, irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
-        func_counter += 1;
-        println!("Analyzing: {:?}", func_name);
-        //let irmap = lift_cfg(&program, &cfg, &metadata);
-        check_cfg_integrity(&cfg.blocks, &cfg.graph);
-
-        let stack_start = Instant::now();
-        let stack_analyzer = StackAnalyzer {};
-        let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
-        let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
-        if !stack_safe {
-            panic!("Not Stack Safe");
-        }
-
-        println!("Checking Heap Safety");
-        let heap_start = Instant::now();
-        let heap_analyzer = HeapAnalyzer {
-            metadata: metadata.clone(),
-        };
-        let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
-        let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
-        if !heap_safe {
-            panic!("Not Heap Safe");
-        }
-
-        let call_start = Instant::now();
-        println!("Checking Call Safety");
-        if has_indirect_calls(&irmap) {
-            let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
-            let call_analyzer = CallAnalyzer {
-                metadata: metadata.clone(),
-                reaching_defs: reaching_defs.clone(),
-                reaching_analyzer: ReachingDefnAnalyzer {
-                    cfg: cfg.clone(),
-                    irmap: irmap.clone(),
-                },
-                funcs: valid_funcs.clone(),
-            };
-            let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
-            let call_safe = check_calls(call_result, &irmap, &call_analyzer, &valid_funcs, &plt);
-            if !call_safe {
-                panic!("Not Call Safe");
-            }
-        }
-        let end = Instant::now();
-        info.push((
-            func_name.to_string(),
-            cfg.blocks.len(),
-            (stack_start - start).as_secs_f64(),
-            (heap_start - stack_start).as_secs_f64(),
-            (call_start - heap_start).as_secs_f64(),
-            (end - call_start).as_secs_f64(),
-        ));
-        println!(
-            "Verified {:?} at {:?} blocks. CFG: {:?}s Stack: {:?}s Heap: {:?}s Calls: {:?}s",
-            func_name,
-            cfg.blocks.len(),
-            (stack_start - start).as_secs_f64(),
-            (heap_start - stack_start).as_secs_f64(),
-            (call_start - heap_start).as_secs_f64(),
-            (end - call_start).as_secs_f64()
-        );
-    }
-    if config.has_output {
-        let data = serde_json::to_string(&info).unwrap();
-        println!("Dumping Stats to {}", config.output_path);
-        fs::write(config.output_path, data).expect("Unable to write file");
-    }
-
-    let mut total_cfg_time = 0.0;
-    let mut total_stack_time = 0.0;
-    let mut total_heap_time = 0.0;
-    let mut total_call_time = 0.0;
-    for (_, _, cfg_time, stack_time, heap_time, call_time) in &info {
-        total_cfg_time += cfg_time;
-        total_stack_time += stack_time;
-        total_heap_time += heap_time;
-        total_call_time += call_time;
-    }
-    println!("Verified {:?} functions", func_counter);
-    println!(
-        "Total time = {:?}s CFG: {:?} Stack: {:?}s Heap: {:?}s Call: {:?}s",
-        total_cfg_time + total_stack_time + total_heap_time + total_call_time,
-        total_cfg_time,
-        total_stack_time,
-        total_heap_time,
-        total_call_time
-    );
-    println!("Done!");
-}
+use loaders::types::{ExecutableType, VwArch};
+use std::str::FromStr;
+use veriwasm::loaders;
+use veriwasm::runner::*;
 
 fn main() {
     let _ = env_logger::try_init();
@@ -164,9 +35,25 @@ fn main() {
                 .short("f")
                 .long("func")
                 .takes_value(true)
-                .help("Single function to process (rather than whole module"),
+                .help("Single function to process (rather than whole module)"),
         )
-        .arg(Arg::with_name("quiet").short("q").long("quiet"))
+        .arg(
+            Arg::with_name("executable type")
+                .short("c")
+                .long("format")
+                .takes_value(true)
+                .help("Format of the executable (lucet | wasmtime)"),
+        )
+        .arg(
+            Arg::with_name("architecture")
+                .long("arch")
+                .takes_value(true)
+                .help("Architecture of the executable (x64 | aarch64)"),
+        )
+        .arg(Arg::with_name("disable_stack_checks").long("disable_stack_checks"))
+        .arg(Arg::with_name("disable_linear_mem_checks").long("disable_linear_mem_checks"))
+        .arg(Arg::with_name("disable_call_checks").long("disable_call_checks"))
+        .arg(Arg::with_name("enable_zero_cost_checks").long("enable_zero_cost_checks"))
         .get_matches();
 
     let module_path = matches.value_of("module path").unwrap();
@@ -175,18 +62,33 @@ fn main() {
     let num_jobs = num_jobs_opt
         .map(|s| s.parse::<u32>().unwrap_or(1))
         .unwrap_or(1);
-    let quiet = matches.is_present("quiet");
+    let disable_stack_checks = matches.is_present("disable_stack_checks");
+    let disable_linear_mem_checks = matches.is_present("disable_linear_mem_checks");
+    let disable_call_checks = matches.is_present("disable_call_checks");
+    let enable_zero_cost_checks = matches.is_present("enable_zero_cost_checks");
     let only_func = matches.value_of("one function").map(|s| s.to_owned());
+    let executable_type =
+        ExecutableType::from_str(matches.value_of("executable type").unwrap_or("lucet")).unwrap();
+    let arch = VwArch::from_str(matches.value_of("architecture").unwrap_or("x64")).unwrap();
 
     let has_output = if output_path == "" { false } else { true };
+
+    let active_passes = PassConfig {
+        stack: !disable_stack_checks,
+        linear_mem: !disable_linear_mem_checks,
+        call: !disable_call_checks,
+        zero_cost: enable_zero_cost_checks,
+    };
 
     let config = Config {
         module_path: module_path.to_string(),
         _num_jobs: num_jobs,
         output_path: output_path.to_string(),
         has_output: has_output,
-        _quiet: quiet,
         only_func,
+        executable_type,
+        active_passes,
+        arch,
     };
 
     run(config);

@@ -1,30 +1,14 @@
 use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::Lattice;
+use crate::lattices::{Lattice, VarSlot};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::default::Default;
 
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub struct StackSlot<T: Lattice + Clone> {
-    pub size: u32,
-    pub value: T,
-}
-
-impl<T: Lattice + Clone> PartialOrd for StackSlot<T> {
-    fn partial_cmp(&self, other: &StackSlot<T>) -> Option<Ordering> {
-        if self.size != other.size {
-            None
-        } else {
-            self.value.partial_cmp(&other.value)
-        }
-    }
-}
-
 //Currently implemented with hashmap, could also use a vector for a dense map
 #[derive(Eq, Clone, Debug)]
-pub struct StackLattice<T: Lattice + Clone> {
+pub struct StackLattice<T> {
     pub offset: i64,
-    pub map: HashMap<i64, StackSlot<T>>,
+    pub map: HashMap<i64, VarSlot<T>>,
 }
 
 impl<T: Lattice + Clone> StackLattice<T> {
@@ -53,13 +37,8 @@ impl<T: Lattice + Clone> StackLattice<T> {
         if value == Default::default() {
             self.map.remove(&(self.offset + offset));
         } else {
-            self.map.insert(
-                self.offset + offset,
-                StackSlot {
-                    size: size,
-                    value: value,
-                },
-            );
+            self.map
+                .insert(self.offset + offset, VarSlot { size, value });
         }
     }
 
@@ -89,7 +68,7 @@ impl<T: Lattice + Clone> StackLattice<T> {
 }
 
 //check if StackLattice s1 is less than StackLattice s2
-fn hashmap_le<T: Lattice + Clone>(s1: &StackLattice<T>, s2: &StackLattice<T>) -> bool {
+fn hashmap_le<T: PartialOrd>(s1: &StackLattice<T>, s2: &StackLattice<T>) -> bool {
     for (k1, v1) in s1.map.iter() {
         if !s2.map.contains_key(k1) {
             return false;
@@ -103,7 +82,7 @@ fn hashmap_le<T: Lattice + Clone>(s1: &StackLattice<T>, s2: &StackLattice<T>) ->
     true
 }
 
-impl<T: Lattice + Clone> PartialOrd for StackLattice<T> {
+impl<T: PartialOrd> PartialOrd for StackLattice<T> {
     fn partial_cmp(&self, other: &StackLattice<T>) -> Option<Ordering> {
         if self.offset != other.offset {
             None
@@ -121,7 +100,7 @@ impl<T: Lattice + Clone> PartialOrd for StackLattice<T> {
     }
 }
 
-impl<T: Lattice + Clone> PartialEq for StackLattice<T> {
+impl<T: PartialEq> PartialEq for StackLattice<T> {
     fn eq(&self, other: &StackLattice<T>) -> bool {
         (self.map == other.map) && (self.offset == other.offset)
     }
@@ -130,14 +109,14 @@ impl<T: Lattice + Clone> PartialEq for StackLattice<T> {
 //assumes that stack offset is equal in both stack lattices
 impl<T: Lattice + Clone> Lattice for StackLattice<T> {
     fn meet(&self, other: &Self, loc_idx: &LocIdx) -> Self {
-        let mut newmap: HashMap<i64, StackSlot<T>> = HashMap::new();
+        let mut newmap: HashMap<i64, VarSlot<T>> = HashMap::new();
         for (k, v1) in self.map.iter() {
             match other.map.get(k) {
                 Some(v2) => {
                     if v1.size == v2.size {
                         let new_v = v1.value.meet(&v2.value.clone(), loc_idx);
                         if new_v != Default::default() {
-                            let newslot = StackSlot {
+                            let newslot = VarSlot {
                                 size: v1.size,
                                 value: new_v,
                             };

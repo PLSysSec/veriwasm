@@ -1,4 +1,4 @@
-use crate::utils::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
+use crate::ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
 
 pub fn is_rsp(v: &Value) -> bool {
     match v {
@@ -157,4 +157,28 @@ pub fn has_indirect_jumps(irmap: &IRMap) -> bool {
         }
     }
     false
+}
+
+pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
+    match memargs {
+        MemArgs::Mem1Arg(arg) => {
+            if let MemArg::Reg(regnum, _) = arg {
+                if *regnum == 4 {
+                    return Some(0);
+                }
+            }
+            None
+        }
+        MemArgs::Mem2Args(arg1, arg2) => {
+            if let MemArg::Reg(regnum, _) = arg1 {
+                if *regnum == 4 {
+                    if let MemArg::Imm(_, _, offset) = arg2 {
+                        return Some(*offset);
+                    }
+                }
+            }
+            None
+        }
+        _ => None,
+    }
 }

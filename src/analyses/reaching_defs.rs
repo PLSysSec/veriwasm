@@ -1,15 +1,17 @@
-use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
-use crate::lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
-use crate::lattices::VarState;
-use crate::utils::lifter::{Binopcode, IRMap, Stmt, Unopcode};
-use crate::utils::utils::LucetMetadata;
+use crate::{analyses, ir, lattices, loaders};
+use analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
+use ir::types::{Binopcode, IRMap, Stmt, Unopcode, ValSize};
+use lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
+use lattices::VarState;
+use lattices::X86Regs::*;
+use loaders::types::VwMetadata;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 
 //Top level function
 pub fn analyze_reaching_defs(
     cfg: &VW_CFG,
     irmap: &IRMap,
-    _metadata: LucetMetadata,
+    _metadata: VwMetadata,
 ) -> AnalysisResult<ReachLattice> {
     run_worklist(
         cfg,
@@ -64,21 +66,21 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
     fn init_state(&self) -> ReachLattice {
         let mut s: ReachLattice = Default::default();
 
-        s.regs.rax = loc(0xdeadbeef, 0);
-        s.regs.rcx = loc(0xdeadbeef, 1);
-        s.regs.rdx = loc(0xdeadbeef, 2);
-        s.regs.rbx = loc(0xdeadbeef, 3);
-        s.regs.rbp = loc(0xdeadbeef, 4);
-        s.regs.rsi = loc(0xdeadbeef, 5);
-        s.regs.rdi = loc(0xdeadbeef, 6);
-        s.regs.r8 = loc(0xdeadbeef, 7);
-        s.regs.r9 = loc(0xdeadbeef, 8);
-        s.regs.r10 = loc(0xdeadbeef, 9);
-        s.regs.r11 = loc(0xdeadbeef, 10);
-        s.regs.r12 = loc(0xdeadbeef, 11);
-        s.regs.r13 = loc(0xdeadbeef, 12);
-        s.regs.r14 = loc(0xdeadbeef, 13);
-        s.regs.r15 = loc(0xdeadbeef, 14);
+        s.regs.set_reg(Rax, ValSize::Size64, loc(0xdeadbeef, 0));
+        s.regs.set_reg(Rcx, ValSize::Size64, loc(0xdeadbeef, 1));
+        s.regs.set_reg(Rdx, ValSize::Size64, loc(0xdeadbeef, 2));
+        s.regs.set_reg(Rbx, ValSize::Size64, loc(0xdeadbeef, 3));
+        s.regs.set_reg(Rbp, ValSize::Size64, loc(0xdeadbeef, 4));
+        s.regs.set_reg(Rsi, ValSize::Size64, loc(0xdeadbeef, 5));
+        s.regs.set_reg(Rdi, ValSize::Size64, loc(0xdeadbeef, 6));
+        s.regs.set_reg(R8, ValSize::Size64, loc(0xdeadbeef, 7));
+        s.regs.set_reg(R9, ValSize::Size64, loc(0xdeadbeef, 8));
+        s.regs.set_reg(R10, ValSize::Size64, loc(0xdeadbeef, 9));
+        s.regs.set_reg(R11, ValSize::Size64, loc(0xdeadbeef, 10));
+        s.regs.set_reg(R12, ValSize::Size64, loc(0xdeadbeef, 11));
+        s.regs.set_reg(R13, ValSize::Size64, loc(0xdeadbeef, 12));
+        s.regs.set_reg(R14, ValSize::Size64, loc(0xdeadbeef, 13));
+        s.regs.set_reg(R15, ValSize::Size64, loc(0xdeadbeef, 14));
 
         s.stack.update(0x8, loc(0xdeadbeef, 15), 4);
         s.stack.update(0x10, loc(0xdeadbeef, 16), 4);
@@ -115,21 +117,51 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
                 in_state.set(dst, singleton(loc_idx.clone()))
             }
             Stmt::Call(_) => {
-                in_state.regs.rax = loc(loc_idx.addr, 0);
-                in_state.regs.rcx = loc(loc_idx.addr, 1);
-                in_state.regs.rdx = loc(loc_idx.addr, 2);
-                in_state.regs.rbx = loc(loc_idx.addr, 3);
-                in_state.regs.rbp = loc(loc_idx.addr, 4);
-                in_state.regs.rsi = loc(loc_idx.addr, 5);
-                in_state.regs.rdi = loc(loc_idx.addr, 6);
-                in_state.regs.r8 = loc(loc_idx.addr, 7);
-                in_state.regs.r9 = loc(loc_idx.addr, 8);
-                in_state.regs.r10 = loc(loc_idx.addr, 9);
-                in_state.regs.r11 = loc(loc_idx.addr, 10);
-                in_state.regs.r12 = loc(loc_idx.addr, 11);
-                in_state.regs.r13 = loc(loc_idx.addr, 12);
-                in_state.regs.r14 = loc(loc_idx.addr, 13);
-                in_state.regs.r15 = loc(loc_idx.addr, 14);
+                in_state
+                    .regs
+                    .set_reg(Rax, ValSize::Size64, loc(loc_idx.addr, 0));
+                in_state
+                    .regs
+                    .set_reg(Rcx, ValSize::Size64, loc(loc_idx.addr, 1));
+                in_state
+                    .regs
+                    .set_reg(Rdx, ValSize::Size64, loc(loc_idx.addr, 2));
+                in_state
+                    .regs
+                    .set_reg(Rbx, ValSize::Size64, loc(loc_idx.addr, 3));
+                in_state
+                    .regs
+                    .set_reg(Rbp, ValSize::Size64, loc(loc_idx.addr, 4));
+                in_state
+                    .regs
+                    .set_reg(Rsi, ValSize::Size64, loc(loc_idx.addr, 5));
+                in_state
+                    .regs
+                    .set_reg(Rdi, ValSize::Size64, loc(loc_idx.addr, 6));
+                in_state
+                    .regs
+                    .set_reg(R8, ValSize::Size64, loc(loc_idx.addr, 7));
+                in_state
+                    .regs
+                    .set_reg(R9, ValSize::Size64, loc(loc_idx.addr, 8));
+                in_state
+                    .regs
+                    .set_reg(R10, ValSize::Size64, loc(loc_idx.addr, 9));
+                in_state
+                    .regs
+                    .set_reg(R11, ValSize::Size64, loc(loc_idx.addr, 10));
+                in_state
+                    .regs
+                    .set_reg(R12, ValSize::Size64, loc(loc_idx.addr, 11));
+                in_state
+                    .regs
+                    .set_reg(R13, ValSize::Size64, loc(loc_idx.addr, 12));
+                in_state
+                    .regs
+                    .set_reg(R14, ValSize::Size64, loc(loc_idx.addr, 13));
+                in_state
+                    .regs
+                    .set_reg(R15, ValSize::Size64, loc(loc_idx.addr, 14));
             }
             _ => (),
         }
