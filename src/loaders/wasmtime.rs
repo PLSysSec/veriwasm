@@ -71,23 +71,24 @@ pub fn load_wasmtime_program(config: &runner::Config) -> VwModule {
     let store: Store<()> = Store::default();
     // Deserialize wasmtime module
     let module = unsafe { Module::deserialize(store.engine(), buffer).unwrap() };
-    let obj = module.obj();
+    unimplemented!();
+    // let obj = module.obj();
 
-    match ModuleData::load_from(&obj, path.to_string()) {
-        Some(mut program) => {
-            fixup_object_file(&mut program, &obj);
-            let metadata = load_wasmtime_metadata(&program);
-            VwModule {
-                program,
-                metadata,
-                format: config.executable_type,
-                arch: config.arch,
-            }
-        } //{ FileRepr::Executable(data) }
-        None => {
-            panic!("function:{} is not a valid path", path)
-        }
-    }
+    // match ModuleData::load_from(&obj, path.to_string()) {
+    //     Some(mut program) => {
+    //         fixup_object_file(&mut program, &obj);
+    //         let metadata = load_wasmtime_metadata(&program);
+    //         VwModule {
+    //             program,
+    //             metadata,
+    //             format: config.executable_type,
+    //             arch: config.arch,
+    //         }
+    //     } //{ FileRepr::Executable(data) }
+    //     None => {
+    //         panic!("function:{} is not a valid path", path)
+    //     }
+    // }
 }
 
 // We do not need to check handwritten trampoline functions

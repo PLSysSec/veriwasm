@@ -349,371 +349,371 @@ fn negative_test_cranelift_805() {
     );
 }
 
-#[test]
-fn wasmtime_wasm_callback() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/callback.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_callback() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/callback.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_fib() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/fib-wasm.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_fib() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/fib-wasm.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_fraction_norm() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/fraction-norm.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_fraction_norm() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/fraction-norm.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_hello() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/hello.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_hello() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/hello.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_memory() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/memory.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_memory() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/memory.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_reflect() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/reflect.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_reflect() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/reflect.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_serialize() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/serialize.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_serialize() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/serialize.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_table() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/table.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_table() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/table.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_trap() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/trap.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_trap() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/trap.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_fib_wasm_dwarf5() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/fib-wasm-dwarf5.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_fib_wasm_dwarf5() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/fib-wasm-dwarf5.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_finalize() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/finalize.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_finalize() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/finalize.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_global() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/global.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_global() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/global.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_issue_1306() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/issue-1306-name-section-with-u32-max-function-index.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_issue_1306() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/issue-1306-name-section-with-u32-max-function-index.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_multi() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/multi.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_multi() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/multi.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_reverse_str() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/reverse-str.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_reverse_str() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/reverse-str.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_start() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/start.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_start() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/start.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wasm_threads() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wasm/threads.wasm",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wasm_threads() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wasm/threads.wasm",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_fuel() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/fuel.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_fuel() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/fuel.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_greeter_reactor() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/greeter_reactor.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_greeter_reactor() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/greeter_reactor.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_illop_invoke() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/iloop-invoke.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_illop_invoke() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/iloop-invoke.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_linking2() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/linking2.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_linking2() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/linking2.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_minimal_reactor() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/minimal-reactor.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_minimal_reactor() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/minimal-reactor.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_threads() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/threads.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_threads() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/threads.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_exit125_wasi_snapshot1() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/exit125_wasi_snapshot1.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_exit125_wasi_snapshot1() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/exit125_wasi_snapshot1.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_gcd() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/gcd.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_gcd() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/gcd.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_hello_wasi_snapshot0() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/hello_wasi_snapshot0.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_hello_wasi_snapshot0() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/hello_wasi_snapshot0.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_iloop_start() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/iloop-start.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_iloop_start() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/iloop-start.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_loop_params() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/loop-params.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_loop_params() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/loop-params.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_multi() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/multi.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_multi() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/multi.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_unreachable() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/unreachable.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_unreachable() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/unreachable.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_exit_with_saved_fprs() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/exit_with_saved_fprs.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_exit_with_saved_fprs() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/exit_with_saved_fprs.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_greeter_callable_command() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/greeter_callable_command.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_greeter_callable_command() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/greeter_callable_command.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_interrupt() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/interrupt.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_interrupt() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/interrupt.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_memory() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/memory.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_memory() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/memory.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_rs2wasm_add_func() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/rs2wasm-add-func.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_rs2wasm_add_func() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/rs2wasm-add-func.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_externref() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/externref.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_externref() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/externref.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_greeter_command() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/greeter_command.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_greeter_command() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/greeter_command.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_hello() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/hello.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_hello() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/hello.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_linking1() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/linking1.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_linking1() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/linking1.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_minimal_command() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/minimal-command.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_minimal_command() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/minimal-command.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
 
-#[test]
-fn wasmtime_wat_simple() {
-    full_test_helper(
-        "./veriwasm_public_data/wasmtime/bin/wat/simple.wat",
-        ExecutableType::Wasmtime,
-        VwArch::X64,
-    )
-}
+// #[test]
+// fn wasmtime_wat_simple() {
+//     full_test_helper(
+//         "./veriwasm_public_data/wasmtime/bin/wat/simple.wat",
+//         ExecutableType::Wasmtime,
+//         VwArch::X64,
+//     )
+// }
