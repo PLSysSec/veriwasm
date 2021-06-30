@@ -1,5 +1,5 @@
 use crate::{loaders, utils};
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, BigEndian};
 use loaders::utils::*;
 use lucet_module;
 use std::collections::HashMap;
@@ -11,34 +11,90 @@ use yaxpeax_core::memory::repr::FileRepr;
 use goblin::Object;
 use std::fs::File;
 use std::path::Path;
-use std::io::Read;
+use std::io::{Read, Seek, SeekFrom};
+use std::fs::OpenOptions;
+use elfkit::{types, DynamicContent, Elf, SectionContent, symbol};
+use elfkit::relocation::RelocationType;
+use std::string::String;
 
-
-pub fn get_plt_data(binpath: &str){
-    let path = Path::new(binpath);
-    let mut fd = File::open(path).unwrap();
-    let mut buffer = Vec::new();
-    fd.read_to_end(&mut buffer).unwrap();
-    match Object::parse(&buffer).unwrap() {
-        Object::Elf(elf) => {
-            println!("Dynamic: {:?}", elf.dynamic);
-            for plt_reloc in elf.pltrelocs.iter(){
-                println!("reloc: {:?}", plt_reloc);
+pub fn get_plt_funcs(binpath: &str) -> Vec<(u64, String)>{
+    //Extract relocation symbols
+    let mut in_file  = OpenOptions::new().read(true).open(binpath).unwrap();
+    let mut elf  = Elf::from_reader(&mut in_file).unwrap();
+    elf.load_all().unwrap();
+    // Parse relocs to get mapping from target to name
+    let mut target_to_name = HashMap::new();
+    for section in &elf.sections {
+        match section.content {
+            SectionContent::Relocations(ref relocs) => {
+                for reloc in relocs {
+                    elf.sections
+                        .get(section.header.link as usize)
+                        .and_then(|sec| sec.content.as_symbols())
+                        .and_then(|symbols| symbols.get(reloc.sym as usize))
+                        .and_then(|symbol| if symbol.name.len() > 0 {
+                            target_to_name.insert(reloc.addr, symbol.name.clone());
+                            // println!("{:x} {:} ", reloc.addr, symbol.name);
+                            Some(())
+                        } else {
+                            None
+                        })
+                        .unwrap_or_else(|| {
+                            // print!("{: <20.20} ", reloc.sym);
+                        });
+                }
             }
-            for dynsym in elf.dynsyms.iter(){
-                println!("import: {} {:x} {:?}", elf.dynstrtab.get(dynsym.st_name).unwrap().unwrap().to_string(), dynsym.st_value, dynsym);
-            }
-            unimplemented!();
-            //println!("elf: {:#?}", &elf);
-            },
-        _ => unimplemented!(),
+            _ => (),
         }
+    }
+    // Parse PLT to get mapping from address to target
+    let mut addr_to_target = HashMap::new();
+    let plt_section = elf.sections.iter().find(|sec| sec.name == ".plt").unwrap();
+    let plt_start = plt_section.header.addr;
+    if let SectionContent::Raw(buf) = &plt_section.content{
+        let mut rdr = Cursor::new(buf);
+        let mut idx: usize = 0;
+        while idx < buf.len(){
+            rdr.seek(SeekFrom::Current(2)).unwrap();
+            let offset = rdr.read_i32::<LittleEndian>().unwrap();
+            rdr.seek(SeekFrom::Current(10)).unwrap();
+            let addr = plt_start + (idx as u64);
+            println!("{:x} {:x} {:x}", plt_start, idx, offset);
+            let target = plt_start + (idx as u64) + (offset as u64) + 6;
+            addr_to_target.insert(addr, target);
+            idx += 16;
+        }
+    }
+    else{
+        panic!("No plt section?");
+    }
+    // println!("===== Addr to Target =======");
+    // for (addr,target) in &addr_to_target{
+    //     println!("{:x} {:x}", addr, target);
+    // }
+    // println!("===== Target to Name =======");
+    // for (target, name) in &target_to_name{
+    //     println!("{:x} {:}", target, name);
+    // }
+    
+
+
+    let mut plt_funcs: Vec<(u64, String)> = Vec::new();
+    for (addr,target) in &addr_to_target{
+        if target_to_name.contains_key(target){
+            let name = target_to_name[target].clone();
+            plt_funcs.push((*addr, name));
+        }
+    }
+    // println!("plt_funcs: {:?}", plt_funcs);
+
+    // unimplemented!();
+    plt_funcs
 }
 
 pub fn load_lucet_program(binpath: &str) -> ModuleData {
     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
     if let FileRepr::Executable(program) = program {
-        // get_plt_data(binpath);
         program
     } else {
         panic!("function:{} is not a valid path", binpath)

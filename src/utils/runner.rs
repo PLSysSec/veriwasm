@@ -28,6 +28,7 @@ use std::fs;
 use std::panic;
 use std::time::Instant;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
+use loaders::lucet::get_plt_funcs;
 
 #[derive(Debug)]
 pub struct PassConfig {
@@ -111,7 +112,9 @@ fn run_calls(
 pub fn run(config: Config) {
     let program = config.executable_type.load_program(&config.module_path);
     let metadata = config.executable_type.load_metadata(&program);
-    let (x86_64_data, func_addrs, plt, all_addrs) = get_data(&program, &config.executable_type);
+    let (x86_64_data, func_addrs, plt, mut all_addrs) = get_data(&program, &config.executable_type);
+    let plt_funcs = get_plt_funcs(&config.module_path);
+    all_addrs.extend(plt_funcs);
     println!("plt: {:?}", plt);
 
     let mut func_counter = 0;
