@@ -35,6 +35,7 @@ pub enum X86Regs {
     R14,
     R15,
     Zf,
+    Cf,
 }
 
 use self::X86Regs::*;
@@ -122,8 +123,12 @@ impl Iterator for X86RegsIterator {
                         return Some(R15);
                     }
                     Zf => {
-                        self.current_reg = None;
+                        self.current_reg = Some(Cf);
                         return Some(Zf);
+                    }
+                    Cf => {
+                        self.current_reg = None;
+                        return Some(Cf);
                     }
                 }
             }
@@ -153,6 +158,7 @@ impl TryFrom<u8> for X86Regs {
             14 => Ok(R14),
             15 => Ok(R15),
             16 => Ok(Zf),
+            17 => Ok(Cf),
             _ => Err(format!("Unknown register: index = {:?}", value)),
         }
     }

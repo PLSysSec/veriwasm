@@ -48,10 +48,12 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
         stmt: &Stmt,
         loc_idx: &LocIdx,
     ) -> bool {
-        let debug_addrs : HashSet<u64> = vec![0x000122b7].into_iter().collect();
+        let debug_addrs : HashSet<u64> = vec![
+        ].into_iter().collect();
         if debug_addrs.contains(&loc_idx.addr) {
             println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            println!("check_statement debug 0x{:x?}: {:?}\n{:?}", loc_idx.addr, stmt, state);
+            println!("{:?}", state);
+            println!("check_statement debug 0x{:x?}: {:?}", loc_idx.addr, stmt);
             let mut cloned = state.clone();
             self.aexec(&mut cloned, stmt, loc_idx);
             println!("{:?}", cloned);
@@ -63,7 +65,7 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
                     match dst {
                         Value::Mem(memsize, memargs) => {},
                         Value::Reg(reg_num, _) => {
-                            if *reg_num != u8::from(Rsp) && *reg_num != u8::from(Zf) {
+                            if *reg_num != u8::from(Rsp) && *reg_num != u8::from(Zf) && *reg_num != u8::from(Cf) {
                                 println!("----------------------------------------");
                                 println!("{:?}", state);
                                 println!("Darn: 0x{:x?}: {:?}", loc_idx.addr, stmt);

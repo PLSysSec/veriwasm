@@ -99,6 +99,7 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
         self.map.remove(&R10);
         self.map.remove(&R11);
         self.map.remove(&Zf);
+        self.map.remove(&Cf);
     }
 
     pub fn show(&self) -> () {
@@ -114,14 +115,14 @@ impl<T: Lattice + Clone> Lattice for X86RegsLattice<T> {
             match other.map.get(var_index) {
                 Some(v2) => {
                     // TODO(matt): what if the sizes are different?
-                    if v1.size == v2.size {
+                    // if v1.size == v2.size {
                         let new_v = v1.value.meet(&v2.value.clone(), loc_idx);
                         let newslot = VarSlot {
                             size: v1.size,
                             value: new_v,
                         };
                         newmap.insert(*var_index, newslot);
-                    }
+                    // }
                 }
                 None => () // this means v2 = ⊥ so v1 ∧ v2 = ⊥
             }

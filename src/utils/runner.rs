@@ -1,7 +1,9 @@
-use crate::{analyses, checkers, ir, loaders, utils};
+use crate::{analyses, checkers, ir, lattices, loaders, utils};
 
 use crate::{IRMap, VW_Metadata, VW_CFG};
+use crate::lattices::VariableState;
 use crate::lattices::calllattice::CallCheckLattice;
+use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use loaders::utils::{VwFuncInfo, to_system_v};
 use analyses::call_analyzer::CallAnalyzer;
 use analyses::heap_analyzer::HeapAnalyzer;
@@ -49,7 +51,18 @@ pub struct Config {
     pub architecture: VwArch,
 }
 
-fn run_locals(call_analysis: AnalysisResult<CallCheckLattice>, plt_bounds: (u64, u64), all_addrs_map: &HashMap<u64, String>, func_signatures: &VwFuncInfo, func_name: &String, cfg: &VW_CFG, irmap: &IRMap) -> bool {
+fn run_locals(
+    reaching_defs: AnalysisResult<VariableState<ReachingDefnLattice>>,
+    call_analysis: AnalysisResult<CallCheckLattice>,
+    plt_bounds: (u64, u64),
+    all_addrs_map: &HashMap<u64, String>,
+    func_signatures: &VwFuncInfo,
+    func_name: &String,
+    cfg: &VW_CFG,
+    irmap: &IRMap,
+    metadata: &VW_Metadata,
+    valid_funcs: &Vec<u64>,
+) -> bool {
     let fun_type = func_signatures.indexes.get(func_name)
         .and_then(|index| func_signatures.signatures.get(usize::try_from(*index).unwrap()))
         .map(to_system_v)
@@ -57,12 +70,24 @@ fn run_locals(call_analysis: AnalysisResult<CallCheckLattice>, plt_bounds: (u64,
             args: Vec::new(),
             ret: None,
         });
+    let call_analyzer = CallAnalyzer {
+        metadata: metadata.clone(),
+        reaching_defs: reaching_defs.clone(),
+        reaching_analyzer: ReachingDefnAnalyzer {
+            cfg: cfg.clone(),
+            irmap: irmap.clone(),
+        },
+        funcs: valid_funcs.clone(),
+        irmap: irmap.clone(),
+        cfg: cfg.clone(),
+    };
     let locals_analyzer = LocalsAnalyzer {
         fun_type,
         plt_bounds,
         symbol_table: func_signatures,
         name_addr_map: all_addrs_map,
         call_analysis,
+        call_analyzer,
     };
     let locals_result = run_worklist(&cfg, &irmap, &locals_analyzer);
     let locals_safe = check_locals(locals_result, &irmap, &locals_analyzer);
@@ -91,7 +116,7 @@ fn run_calls(
     metadata: &VW_Metadata,
     valid_funcs: &Vec<u64>,
     plt: (u64, u64),
-) -> (bool, AnalysisResult<CallCheckLattice>) {
+) -> (bool, AnalysisResult<CallCheckLattice>, AnalysisResult<VariableState<ReachingDefnLattice>>) {
     let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
     let call_analyzer = CallAnalyzer {
         metadata: metadata.clone(),
@@ -106,7 +131,7 @@ fn run_calls(
     };
     let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
     let call_safe = check_calls(call_result.clone(), &irmap, &call_analyzer, &valid_funcs, &plt);
-    (call_safe, call_result)
+    (call_safe, call_result, reaching_defs)
 }
 
 pub fn run(config: Config) {
@@ -156,14 +181,14 @@ pub fn run(config: Config) {
         if config.active_passes.linear_mem {
             println!("Checking Call Safety");
             // TODO: call analysis should check direct calls too, no?
-            let (call_safe, indirect_calls_result) = run_calls(&cfg, &irmap, &metadata, &valid_funcs, plt);
+            let (call_safe, indirect_calls_result, reaching_defs) = run_calls(&cfg, &irmap, &metadata, &valid_funcs, plt);
             if !call_safe {
                 panic!("Not Call Safe");
             }
 
             let locals_start = Instant::now();
             println!("Checking Locals Safety");
-            let locals_safe = run_locals(indirect_calls_result, plt, &all_addrs_map, &func_signatures, &func_name, &cfg, &irmap);
+            let locals_safe = run_locals(reaching_defs, indirect_calls_result, plt, &all_addrs_map, &func_signatures, &func_name, &cfg, &irmap, &metadata, &valid_funcs);
             if !locals_safe {
                 panic!("Not Locals Safe");
             }
