@@ -7,10 +7,10 @@ use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::analyses::call_analyzer::CallAnalyzer;
 use crate::loaders::utils::{VwFuncInfo, to_system_v_ret_ty};
 use crate::lattices::mem_to_stack_offset;
-use crate::ir::types::{Value, Binopcode, Stmt, IRMap, ValSize};
+use crate::ir::types::{Value, Binopcode, Stmt, IRMap, ValSize, X86Regs, VarIndex};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::localslattice::*;
-use crate::lattices::{VariableState, VarState, Lattice, VarIndex};
+use crate::lattices::{VariableState, VarState, Lattice};
 
 use SlotVal::*;
 use X86Regs::*;

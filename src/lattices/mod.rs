@@ -7,174 +7,15 @@ pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod switchlattice;
 pub mod localslattice;
-use crate::ir::types::{Binopcode, MemArg, MemArgs, ValSize, Value};
+use crate::ir::types::{Binopcode, MemArg, MemArgs, ValSize, Value, X86Regs};
 use crate::ir::utils::{get_imm_offset, is_rsp};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::regslattice::X86RegsLattice;
 use crate::lattices::stacklattice::StackLattice;
 use std::cmp::Ordering;
-use std::convert::TryFrom;
 use std::fmt::Debug;
 
-#[derive(PartialEq, Clone, Eq, Debug, Copy, Hash)]
-pub enum X86Regs {
-    Rax,
-    Rcx,
-    Rdx,
-    Rbx,
-    Rsp,
-    Rbp,
-    Rsi,
-    Rdi,
-    R8,
-    R9,
-    R10,
-    R11,
-    R12,
-    R13,
-    R14,
-    R15,
-    Zf,
-    Cf,
-}
-
-use self::X86Regs::*;
-
-struct X86RegsIterator {
-    current_reg: Option<X86Regs>
-}
-
-impl X86Regs {
-    fn iter() -> X86RegsIterator {
-        X86RegsIterator { current_reg: Some(Rax) }
-    }
-}
-
-impl Iterator for X86RegsIterator {
-    type Item = X86Regs;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.current_reg {
-            None => None,
-            Some(reg) => {
-                match reg {
-                    Rax => {
-                        self.current_reg = Some(Rcx);
-                        return Some(Rax);
-                    }
-                    Rcx => {
-                        self.current_reg = Some(Rdx);
-                        return Some(Rcx);
-                    }
-                    Rdx => {
-                        self.current_reg = Some(Rbx);
-                        return Some(Rdx);
-                    }
-                    Rbx => {
-                        self.current_reg = Some(Rsp);
-                        return Some(Rbx);
-                    }
-                    Rsp => {
-                        self.current_reg = Some(Rbp);
-                        return Some(Rsp);
-                    }
-                    Rbp => {
-                        self.current_reg = Some(Rsi);
-                        return Some(Rbp);
-                    }
-                    Rsi => {
-                        self.current_reg = Some(Rdi);
-                        return Some(Rsi);
-                    }
-                    Rdi => {
-                        self.current_reg = Some(R8);
-                        return Some(Rdi);
-                    }
-                    R8 => {
-                        self.current_reg = Some(R9);
-                        return Some(R8);
-                    }
-                    R9 => {
-                        self.current_reg = Some(R10);
-                        return Some(R9);
-                    }
-                    R10 => {
-                        self.current_reg = Some(R11);
-                        return Some(R10);
-                    }
-                    R11 => {
-                        self.current_reg = Some(R12);
-                        return Some(R11);
-                    }
-                    R12 => {
-                        self.current_reg = Some(R13);
-                        return Some(R12);
-                    }
-                    R13 => {
-                        self.current_reg = Some(R14);
-                        return Some(R13);
-                    }
-                    R14 => {
-                        self.current_reg = Some(R15);
-                        return Some(R14);
-                    }
-                    R15 => {
-                        self.current_reg = Some(Zf);
-                        return Some(R15);
-                    }
-                    Zf => {
-                        self.current_reg = Some(Cf);
-                        return Some(Zf);
-                    }
-                    Cf => {
-                        self.current_reg = None;
-                        return Some(Cf);
-                    }
-                }
-            }
-        }
-    }
-}
-
-impl TryFrom<u8> for X86Regs {
-    type Error = std::string::String;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Rax),
-            1 => Ok(Rcx),
-            2 => Ok(Rdx),
-            3 => Ok(Rbx),
-            4 => Ok(Rsp),
-            5 => Ok(Rbp),
-            6 => Ok(Rsi),
-            7 => Ok(Rdi),
-            8 => Ok(R8),
-            9 => Ok(R9),
-            10 => Ok(R10),
-            11 => Ok(R11),
-            12 => Ok(R12),
-            13 => Ok(R13),
-            14 => Ok(R14),
-            15 => Ok(R15),
-            16 => Ok(Zf),
-            17 => Ok(Cf),
-            _ => Err(format!("Unknown register: index = {:?}", value)),
-        }
-    }
-}
-
-impl From<X86Regs> for u8 {
-    fn from(value: X86Regs) -> Self {
-        value as u8
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum VarIndex {
-    Reg(X86Regs),
-    Stack(i64)
-}
+use X86Regs::*;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct VarSlot<T> {
@@ -301,14 +142,14 @@ pub fn mem_to_stack_offset(memargs: &MemArgs) -> Option<i64> {
     match memargs {
         MemArgs::Mem1Arg(arg) => {
             if let MemArg::Reg(regnum, _) = arg {
-                if *regnum == 4 {
+                if *regnum == Rsp {
                     return Some(0);
                 }
             }
         }
         MemArgs::Mem2Args(arg1, arg2) => {
             if let MemArg::Reg(regnum, _) = arg1 {
-                if *regnum == 4 {
+                if *regnum == Rsp {
                     if let MemArg::Imm(_, _, offset) = arg2 {
                         return Some(*offset);
                     }
@@ -341,7 +182,7 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
             Value::Reg(regnum, s2) => {
                 if let ValSize::SizeOther = s2 {
                 } else {
-                    self.regs.set_reg_index(regnum, s2, value)
+                    self.regs.set_reg(*regnum, *s2, value)
                 }
             }
             Value::Imm(_, _, _) => panic!("Trying to write to an immediate value"),
@@ -354,7 +195,7 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
             Value::Mem(memsize, memargs) => {
                 mem_to_stack_offset(memargs).map(|offset| self.stack.get(offset, memsize.into_bytes()))
             },
-            Value::Reg(regnum, s2) => Some(self.regs.get_reg_index(*regnum, *s2)),
+            Value::Reg(regnum, s2) => Some(self.regs.get_reg(*regnum, *s2)),
             Value::Imm(_, _, _) => None,
             Value::RIPConst => None,
         }

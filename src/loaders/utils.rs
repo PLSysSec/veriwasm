@@ -3,10 +3,9 @@
 use lucet_module::{Signature, ValueType};
 use std::collections::HashMap;
 
-use crate::ir::types::{FunType, ValSize};
-use crate::lattices::X86Regs;
-use crate::lattices::VarIndex;
-use crate::lattices::X86Regs::*;
+use crate::ir::types::{FunType, ValSize, X86Regs, VarIndex};
+
+use X86Regs::*;
 
 #[derive(Clone, Debug)]
 pub struct VW_Metadata {

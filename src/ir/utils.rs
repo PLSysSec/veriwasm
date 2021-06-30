@@ -1,28 +1,30 @@
-use crate::ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
+use crate::ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value, X86Regs};
+
+use X86Regs::*;
 
 pub fn is_rsp(v: &Value) -> bool {
     match v {
-        Value::Reg(4, ValSize::Size64) => return true,
-        Value::Reg(4, ValSize::Size32)
-        | Value::Reg(4, ValSize::Size16)
-        | Value::Reg(4, ValSize::Size8) => panic!("Illegal RSP access"),
+        Value::Reg(Rsp, ValSize::Size64) => return true,
+        Value::Reg(Rsp, ValSize::Size32)
+        | Value::Reg(Rsp, ValSize::Size16)
+        | Value::Reg(Rsp, ValSize::Size8) => panic!("Illegal RSP access"),
         _ => return false,
     }
 }
 
 pub fn is_rbp(v: &Value) -> bool {
     match v {
-        Value::Reg(5, ValSize::Size64) => return true,
-        Value::Reg(5, ValSize::Size32)
-        | Value::Reg(5, ValSize::Size16)
-        | Value::Reg(5, ValSize::Size8) => panic!("Illegal RBP access"),
+        Value::Reg(Rbp, ValSize::Size64) => return true,
+        Value::Reg(Rbp, ValSize::Size32)
+        | Value::Reg(Rbp, ValSize::Size16)
+        | Value::Reg(Rbp, ValSize::Size8) => panic!("Illegal RBP access"),
         _ => return false,
     }
 }
 
 pub fn is_zf(v: &Value) -> bool {
     match v {
-        Value::Reg(16, _) => return true,
+        Value::Reg(Zf, _) => return true,
         _ => return false,
     }
 }
@@ -35,7 +37,7 @@ pub fn is_irrelevant_reg(v: &Value) -> bool {
 }
 
 pub fn memarg_is_stack(memarg: &MemArg) -> bool {
-    if let MemArg::Reg(4, regsize) = memarg {
+    if let MemArg::Reg(Rsp, regsize) = memarg {
         if let ValSize::Size64 = regsize {
             return true;
         } else {
@@ -68,7 +70,7 @@ pub fn is_stack_access(v: &Value) -> bool {
 }
 
 pub fn memarg_is_bp(memarg: &MemArg) -> bool {
-    if let MemArg::Reg(5, regsize) = memarg {
+    if let MemArg::Reg(Rbp, regsize) = memarg {
         if let ValSize::Size64 = regsize {
             return true;
         } else {
@@ -163,7 +165,7 @@ pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
     match memargs {
         MemArgs::Mem1Arg(arg) => {
             if let MemArg::Reg(regnum, _) = arg {
-                if *regnum == 4 {
+                if *regnum == Rsp {
                     return Some(0);
                 }
             }
@@ -171,7 +173,7 @@ pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
         }
         MemArgs::Mem2Args(arg1, arg2) => {
             if let MemArg::Reg(regnum, _) = arg1 {
-                if *regnum == 4 {
+                if *regnum == Rsp {
                     if let MemArg::Imm(_, _, offset) = arg2 {
                         return Some(*offset);
                     }

@@ -4,8 +4,7 @@ use std::collections::HashSet;
 use crate::analyses::locals_analyzer::LocalsAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
-use crate::ir::types::{IRMap, MemArgs, Stmt, Value};
-use crate::lattices::X86Regs;
+use crate::ir::types::{IRMap, MemArgs, Stmt, Value, X86Regs};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::localslattice::{LocalsLattice, SlotVal};
 
@@ -65,7 +64,7 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
                     match dst {
                         Value::Mem(memsize, memargs) => {},
                         Value::Reg(reg_num, _) => {
-                            if *reg_num != u8::from(Rsp) && *reg_num != u8::from(Zf) && *reg_num != u8::from(Cf) {
+                            if *reg_num != Rsp && *reg_num != Zf && *reg_num != Cf {
                                 println!("----------------------------------------");
                                 println!("{:?}", state);
                                 println!("Darn: 0x{:x?}: {:?}", loc_idx.addr, stmt);

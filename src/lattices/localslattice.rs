@@ -2,7 +2,8 @@ use std::convert::TryFrom;
 use crate::lattices::Lattice;
 use crate::lattices::reachingdefslattice::LocIdx;
 use std::cmp::Ordering;
-pub use crate::lattices::{VariableState, VarState, X86Regs};
+use crate::ir::types::X86Regs;
+pub use crate::lattices::{VariableState, VarState};
 
 use X86Regs::*;
 use Ordering::*;

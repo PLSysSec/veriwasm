@@ -1,8 +1,8 @@
+use std::convert::TryFrom;
 use std::mem::discriminant;
 
 use crate::ir::types::*;
 use crate::loaders::utils::VW_Metadata;
-use crate::lattices::X86Regs::*;
 use yaxpeax_arch::{AddressBase, Arch, LengthedInstruction};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_core::arch::x86_64::analyses::data_flow::Location;
@@ -11,6 +11,8 @@ use yaxpeax_core::data::{Direction, ValueLocations};
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_x86::long_mode::Opcode::*;
 use yaxpeax_x86::long_mode::{register_class, Arch as AMD64, Opcode, Operand, RegSpec};
+
+use X86Regs::*;
 
 pub fn valsize(num: u32) -> ValSize {
     match num {
@@ -43,7 +45,7 @@ fn get_reg_size(reg: yaxpeax_x86::long_mode::RegSpec) -> ValSize {
 
 fn convert_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> Value {
     let size = get_reg_size(reg);
-    Value::Reg(reg.num(), size)
+    Value::Reg(X86Regs::try_from(reg.num()).unwrap(), size)
 }
 
 fn convert_memarg_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> MemArg {
@@ -54,7 +56,7 @@ fn convert_memarg_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> MemArg {
         register_class::B => ValSize::Size8,
         _ => panic!("Unknown register bank: {:?}", reg.class()),
     };
-    MemArg::Reg(reg.num(), size)
+    MemArg::Reg(X86Regs::try_from(reg.num()).unwrap(), size)
 }
 
 fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Value {
@@ -179,10 +181,10 @@ fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
         srcs.clone(),
     ));
     if writes_to_zf {
-        stmts.push(Stmt::Clear(Value::Reg(u8::from(Zf), ValSize::Size8), srcs.clone()));
+        stmts.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), srcs.clone()));
     };
     if writes_to_cf {
-        stmts.push(Stmt::Clear(Value::Reg(u8::from(Cf), ValSize::Size8), srcs));
+        stmts.push(Stmt::Clear(Value::Reg(Cf, ValSize::Size8), srcs));
     };
     stmts
 }
@@ -210,10 +212,10 @@ fn generic_clear(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
     }
     // TODO: dangerous
     if writes_to_zf {
-        stmts.push(Stmt::Clear(Value::Reg(u8::from(Zf), ValSize::Size8), vec![]));
+        stmts.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), vec![]));
     }
     if writes_to_cf {
-        stmts.push(Stmt::Clear(Value::Reg(u8::from(Cf), ValSize::Size8), vec![]));
+        stmts.push(Stmt::Clear(Value::Reg(Cf, ValSize::Size8), vec![]));
     }
 
     stmts
@@ -362,13 +364,13 @@ pub fn lift(
             };
             instrs.push(Stmt::Binop(
                 Binopcode::Test,
-                Value::Reg(u8::from(Zf), ValSize::Size8),
+                Value::Reg(Zf, ValSize::Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
             ));
             instrs.push(Stmt::Binop(
                 Binopcode::Test,
-                Value::Reg(u8::from(Cf), ValSize::Size8),
+                Value::Reg(Cf, ValSize::Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
             ));
@@ -386,13 +388,13 @@ pub fn lift(
             };
             instrs.push(Stmt::Binop(
                 Binopcode::Cmp,
-                Value::Reg(u8::from(Zf), ValSize::Size8),
+                Value::Reg(Zf, ValSize::Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
             ));
             instrs.push(Stmt::Binop(
                 Binopcode::Cmp,
-                Value::Reg(u8::from(Cf), ValSize::Size8),
+                Value::Reg(Cf, ValSize::Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
             ));
@@ -401,28 +403,28 @@ pub fn lift(
         Opcode::AND => {
             instrs.push(binop(Binopcode::And, instr));
             instrs.push(Stmt::Clear(
-                Value::Reg(16, ValSize::Size8),
+                Value::Reg(Zf, ValSize::Size8),
                 get_sources(instr),
             ))
         }
         Opcode::ADD => {
             instrs.push(binop(Binopcode::Add, instr));
             instrs.push(Stmt::Clear(
-                Value::Reg(16, ValSize::Size8),
+                Value::Reg(Zf, ValSize::Size8),
                 get_sources(instr),
             ))
         }
         Opcode::SUB => {
             instrs.push(binop(Binopcode::Sub, instr));
             instrs.push(Stmt::Clear(
-                Value::Reg(16, ValSize::Size8),
+                Value::Reg(Zf, ValSize::Size8),
                 get_sources(instr),
             ))
         }
         Opcode::SHL => {
             instrs.push(binop(Binopcode::Shl, instr));
             instrs.push(Stmt::Clear(
-                Value::Reg(16, ValSize::Size8),
+                Value::Reg(Zf, ValSize::Size8),
                 get_sources(instr),
             ))
         }
@@ -462,15 +464,15 @@ pub fn lift(
             assert_eq!(width, 8); //8 bytes
             instrs.push(Stmt::Binop(
                 Binopcode::Sub,
-                Value::Reg(4, ValSize::Size64),
-                Value::Reg(4, ValSize::Size64),
+                Value::Reg(Rsp, ValSize::Size64),
+                Value::Reg(Rsp, ValSize::Size64),
                 mk_value_i64(width.into()),
             ));
             instrs.push(Stmt::Unop(
                 Unopcode::Mov,
                 Value::Mem(
                     valsize((width * 8) as u32),
-                    MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)),
+                    MemArgs::Mem1Arg(MemArg::Reg(Rsp, ValSize::Size64)),
                 ),
                 convert_operand(instr.operand(0), ValSize::SizeOther),
             ))
@@ -483,24 +485,24 @@ pub fn lift(
                 convert_operand(instr.operand(0), ValSize::SizeOther),
                 Value::Mem(
                     valsize((width * 8) as u32),
-                    MemArgs::Mem1Arg(MemArg::Reg(4, ValSize::Size64)),
+                    MemArgs::Mem1Arg(MemArg::Reg(Rsp, ValSize::Size64)),
                 ),
             ));
             instrs.push(Stmt::Binop(
                 Binopcode::Add,
-                Value::Reg(4, ValSize::Size64),
-                Value::Reg(4, ValSize::Size64),
+                Value::Reg(Rsp, ValSize::Size64),
+                Value::Reg(Rsp, ValSize::Size64),
                 mk_value_i64(width.into()),
             ))
         }
 
         Opcode::NOP | Opcode::FILD | Opcode::STD | Opcode::CLD | Opcode::STI => (),
         Opcode::IDIV | Opcode::DIV => {
-            // instrs.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), vec![]));
-            instrs.push(Stmt::Clear(Value::Reg(0, ValSize::Size64), vec![])); // clear RAX
-            instrs.push(Stmt::Clear(Value::Reg(2, ValSize::Size64), vec![])); // clear RDX
+            // instrs.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), vec![]));
+            instrs.push(Stmt::Clear(Value::Reg(Rax, ValSize::Size64), vec![])); // clear RAX
+            instrs.push(Stmt::Clear(Value::Reg(Rdx, ValSize::Size64), vec![])); // clear RDX
             instrs.push(Stmt::Clear(
-                Value::Reg(16, ValSize::Size8),
+                Value::Reg(Zf, ValSize::Size8),
                 get_sources(instr),
             ));
         }
@@ -514,7 +516,7 @@ pub fn lift(
                     Value::Imm(ImmType::Signed, ValSize::Size64, 0),
                 ));
                 instrs.push(Stmt::Clear(
-                    Value::Reg(16, ValSize::Size8),
+                    Value::Reg(Zf, ValSize::Size8),
                     get_sources(instr),
                 ));
             } else {
@@ -524,9 +526,9 @@ pub fn lift(
 
         Opcode::CDQ | Opcode::CDQE => {
             // clear rax
-            instrs.push(Stmt::Clear(Value::Reg(0, ValSize::Size64), vec![]));
+            instrs.push(Stmt::Clear(Value::Reg(Rax, ValSize::Size64), vec![]));
             // clear rdx
-            instrs.push(Stmt::Clear(Value::Reg(2, ValSize::Size64), vec![]));
+            instrs.push(Stmt::Clear(Value::Reg(Rdx, ValSize::Size64), vec![]));
         }
 
         // TODO: check
@@ -535,20 +537,20 @@ pub fn lift(
         | SETZ => {
             instrs.push(Stmt::Clear(
                 convert_operand(instr.operand(0), ValSize::Size8),
-                vec![Value::Reg(u8::from(Zf), ValSize::Size8)],
+                vec![Value::Reg(Zf, ValSize::Size8)],
             ));
         }
 
         SETB => {
             instrs.push(Stmt::Clear(
                 convert_operand(instr.operand(0), ValSize::Size8),
-                vec![Value::Reg(u8::from(Cf), ValSize::Size8)],
+                vec![Value::Reg(Cf, ValSize::Size8)],
             ));
         }
 
         Opcode::BSF => {
             instrs.push(Stmt::Clear(
-                Value::Reg(u8::from(Zf), ValSize::Size8),
+                Value::Reg(Zf, ValSize::Size8),
                 vec![convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap())],
             ));
             instrs.push(Stmt::Clear(
@@ -561,7 +563,7 @@ pub fn lift(
         }
         Opcode::LZCNT => {
             instrs.push(Stmt::Clear(
-                Value::Reg(u8::from(Zf), ValSize::Size8),
+                Value::Reg(Zf, ValSize::Size8),
                 vec![convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap())],
             ));
             instrs.push(Stmt::Clear(
@@ -763,7 +765,7 @@ fn parse_probestack_arg<'a>(
     if move_instr.len() != 1 {
         return Err(ParseErr::Error(instrs));
     }
-    if let Stmt::Unop(Unopcode::Mov, Value::Reg(0, ValSize::Size32), Value::Imm(_, _, x)) = move_instr[0] {
+    if let Stmt::Unop(Unopcode::Mov, Value::Reg(Rax, ValSize::Size32), Value::Imm(_, _, x)) = move_instr[0] {
         return Ok((rest, (x as u64, (addr, move_instr))));
     }
     Err(ParseErr::Error(instrs))
@@ -793,7 +795,7 @@ fn parse_probestack_suffix<'a>(
     if sub_instr.len() != 1 {
         return Err(ParseErr::Error(instrs));
     }
-    if let Stmt::Binop(Binopcode::Sub, Value::Reg(4, ValSize::Size64), Value::Reg(0, ValSize::Size64), _) = sub_instr[0] {
+    if let Stmt::Binop(Binopcode::Sub, Value::Reg(Rsp, ValSize::Size64), Value::Reg(Rax, ValSize::Size64), _) = sub_instr[0] {
         return Ok((rest, (addr, sub_instr)))
     }
     Err(ParseErr::Error(instrs))
@@ -856,7 +858,7 @@ fn parse_bsf_cmove<'a>(
     let (rest, (_addr, mov_src)) = parse_cmovez(rest, &bsf_dst)?;
     let mut stmts = Vec::new();
     stmts.push(Stmt::Clear(
-        Value::Reg(u8::from(Zf), ValSize::Size8),
+        Value::Reg(Zf, ValSize::Size8),
         vec![bsf_src.clone()],
     ));
     stmts.push(Stmt::Clear(

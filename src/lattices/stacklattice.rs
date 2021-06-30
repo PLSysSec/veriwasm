@@ -57,11 +57,11 @@ impl<T: Lattice + Clone> StackLattice<T> {
         // TODO: is this correct?
         match self.map.get(&(self.offset + offset)) {
             Some(stack_slot) => {
-                // if stack_slot.size == size {
+                if stack_slot.size == size {
                     stack_slot.value.clone()
-                // } else {
-                //     Default::default()
-                // }
+                } else {
+                    Default::default()
+                }
             }
             None => Default::default(),
         }

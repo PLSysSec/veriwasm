@@ -1,11 +1,12 @@
 use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
 use crate::ir::types::ValSize;
-use crate::ir::types::{Binopcode, IRMap, Stmt, Unopcode};
+use crate::ir::types::{Binopcode, IRMap, Stmt, Unopcode, X86Regs};
 use crate::lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
 use crate::lattices::VarState;
-use crate::lattices::X86Regs::*;
 use crate::loaders::utils::VW_Metadata;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
+
+use X86Regs::*;
 
 //Top level function
 pub fn analyze_reaching_defs(

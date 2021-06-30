@@ -2,11 +2,11 @@ use std::convert::TryFrom;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use crate::ir::types::ValSize;
+use crate::ir::types::{ValSize ,X86Regs};
 use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::{Lattice, X86Regs, VarSlot};
+use crate::lattices::{Lattice, VarSlot};
 
-use self::X86Regs::*;
+use X86Regs::*;
 
 #[derive(Default, PartialEq, Eq, Clone, Debug)]
 pub struct X86RegsLattice<T> {
@@ -68,12 +68,12 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
         self.map.insert(index, VarSlot { size: size.into_bits(), value });
     }
 
-    pub fn set_reg_index(&mut self, index: &u8, size: &ValSize, value: T) -> () {
-        let reg_index = match X86Regs::try_from(*index) {
+    pub fn set_reg_index(&mut self, index: u8, size: ValSize, value: T) -> () {
+        let reg_index = match X86Regs::try_from(index) {
             Err(err) => panic!("{}", err),
             Ok(reg) => reg,
         };
-        self.set_reg(reg_index, *size, value)
+        self.set_reg(reg_index, size, value)
     }
 
     pub fn clear_regs(&mut self) -> () {
@@ -115,14 +115,14 @@ impl<T: Lattice + Clone> Lattice for X86RegsLattice<T> {
             match other.map.get(var_index) {
                 Some(v2) => {
                     // TODO(matt): what if the sizes are different?
-                    // if v1.size == v2.size {
+                    if v1.size == v2.size {
                         let new_v = v1.value.meet(&v2.value.clone(), loc_idx);
                         let newslot = VarSlot {
                             size: v1.size,
                             value: new_v,
                         };
                         newmap.insert(*var_index, newslot);
-                    // }
+                    }
                 }
                 None => () // this means v2 = ⊥ so v1 ∧ v2 = ⊥
             }
