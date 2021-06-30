@@ -3,7 +3,8 @@
 use lucet_module::{Signature, ValueType};
 use std::collections::HashMap;
 
-use crate::ir::types::ValSize;
+use crate::ir::types::{FunType, ValSize};
+use crate::lattices::X86Regs;
 use crate::lattices::VarIndex;
 use crate::lattices::X86Regs::*;
 
@@ -26,21 +27,21 @@ pub struct VwFuncInfo {
 // RDI, RSI, RDX, RCX, R8, R9,
 // 7,   6,   3,   2,   8,  9,    then stack slots
 
-pub fn to_system_v(sig: &Signature) -> Vec<(VarIndex, ValSize)> {
+pub fn to_system_v(sig: &Signature) -> FunType {
     let mut arg_locs = Vec::new();
     let mut i_ctr = 0; // integer arg #
     let mut f_ctr = 0; // floating point arg #
     let mut stack_offset = 0;
+    arg_locs.push((VarIndex::Reg(Rdi), ValSize::Size64));
     for arg in &sig.params {
         match arg {
             ValueType::I32 | ValueType::I64 => {
                 let index = match i_ctr {
-                    0 => VarIndex::Reg(Rdi),
-                    1 => VarIndex::Reg(Rsi),
-                    2 => VarIndex::Reg(Rdx),
-                    3 => VarIndex::Reg(Rcx),
-                    4 => VarIndex::Reg(R8),
-                    5 => VarIndex::Reg(R9),
+                    0 => VarIndex::Reg(Rsi),
+                    1 => VarIndex::Reg(Rdx),
+                    2 => VarIndex::Reg(Rcx),
+                    3 => VarIndex::Reg(R8),
+                    4 => VarIndex::Reg(R9),
                     _ => {
                         if let ValueType::I32 = arg {
                             stack_offset += 4;
@@ -62,5 +63,22 @@ pub fn to_system_v(sig: &Signature) -> Vec<(VarIndex, ValSize)> {
             }
         }
     }
-    return arg_locs;
+    return FunType {
+        args: arg_locs,
+        ret: to_system_v_ret_ty(sig),
+    };
+}
+
+pub fn to_system_v_ret_ty(sig: &Signature) -> Option<(X86Regs, ValSize)> {
+    sig.ret_ty
+        .and_then(|ty| {
+            match ty {
+                ValueType::I32 => Some((Rax, ValSize::Size32)),
+                ValueType::I64 => Some((Rax, ValSize::Size64)),
+                float => {
+                    println!("float return type");
+                    None
+                },
+            }
+        })
 }

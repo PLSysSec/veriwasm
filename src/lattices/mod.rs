@@ -164,6 +164,7 @@ impl From<X86Regs> for u8 {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum VarIndex {
     Reg(X86Regs),
     Stack(i64)

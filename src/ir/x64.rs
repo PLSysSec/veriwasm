@@ -1,5 +1,8 @@
+use std::mem::discriminant;
+
 use crate::ir::types::*;
 use crate::loaders::utils::VW_Metadata;
+use crate::lattices::X86Regs::*;
 use yaxpeax_arch::{AddressBase, Arch, LengthedInstruction};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_core::arch::x86_64::analyses::data_flow::Location;
@@ -283,7 +286,7 @@ fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &VW_Metadata) ->
     Stmt::Call(dst)
 }
 
-fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Vec<Stmt> {
+fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &Addr) -> Vec<Stmt> {
     let dst = instr.operand(0);
     let src1 = instr.operand(1);
     if let Operand::RegDisp(reg, disp) = src1 {
@@ -312,7 +315,7 @@ fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &u64) -> Vec<Stmt> {
 
 pub fn lift(
     instr: &yaxpeax_x86::long_mode::Instruction,
-    addr: &u64,
+    addr: &Addr,
     metadata: &VW_Metadata,
 ) -> Vec<Stmt> {
     log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
@@ -333,7 +336,24 @@ pub fn lift(
         Opcode::LEA => instrs.extend(lea(instr, addr)),
 
         Opcode::TEST => instrs.push(binop(Binopcode::Test, instr)),
-        Opcode::CMP => instrs.push(binop(Binopcode::Cmp, instr)),
+        // Opcode::CMP => instrs.push(binop(Binopcode::Cmp, instr)),
+        Opcode::CMP => {
+            let memsize = match (
+                get_operand_size(instr.operand(0)),
+                get_operand_size(instr.operand(1)),
+            ) {
+                (None, None) => panic!("Two Memory Args?"),
+                (Some(x), None) => x,
+                (None, Some(x)) => x,
+                (Some(x), Some(_y)) => x,
+            };
+            instrs.push(Stmt::Binop(
+                Binopcode::Cmp,
+                Value::Reg(u8::from(Zf), ValSize::Size8),
+                convert_operand(instr.operand(0), memsize),
+                convert_operand(instr.operand(1), memsize),
+            ))
+        },
 
         Opcode::AND => {
             instrs.push(binop(Binopcode::And, instr));
@@ -466,6 +486,39 @@ pub fn lift(
             instrs.push(Stmt::Clear(Value::Reg(2, ValSize::Size64), vec![]));
         }
 
+        SETNZ => {
+            instrs.push(Stmt::Clear(
+                convert_operand(instr.operand(0), ValSize::Size8),
+                vec![Value::Reg(u8::from(Zf), ValSize::Size8)],
+            ));
+        },
+
+        Opcode::BSF => {
+            instrs.push(Stmt::Clear(
+                Value::Reg(u8::from(Zf), ValSize::Size8),
+                vec![convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap())],
+            ));
+            instrs.push(Stmt::Clear(
+                convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap()),
+                vec![
+                    convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap()),
+                    convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap()),
+                ],
+            ));
+        }
+        Opcode::LZCNT => {
+            instrs.push(Stmt::Clear(
+                Value::Reg(u8::from(Zf), ValSize::Size8),
+                vec![convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap())],
+            ));
+            instrs.push(Stmt::Clear(
+                convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap()),
+                vec![
+                    convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap()),
+                ],
+            ));
+        }
+
         Opcode::OR
         | Opcode::SHR
         | Opcode::RCL
@@ -493,7 +546,7 @@ pub fn lift(
         | SETB
         | SETAE
         | SETZ
-        | SETNZ
+        // | SETNZ
         | SETBE
         | SETA
         | SETS
@@ -535,7 +588,7 @@ pub fn lift(
         | Opcode::SUBSD
         | Opcode::MULSD
         | Opcode::DIVSS
-        | Opcode::LZCNT
+        // | Opcode::LZCNT
         | Opcode::DIVPD
         | Opcode::DIVPS
         | Opcode::BLENDVPS
@@ -641,7 +694,6 @@ pub fn lift(
         | Opcode::TZCNT
         | Opcode::SBB
         | Opcode::BSR
-        | Opcode::BSF
         | Opcode::ANDPD
         | Opcode::ORPD => instrs.extend(clear_dst(instr)),
 
@@ -650,101 +702,194 @@ pub fn lift(
     instrs
 }
 
-fn is_probestack(
-    instr: &yaxpeax_x86::long_mode::Instruction,
-    addr: &u64,
+fn parse_probestack_arg<'a>(
+    instrs: BlockInstrs<'a>,
     metadata: &VW_Metadata,
-) -> bool {
-    if let Opcode::CALL = instr.opcode() {
-        let op = convert_operand(instr.operand(0), ValSize::SizeOther);
-        if let Value::Imm(_, _, offset) = op {
-            // 5 = size of call instruction
-            if 5 + offset + (*addr as i64) == metadata.lucet_probestack as i64 {
-                return true;
-            }
-        }
+) -> IResult<'a, (u64, StmtResult)> {
+    let (rest, (addr, move_instr)) = parse_single_instr(instrs, metadata)?;
+    if move_instr.len() != 1 {
+        return Err(ParseErr::Error(instrs));
     }
-    false
+    if let Stmt::Unop(Unopcode::Mov, Value::Reg(0, ValSize::Size32), Value::Imm(_, _, x)) = move_instr[0] {
+        return Ok((rest, (x as u64, (addr, move_instr))));
+    }
+    Err(ParseErr::Error(instrs))
 }
 
-fn extract_probestack_arg(instr: &yaxpeax_x86::long_mode::Instruction) -> Option<u64> {
-    if let Opcode::MOV = instr.opcode() {
-        if let Value::Reg(0, ValSize::Size32) =
-            convert_operand(instr.operand(0), ValSize::SizeOther)
-        {
-            if let Value::Imm(_, _, x) = convert_operand(instr.operand(1), ValSize::SizeOther) {
-                if instr.operand_count() == 2 {
-                    return Some(x as u64);
+fn parse_probestack_call<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VW_Metadata,
+) -> IResult<'a, StmtResult> {
+    let (rest, (addr, call_instr)) = parse_single_instr(instrs, metadata)?;
+    if call_instr.len() != 1 {
+        return Err(ParseErr::Error(instrs));
+    }
+    if let Stmt::Call(Value::Imm(_, _, offset)) = call_instr[0] {
+        if 5 + offset + (addr as i64) == metadata.lucet_probestack as i64 {
+            return Ok((rest, (addr, call_instr)));
+        }
+    }
+    Err(ParseErr::Error(instrs))
+}
+
+fn parse_probestack_suffix<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VW_Metadata,
+) -> IResult<'a, StmtResult> {
+    let (rest, (addr, sub_instr)) = parse_single_instr(instrs, metadata)?;
+    if sub_instr.len() != 1 {
+        return Err(ParseErr::Error(instrs));
+    }
+    if let Stmt::Binop(Binopcode::Sub, Value::Reg(4, ValSize::Size64), Value::Reg(0, ValSize::Size64), _) = sub_instr[0] {
+        return Ok((rest, (addr, sub_instr)))
+    }
+    Err(ParseErr::Error(instrs))
+}
+
+fn parse_probestack<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VW_Metadata,
+) -> IResult<'a, StmtResult> {
+    let (rest, (probestack_arg, (addr, mov_instr))) = parse_probestack_arg(instrs, metadata)?;
+    let (rest, (_, call_instr)) = parse_probestack_call(rest, metadata)?;
+    let (rest, (_, suffix_instr)) = parse_probestack_suffix(rest, metadata)?;
+    let mut stmts = Vec::new();
+    stmts.extend(mov_instr);
+    stmts.push(Stmt::ProbeStack(probestack_arg));
+    Ok((rest, (addr, stmts)))
+}
+
+// returns (addr, operand(0), operand(1))
+fn parse_bsf<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value, Value)> {
+    if let Some(((addr, instr), rest)) = instrs.split_first() {
+        if let Opcode::BSF = instr.opcode() {
+            return Ok((rest,
+                (
+                    *addr,
+                    convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap()),
+                    convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap()),
+                )
+            ));
+        }
+    }
+    Err(ParseErr::Incomplete)
+}
+
+// returns src of the cmove (dst must be the same)
+fn parse_cmovez<'a>(instrs: BlockInstrs<'a>, bsf_dst: &Value) -> IResult<'a, (Addr, Value)> {
+    if let Some(((addr, instr), rest)) = instrs.split_first() {
+        if let Opcode::CMOVZ = instr.opcode() {
+            let mov_dst = convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap());
+            if let (Value::Reg(bsf_dst_reg, _), Value::Reg(mov_dst_reg, _)) = (bsf_dst, mov_dst) {
+                if *bsf_dst_reg == mov_dst_reg {
+                    return Ok((rest,
+                               (
+                                   *addr,
+                                   convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap()),
+                               )
+                    ))
                 }
             }
         }
     }
-    None
+    Err(ParseErr::Error(instrs))
 }
 
-fn check_probestack_suffix(instr: &yaxpeax_x86::long_mode::Instruction) -> bool {
-    if let Opcode::SUB = instr.opcode() {
-        if let Value::Reg(4, ValSize::Size64) =
-            convert_operand(instr.operand(0), ValSize::SizeOther)
-        {
-            //size is dummy
-            if let Value::Reg(0, ValSize::Size64) =
-                convert_operand(instr.operand(1), ValSize::SizeOther)
-            {
-                if instr.operand_count() == 2 {
-                    return true;
-                }
+fn parse_bsf_cmove<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VW_Metadata,
+) -> IResult<'a, StmtResult> {
+    let (rest, (addr, bsf_dst, bsf_src)) = parse_bsf(instrs)?;
+    let (rest, (_addr, mov_src)) = parse_cmovez(rest, &bsf_dst)?;
+    let mut stmts = Vec::new();
+    stmts.push(Stmt::Clear(
+        Value::Reg(u8::from(Zf), ValSize::Size8),
+        vec![bsf_src.clone()],
+    ));
+    stmts.push(Stmt::Clear(
+        bsf_dst,
+        vec![bsf_src, mov_src],
+    ));
+    Ok((rest, (addr, stmts)))
+}
+
+fn parse_single_instr<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VW_Metadata,
+) -> IResult<'a, StmtResult> {
+    if let Some(((addr, instr), rest)) = instrs.split_first() {
+        Ok((rest, (*addr, lift(instr, addr, metadata))))
+    } else {
+        Err(ParseErr::Incomplete)
+    }
+
+}
+
+fn parse_instr<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VW_Metadata,
+) -> IResult<'a, StmtResult> {
+    if let Ok((rest, stmt)) = parse_bsf_cmove(instrs, metadata) {
+        Ok((rest, stmt))
+    } else if let Ok((rest, stmt)) = parse_probestack(instrs, metadata) {
+        Ok((rest, stmt))
+    } else {
+        parse_single_instr(instrs, metadata)
+    }
+}
+
+fn parse_instrs<'a>(
+    instrs: BlockInstrs,
+    metadata: &VW_Metadata,
+) -> Vec<(Addr, Vec<Stmt>)> {
+    let mut block_ir: Vec<(Addr, Vec<Stmt>)> = Vec::new();
+    let mut rest = instrs;
+    while let Ok((more, (addr, stmts))) = parse_instr(rest, metadata) {
+        rest = more;
+        if stmts.len() == 1 {
+            if let Stmt::Branch(Opcode::JMP, _) = stmts[0] {
+                // Don't continue past an unconditional jump --
+                // Cranelift's new backend embeds constants in the
+                // code stream at points (e.g. jump tables) and we
+                // should not disassemble them as code.
+                block_ir.push((addr, stmts));
+                break;
             }
         }
+        block_ir.push((addr, stmts));
     }
-    panic!("Broken Probestack?")
+    block_ir
 }
 
 pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &VW_Metadata) -> IRMap {
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
     for block_addr in g.nodes() {
-        let mut block_ir: Vec<(u64, Vec<Stmt>)> = Vec::new();
         let block = cfg.get_block(block_addr);
-        let mut iter = program.instructions_spanning(
+
+        let instrs_vec: Vec<(u64, yaxpeax_x86::long_mode::Instruction)> = program.instructions_spanning(
             <AMD64 as Arch>::Decoder::default(),
             block.start,
             block.end,
-        );
-        let mut probestack_suffix = false;
-        let mut x: Option<u64> = None;
-        while let Some((addr, instr)) = iter.next() {
-            if probestack_suffix {
-                //1. fail if it isnt sub, rsp, rax
-                //2. skip
-                probestack_suffix = false;
-                check_probestack_suffix(instr);
+        ).collect();
+        let instrs = instrs_vec.as_slice();
+        let block_ir = parse_instrs(instrs, &metadata);
 
-                continue;
-            }
-            if is_probestack(instr, &addr, &metadata) {
-                match x {
-                    Some(v) => {
-                        let ir = (addr, vec![Stmt::ProbeStack(v)]);
-                        block_ir.push(ir);
-                        probestack_suffix = true;
-                        continue;
-                    }
-                    None => panic!("probestack broken"),
-                }
-            }
-            let ir = (addr, lift(instr, &addr, metadata));
-            block_ir.push(ir);
-            x = extract_probestack_arg(instr);
-            if instr.opcode() == Opcode::JMP {
-                // Don't continue past an unconditional jump --
-                // Cranelift's new backend embeds constants in the
-                // code stream at points (e.g. jump tables) and we
-                // should not disassemble them as code.
-                break;
-            }
-        }
         irmap.insert(block_addr, block_ir);
     }
     irmap
 }
+
+// TODO: baby version of nom, resolve crate incompatibilities later
+
+type IResult<'a, O> = Result<(BlockInstrs<'a>, O), ParseErr<BlockInstrs<'a>>>;
+type StmtResult = (Addr, Vec<Stmt>);
+type Addr = u64;
+
+enum ParseErr<E> {
+    Incomplete, // input too short
+    Error(E),   // recoverable
+    Failure(E), // unrecoverable
+}
+
+type BlockInstrs<'a> = &'a[(Addr, yaxpeax_x86::long_mode::Instruction)];
