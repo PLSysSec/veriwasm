@@ -151,6 +151,10 @@ fn func_body_and_bbs_to_cfg(
     //       "Heap-access style"
 }
 
+pub fn wasmtime_test_hook(){
+    println!("Wasmtime has called into VeriWasm!");
+}
+
 pub fn validate_heap(
     code: &[u8],
     basic_blocks: &[usize],
