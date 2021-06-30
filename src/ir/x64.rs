@@ -167,6 +167,10 @@ fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
         (Some(Location::ZF), Direction::Write) => true,
         _ => false,
     });
+    let writes_to_cf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
+        (Some(Location::CF), Direction::Write) => true,
+        _ => false,
+    });
     let srcs: Vec<Value> = get_sources(instr);
     let mut stmts: Vec<Stmt> = Vec::new();
 
@@ -175,7 +179,10 @@ fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
         srcs.clone(),
     ));
     if writes_to_zf {
-        stmts.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), srcs));
+        stmts.push(Stmt::Clear(Value::Reg(u8::from(Zf), ValSize::Size8), srcs.clone()));
+    };
+    if writes_to_cf {
+        stmts.push(Stmt::Clear(Value::Reg(u8::from(Cf), ValSize::Size8), srcs));
     };
     stmts
 }
@@ -185,6 +192,10 @@ fn generic_clear(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
     let writes_to_zf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
         (Some(Location::ZF), Direction::Write) => true,
+        _ => false,
+    });
+    let writes_to_cf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
+        (Some(Location::CF), Direction::Write) => true,
         _ => false,
     });
     let mut stmts = vec![];
@@ -197,8 +208,12 @@ fn generic_clear(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
             _ => {}
         }
     }
+    // TODO: dangerous
     if writes_to_zf {
-        stmts.push(Stmt::Clear(Value::Reg(16, ValSize::Size8), vec![]));
+        stmts.push(Stmt::Clear(Value::Reg(u8::from(Zf), ValSize::Size8), vec![]));
+    }
+    if writes_to_cf {
+        stmts.push(Stmt::Clear(Value::Reg(u8::from(Cf), ValSize::Size8), vec![]));
     }
 
     stmts
@@ -335,8 +350,30 @@ pub fn lift(
 
         Opcode::LEA => instrs.extend(lea(instr, addr)),
 
-        Opcode::TEST => instrs.push(binop(Binopcode::Test, instr)),
-        // Opcode::CMP => instrs.push(binop(Binopcode::Cmp, instr)),
+        Opcode::TEST => {
+            let memsize = match (
+                get_operand_size(instr.operand(0)),
+                get_operand_size(instr.operand(1)),
+            ) {
+                (None, None) => panic!("Two Memory Args?"),
+                (Some(x), None) => x,
+                (None, Some(x)) => x,
+                (Some(x), Some(_y)) => x,
+            };
+            instrs.push(Stmt::Binop(
+                Binopcode::Test,
+                Value::Reg(u8::from(Zf), ValSize::Size8),
+                convert_operand(instr.operand(0), memsize),
+                convert_operand(instr.operand(1), memsize),
+            ));
+            instrs.push(Stmt::Binop(
+                Binopcode::Test,
+                Value::Reg(u8::from(Cf), ValSize::Size8),
+                convert_operand(instr.operand(0), memsize),
+                convert_operand(instr.operand(1), memsize),
+            ));
+        }
+
         Opcode::CMP => {
             let memsize = match (
                 get_operand_size(instr.operand(0)),
@@ -352,7 +389,13 @@ pub fn lift(
                 Value::Reg(u8::from(Zf), ValSize::Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
-            ))
+            ));
+            instrs.push(Stmt::Binop(
+                Binopcode::Cmp,
+                Value::Reg(u8::from(Cf), ValSize::Size8),
+                convert_operand(instr.operand(0), memsize),
+                convert_operand(instr.operand(1), memsize),
+            ));
         },
 
         Opcode::AND => {
@@ -486,12 +529,22 @@ pub fn lift(
             instrs.push(Stmt::Clear(Value::Reg(2, ValSize::Size64), vec![]));
         }
 
-        SETNZ => {
+        // TODO: check
+        SETLE
+        | SETNZ
+        | SETZ => {
             instrs.push(Stmt::Clear(
                 convert_operand(instr.operand(0), ValSize::Size8),
                 vec![Value::Reg(u8::from(Zf), ValSize::Size8)],
             ));
-        },
+        }
+
+        SETB => {
+            instrs.push(Stmt::Clear(
+                convert_operand(instr.operand(0), ValSize::Size8),
+                vec![Value::Reg(u8::from(Cf), ValSize::Size8)],
+            ));
+        }
 
         Opcode::BSF => {
             instrs.push(Stmt::Clear(
@@ -543,9 +596,9 @@ pub fn lift(
         | Opcode::CMOVZ
         | SETO
         | SETNO
-        | SETB
+        // | SETB
         | SETAE
-        | SETZ
+        // | SETZ
         // | SETNZ
         | SETBE
         | SETA
@@ -555,7 +608,7 @@ pub fn lift(
         | SETNP
         | SETL
         | SETGE
-        | SETLE
+        // | SETLE
         | SETG
         | Opcode::SAR
         | Opcode::ADC

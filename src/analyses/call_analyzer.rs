@@ -65,10 +65,10 @@ impl CallAnalyzer {
     pub fn get_fn_ptr_type(&self,
         result: &AnalysisResult<CallCheckLattice>,
         loc_idx: &LocIdx,
-        src: Value) -> Option<u32>{
+        src: &Value) -> Option<u32>{
         let def_state = self.fetch_result(result, loc_idx);
-        if let Value::Reg(regnum, size) = src{
-            let aval = def_state.regs.get_reg_index(regnum, size);
+        if let Value::Reg(regnum, size) = src {
+            let aval = def_state.regs.get_reg_index(*regnum, *size);
             if let Some(CallCheckValue::FnPtr(ty)) = aval.v {
                 return Some(ty);
             }

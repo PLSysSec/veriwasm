@@ -54,13 +54,14 @@ impl<T: Lattice + Clone> StackLattice<T> {
             panic!("Load wrong size! size = {:?}", size);
         }
 
+        // TODO: is this correct?
         match self.map.get(&(self.offset + offset)) {
             Some(stack_slot) => {
-                if stack_slot.size == size {
+                // if stack_slot.size == size {
                     stack_slot.value.clone()
-                } else {
-                    Default::default()
-                }
+                // } else {
+                //     Default::default()
+                // }
             }
             None => Default::default(),
         }
@@ -120,7 +121,8 @@ impl<T: Lattice + Clone> Lattice for StackLattice<T> {
         for (k, v1) in self.map.iter() {
             match other.map.get(k) {
                 Some(v2) => {
-                    if v1.size == v2.size {
+                    // TODO: sizes?
+                    // if v1.size == v2.size {
                         let new_v = v1.value.meet(&v2.value.clone(), loc_idx);
                         if new_v != Default::default() {
                             let newslot = VarSlot {
@@ -129,10 +131,14 @@ impl<T: Lattice + Clone> Lattice for StackLattice<T> {
                             };
                             newmap.insert(*k, newslot);
                         }
-                    }
+                    // }
                 }
                 None => (),
             }
+        }
+
+        if self.offset != other.offset {
+            panic!("stack offsets misaligned 0x{:x?}: {:?} {:?}", loc_idx.addr, self.offset, other.offset);
         }
 
         StackLattice {
