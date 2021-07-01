@@ -55,7 +55,7 @@ fn run_locals(
     reaching_defs: AnalysisResult<VariableState<ReachingDefnLattice>>,
     call_analysis: AnalysisResult<CallCheckLattice>,
     plt_bounds: (u64, u64),
-    all_addrs_map: &HashMap<u64, String>,
+    all_addrs_map: &HashMap<u64, String>, // index into func_signatures.signatures
     func_signatures: &VwFuncInfo,
     func_name: &String,
     cfg: &VW_CFG,
@@ -163,7 +163,11 @@ pub fn run(config: Config) {
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     let func_signatures = config.executable_type.get_func_signatures(&program);
     // println!("{:?}", func_signatures);
-    let all_addrs_map = HashMap::from_iter(all_addrs.clone());
+    // TODO: entry0?
+    let mut all_addrs_map = HashMap::new();
+    for (addr, func_name) in all_addrs {
+        all_addrs_map.insert(addr, func_name);
+    }
     for (addr, func_name) in func_addrs {
         if config.only_func.is_some() && func_name != config.only_func.as_ref().unwrap().as_str() {
             continue;

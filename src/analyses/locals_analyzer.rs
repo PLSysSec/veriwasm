@@ -25,10 +25,13 @@ pub struct LocalsAnalyzer<'a> {
 }
 
 impl<'a> LocalsAnalyzer<'a> {
-    pub fn aeval_val(&self, state: &LocalsLattice, value: &Value) -> SlotVal {
+    pub fn aeval_val(&self, state: &LocalsLattice, value: &Value, loc_idx: &LocIdx) -> SlotVal {
         match value {
             Value::Mem(memsize, memargs) => {
                 if let Some(offset) = mem_to_stack_offset(memargs) {
+                    println!("reading from stack 0x{:x?}: {:?} + {:?}\n\t{:?}", loc_idx.addr, state.stack.offset, offset, value);
+                    println!("{}", state.stack);
+                    println!("{:?}", self.fun_type);
                     state.stack.get(offset, memsize.into_bytes())
                 } else {
                     Init
@@ -41,9 +44,9 @@ impl<'a> LocalsAnalyzer<'a> {
     }
 
     // if all values are initialized then the value is initialized
-    pub fn aeval_vals(&self, state: &LocalsLattice, values: &Vec<Value>) -> SlotVal {
+    pub fn aeval_vals(&self, state: &LocalsLattice, values: &Vec<Value>, loc_idx: &LocIdx) -> SlotVal {
         values.iter().fold(Init, |acc, value| -> SlotVal {
-            if (acc == Init) && (self.aeval_val(state, value) == Init) {
+            if (acc == Init) && (self.aeval_val(state, value, loc_idx) == Init) {
                 Init
             } else {
                 Uninit
@@ -90,54 +93,47 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
     fn aexec(&self, in_state: &mut LocalsLattice, ir_instr: &Stmt, loc_idx: &LocIdx) -> () {
         let debug_addrs: HashSet<u64> = vec![].into_iter().collect();
         if debug_addrs.contains(&loc_idx.addr) {
-            println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            println!("========================================");
             println!("{:?}", in_state);
             println!("aexec debug 0x{:x?}: {:?}", loc_idx.addr, ir_instr);
         }
         match ir_instr {
-            Stmt::Clear(dst, srcs) => in_state.set(dst, self.aeval_vals(in_state, srcs)),
+            Stmt::Clear(dst, srcs) => {
+                in_state.set(dst, self.aeval_vals(in_state, srcs, loc_idx))
+            }
             Stmt::Unop(_, dst, src) => {
-                // if let Value::Mem(memsize, memargs) = src {
-                //     if let Some(offset) = mem_to_stack_offset(memargs) {
-                //         println!("0x{:x?}: {:?}\n\thas key: {:?}\n\thas -key: {:?}",
-                //                 loc_idx.addr,
-                //                 offset,
-                //                 in_state.stack.map.contains_key(&offset),
-                //                 in_state.stack.map.contains_key(&(-offset)),
-                //         );
-                //     }
-                // }
-                in_state.set(dst, self.aeval_val(in_state, src))
+                in_state.set(dst, self.aeval_val(in_state, src, loc_idx))
             }
             Stmt::Binop(opcode, dst, src1, src2) => {
                 let dst_val = self
-                    .aeval_val(in_state, src1)
-                    .meet(&self.aeval_val(in_state, src2), loc_idx);
+                    .aeval_val(in_state, src1, loc_idx)
+                    .meet(&self.aeval_val(in_state, src2, loc_idx), loc_idx);
                 in_state.set(dst, dst_val);
+                let prev_offset = in_state.stack.offset;
                 in_state.adjust_stack_offset(opcode, dst, src1, src2);
+                // if prev_offset != in_state.stack.offset {
+                //     println!("adjusting offset 0x{:x?}: {:?}\n\t{:?} -> {:?}",
+                //              loc_idx.addr,
+                //              ir_instr,
+                //              prev_offset,
+                //              in_state.stack.offset,
+                //     );
+                // }
             }
             // TODO: wasi calls (no requirements on initialization, always return in rax)
             // TODO: wasi calls are things in plt_bounds?
             Stmt::Call(Value::Imm(_, _, dst)) => {
                 let target = (*dst + (loc_idx.addr as i64) + 5) as u64;
-                if self.plt_bounds.0 <= target && target <= self.plt_bounds.1 {
-                    // plt (TODO: trusted? function)
-                    in_state.on_call(); // clear caller-saved registers
-                    in_state.regs.set_reg(Rax, ValSize::Size64, Init); // TODO: assumes that all calls in plt return in rax
+                let name = self.name_addr_map.get(&target);
+                let signature = name
+                    .and_then(|name| self.symbol_table.indexes.get(name))
+                    .and_then(|sig_index| self.symbol_table.signatures.get(*sig_index as usize));
+                in_state.on_call();
+                if let Some((ret_reg, reg_size)) = signature.and_then(|sig| to_system_v_ret_ty(sig)) {
+
+                    in_state.regs.set_reg(ret_reg, reg_size, Init);
                 } else {
-                    // library function
-                    let name = self.name_addr_map.get(&target);
-                    let signature = name
-                        .and_then(|name| self.symbol_table.indexes.get(name))
-                        .and_then(|sig_index| {
-                            self.symbol_table.signatures.get(*sig_index as usize)
-                        });
-                    in_state.on_call();
-                    if let Some((ret_reg, reg_size)) =
-                        signature.and_then(|sig| to_system_v_ret_ty(sig))
-                    {
-                        in_state.regs.set_reg(ret_reg, reg_size, Init);
-                    }
+                    panic!("0x{:x?}: 0x{:x?}", loc_idx.addr, target);
                 }
             }
             Stmt::Call(val @ Value::Reg(_, _)) => {
@@ -163,7 +159,7 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
         }
         if debug_addrs.contains(&loc_idx.addr) {
             println!("{:?}", in_state);
-            println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            println!("========================================");
         }
     }
 

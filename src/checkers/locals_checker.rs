@@ -48,31 +48,68 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
             println!("{:?}", cloned);
             println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         }
-        match stmt {
+        let error = match stmt {
             Stmt::Clear(dst, srcs) => {
-                if self.analyzer.aeval_vals(state, srcs) == Uninit {
+                if self.analyzer.aeval_vals(state, srcs, loc_idx) == Uninit {
                     match dst {
-                        Value::Mem(memsize, memargs) => {}
+                        Value::Mem(memsize, memargs) => {
+                            true
+                        },
                         Value::Reg(reg_num, _) => {
-                            if *reg_num != Rsp && *reg_num != Zf && *reg_num != Cf {
-                                println!("----------------------------------------");
-                                println!("{:?}", state);
-                                println!("Darn: 0x{:x?}: {:?}", loc_idx.addr, stmt);
-                                println!("reg: {:?}", X86Regs::try_from(*reg_num));
-                                println!("type: {:?}", self.analyzer.fun_type);
-                                println!("----------------------------------------")
-                                // return false;
-                            }
-                        }
-                        Value::Imm(_, _, _) => {}
-                        Value::RIPConst => todo!(),
+                            *reg_num != Rsp && *reg_num != Zf && *reg_num != Cf && *reg_num != Rbp
+                        },
+                        Value::Imm(_, _, _) => false,
+                        Value::RIPConst => false,
                     }
+                } else {
+                    false
                 }
             }
-            _ => {}
+            Stmt::Unop(_, dst, src) => {
+                if self.analyzer.aeval_val(state, src, loc_idx) == Uninit {
+                    match dst {
+                        Value::Mem(memsize, memargs) => {
+                            true
+                        },
+                        Value::Reg(reg_num, _) => {
+                            *reg_num != Rsp && *reg_num != Zf && *reg_num != Cf && *reg_num != Rbp
+                        },
+                        Value::Imm(_, _, _) => false,
+                        Value::RIPConst => false,
+                    }
+                } else {
+                    false
+                }
+            }
+            Stmt::Binop(opcode, dst, src1, src2) => {
+                if self.analyzer.aeval_vals(state, &vec![src1.clone(), src2.clone()], loc_idx) == Uninit {
+                    match dst {
+                        Value::Mem(memsize, memargs) => {
+                            true
+                        },
+                        Value::Reg(reg_num, _) => {
+                            *reg_num != Rsp && *reg_num != Zf && *reg_num != Cf && *reg_num != Rbp
+                        },
+                        Value::Imm(_, _, _) => false,
+                        Value::RIPConst => false,
+                    }
+                } else {
+                    false
+                }
+            }
+            Stmt::Branch(br_type, val) => {
+                self.analyzer.aeval_val(state, val, loc_idx) == Uninit
+            }
+            _ => {
+                false
+            }
+        };
+        if error {
+            println!("----------------------------------------");
+            println!("{:?}", state);
+            println!("Darn: 0x{:x?}: {:?}", loc_idx.addr, stmt);
+            println!("----------------------------------------")
         }
-        // println!("{:?}", state);
-        // println!("0x{:x?}: {:?}", loc_idx.addr, stmt);
 
         // //1, stackgrowth is never Bottom or >= 0
         // match state.v {

@@ -12,6 +12,15 @@ pub struct StackLattice<T> {
     pub map: HashMap<i64, VarSlot<T>>,
 }
 
+impl<T: std::fmt::Debug + Clone> std::fmt::Display for StackLattice<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut tmp: Vec<(&i64, &VarSlot<T>)> = self.map.iter().collect();
+        let sorted = tmp.as_mut_slice();
+        sorted.sort_by(|a, b| b.0.cmp(&a.0));
+        write!(f, "{}: {:?}", self.offset, sorted)
+    }
+}
+
 impl<T: Lattice + Clone> StackLattice<T> {
     pub fn update(&mut self, offset: i64, value: T, size: u32) -> () {
         //Check if 4 aligned
