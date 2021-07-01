@@ -122,7 +122,7 @@ impl<T: Lattice + Clone> Lattice for StackLattice<T> {
             match other.map.get(k) {
                 Some(v2) => {
                     // TODO: sizes?
-                    // if v1.size == v2.size {
+                    if v1.size == v2.size {
                         let new_v = v1.value.meet(&v2.value.clone(), loc_idx);
                         if new_v != Default::default() {
                             let newslot = VarSlot {
@@ -131,7 +131,7 @@ impl<T: Lattice + Clone> Lattice for StackLattice<T> {
                             };
                             newmap.insert(*k, newslot);
                         }
-                    // }
+                    }
                 }
                 None => (),
             }
