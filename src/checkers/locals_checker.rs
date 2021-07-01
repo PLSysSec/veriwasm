@@ -1,12 +1,12 @@
-use std::convert::TryFrom;
 use std::collections::HashSet;
+use std::convert::TryFrom;
 
 use crate::analyses::locals_analyzer::LocalsAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
 use crate::ir::types::{IRMap, MemArgs, Stmt, Value, X86Regs};
-use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::localslattice::{LocalsLattice, SlotVal};
+use crate::lattices::reachingdefslattice::LocIdx;
 
 use SlotVal::*;
 use X86Regs::*;
@@ -21,11 +21,7 @@ pub fn check_locals(
     irmap: &IRMap,
     analyzer: &LocalsAnalyzer,
 ) -> bool {
-    LocalsChecker {
-        irmap,
-        analyzer,
-    }
-    .check(result)
+    LocalsChecker { irmap, analyzer }.check(result)
 }
 
 impl Checker<LocalsLattice> for LocalsChecker<'_> {
@@ -41,14 +37,8 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
         self.analyzer.aexec(state, ir_stmt, loc)
     }
 
-    fn check_statement(
-        &self,
-        state: &LocalsLattice,
-        stmt: &Stmt,
-        loc_idx: &LocIdx,
-    ) -> bool {
-        let debug_addrs : HashSet<u64> = vec![
-        ].into_iter().collect();
+    fn check_statement(&self, state: &LocalsLattice, stmt: &Stmt, loc_idx: &LocIdx) -> bool {
+        let debug_addrs: HashSet<u64> = vec![].into_iter().collect();
         if debug_addrs.contains(&loc_idx.addr) {
             println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
             println!("{:?}", state);
@@ -62,7 +52,7 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
             Stmt::Clear(dst, srcs) => {
                 if self.analyzer.aeval_vals(state, srcs) == Uninit {
                     match dst {
-                        Value::Mem(memsize, memargs) => {},
+                        Value::Mem(memsize, memargs) => {}
                         Value::Reg(reg_num, _) => {
                             if *reg_num != Rsp && *reg_num != Zf && *reg_num != Cf {
                                 println!("----------------------------------------");
@@ -73,12 +63,12 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
                                 println!("----------------------------------------")
                                 // return false;
                             }
-                        },
-                        Value::Imm(_, _, _) => {},
+                        }
+                        Value::Imm(_, _, _) => {}
                         Value::RIPConst => todo!(),
                     }
                 }
-            },
+            }
             _ => {}
         }
         // println!("{:?}", state);
@@ -160,4 +150,3 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
         true
     }
 }
-

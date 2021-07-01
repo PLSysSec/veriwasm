@@ -29,12 +29,12 @@ pub fn is_zf(v: &Value) -> bool {
     }
 }
 
-pub fn is_irrelevant_reg(v: &Value) -> bool {
-    if let Value::Reg(_, ValSize::SizeOther) = v {
-        return true;
-    }
-    false
-}
+// pub fn is_irrelevant_reg(v: &Value) -> bool {
+//     if let Value::Reg(_, ValSize::SizeOther) = v {
+//         return true;
+//     }
+//     false
+// }
 
 pub fn memarg_is_stack(memarg: &MemArg) -> bool {
     if let MemArg::Reg(Rsp, regsize) = memarg {

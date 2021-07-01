@@ -16,7 +16,11 @@ pub struct HeapAnalyzer {
 impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     fn init_state(&self) -> HeapLattice {
         let mut result: HeapLattice = Default::default();
-        result.regs.set_reg(Rdi, ValSize::Size64, HeapValueLattice::new(HeapValue::HeapBase));
+        result.regs.set_reg(
+            Rdi,
+            ValSize::Size64,
+            HeapValueLattice::new(HeapValue::HeapBase),
+        );
         result
     }
 
@@ -137,9 +141,6 @@ impl HeapAnalyzer {
             }
 
             Value::Reg(regnum, size) => {
-                if let ValSize::SizeOther = size {
-                    return Default::default();
-                };
                 if size.into_bits() <= 32 {
                     return HeapValueLattice::new(HeapValue::Bounded4GB);
                 } else {

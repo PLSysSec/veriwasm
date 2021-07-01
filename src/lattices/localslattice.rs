@@ -1,12 +1,12 @@
-use std::convert::TryFrom;
-use crate::lattices::Lattice;
-use crate::lattices::reachingdefslattice::LocIdx;
-use std::cmp::Ordering;
 use crate::ir::types::X86Regs;
-pub use crate::lattices::{VariableState, VarState};
+use crate::lattices::reachingdefslattice::LocIdx;
+use crate::lattices::Lattice;
+pub use crate::lattices::{VarState, VariableState};
+use std::cmp::Ordering;
+use std::convert::TryFrom;
 
-use X86Regs::*;
 use Ordering::*;
+use X86Regs::*;
 
 #[derive(PartialEq, Clone, Eq, Debug, Copy, Hash)]
 pub enum SlotVal {
@@ -30,7 +30,7 @@ impl PartialOrd for SlotVal {
                 } else {
                     None
                 }
-            },
+            }
         }
     }
 }
@@ -57,7 +57,7 @@ impl Lattice for SlotVal {
                 } else {
                     Uninit
                 }
-            },
+            }
         }
     }
 }

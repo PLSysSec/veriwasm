@@ -1,7 +1,7 @@
+use crate::ir::types::X86Regs;
 use crate::lattices::davlattice::DAV;
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VariableState};
-use crate::ir::types::X86Regs;
 use std::cmp::Ordering;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
@@ -9,13 +9,13 @@ pub enum CallCheckValue {
     GuestTableBase,
     LucetTablesBase,
     TableSize,
-    TypeOf(X86Regs),//regnum
+    TypeOf(X86Regs), //regnum
     PtrOffset(DAV),
     TypedPtrOffset(u32),
-    FnPtr(u32),//type
+    FnPtr(u32), //type
     CheckedVal,
     CheckFlag(u32, X86Regs),
-    TypeCheckFlag(X86Regs, u32),//addr, regnum, typeidx
+    TypeCheckFlag(X86Regs, u32), //addr, regnum, typeidx
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]

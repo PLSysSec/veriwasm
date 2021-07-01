@@ -1,26 +1,26 @@
 use crate::{loaders, utils};
-use byteorder::{LittleEndian, ReadBytesExt, BigEndian};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
+use elfkit::relocation::RelocationType;
+use elfkit::{symbol, types, DynamicContent, Elf, SectionContent};
+use goblin::Object;
 use loaders::utils::*;
 use lucet_module;
 use std::collections::HashMap;
+use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::Cursor;
+use std::io::{Read, Seek, SeekFrom};
 use std::mem;
+use std::path::Path;
+use std::string::String;
 use utils::utils::{deconstruct_elf, get_symbol_addr};
 use yaxpeax_core::memory::repr::process::{ModuleData, Segment};
 use yaxpeax_core::memory::repr::FileRepr;
-use goblin::Object;
-use std::fs::File;
-use std::path::Path;
-use std::io::{Read, Seek, SeekFrom};
-use std::fs::OpenOptions;
-use elfkit::{types, DynamicContent, Elf, SectionContent, symbol};
-use elfkit::relocation::RelocationType;
-use std::string::String;
 
-pub fn get_plt_funcs(binpath: &str) -> Vec<(u64, String)>{
+pub fn get_plt_funcs(binpath: &str) -> Vec<(u64, String)> {
     //Extract relocation symbols
-    let mut in_file  = OpenOptions::new().read(true).open(binpath).unwrap();
-    let mut elf  = Elf::from_reader(&mut in_file).unwrap();
+    let mut in_file = OpenOptions::new().read(true).open(binpath).unwrap();
+    let mut elf = Elf::from_reader(&mut in_file).unwrap();
     elf.load_all().unwrap();
     // Parse relocs to get mapping from target to name
     let mut target_to_name = HashMap::new();
@@ -32,12 +32,14 @@ pub fn get_plt_funcs(binpath: &str) -> Vec<(u64, String)>{
                         .get(section.header.link as usize)
                         .and_then(|sec| sec.content.as_symbols())
                         .and_then(|symbols| symbols.get(reloc.sym as usize))
-                        .and_then(|symbol| if symbol.name.len() > 0 {
-                            target_to_name.insert(reloc.addr, symbol.name.clone());
-                            // println!("{:x} {:} ", reloc.addr, symbol.name);
-                            Some(())
-                        } else {
-                            None
+                        .and_then(|symbol| {
+                            if symbol.name.len() > 0 {
+                                target_to_name.insert(reloc.addr, symbol.name.clone());
+                                // println!("{:x} {:} ", reloc.addr, symbol.name);
+                                Some(())
+                            } else {
+                                None
+                            }
                         })
                         .unwrap_or_else(|| {
                             // print!("{: <20.20} ", reloc.sym);
@@ -51,10 +53,10 @@ pub fn get_plt_funcs(binpath: &str) -> Vec<(u64, String)>{
     let mut addr_to_target = HashMap::new();
     let plt_section = elf.sections.iter().find(|sec| sec.name == ".plt").unwrap();
     let plt_start = plt_section.header.addr;
-    if let SectionContent::Raw(buf) = &plt_section.content{
+    if let SectionContent::Raw(buf) = &plt_section.content {
         let mut rdr = Cursor::new(buf);
         let mut idx: usize = 0;
-        while idx < buf.len(){
+        while idx < buf.len() {
             rdr.seek(SeekFrom::Current(2)).unwrap();
             let offset = rdr.read_i32::<LittleEndian>().unwrap();
             rdr.seek(SeekFrom::Current(10)).unwrap();
@@ -64,8 +66,7 @@ pub fn get_plt_funcs(binpath: &str) -> Vec<(u64, String)>{
             addr_to_target.insert(addr, target);
             idx += 16;
         }
-    }
-    else{
+    } else {
         panic!("No plt section?");
     }
     // println!("===== Addr to Target =======");
@@ -76,12 +77,10 @@ pub fn get_plt_funcs(binpath: &str) -> Vec<(u64, String)>{
     // for (target, name) in &target_to_name{
     //     println!("{:x} {:}", target, name);
     // }
-    
-
 
     let mut plt_funcs: Vec<(u64, String)> = Vec::new();
-    for (addr,target) in &addr_to_target{
-        if target_to_name.contains_key(target){
+    for (addr, target) in &addr_to_target {
+        if target_to_name.contains_key(target) {
             let name = target_to_name[target].clone();
             plt_funcs.push((*addr, name));
         }

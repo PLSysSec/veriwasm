@@ -5,7 +5,6 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::default::Default;
 
-
 //Currently implemented with hashmap, could also use a vector for a dense map
 #[derive(Eq, Clone, Debug)]
 pub struct StackLattice<T> {
@@ -39,13 +38,8 @@ impl<T: Lattice + Clone> StackLattice<T> {
         if value == Default::default() {
             self.map.remove(&(self.offset + offset));
         } else {
-            self.map.insert(
-                self.offset + offset,
-                VarSlot {
-                    size,
-                    value,
-                },
-            );
+            self.map
+                .insert(self.offset + offset, VarSlot { size, value });
         }
     }
 
@@ -138,7 +132,10 @@ impl<T: Lattice + Clone> Lattice for StackLattice<T> {
         }
 
         if self.offset != other.offset {
-            panic!("stack offsets misaligned 0x{:x?}: {:?} {:?}", loc_idx.addr, self.offset, other.offset);
+            panic!(
+                "stack offsets misaligned 0x{:x?}: {:?} {:?}",
+                loc_idx.addr, self.offset, other.offset
+            );
         }
 
         StackLattice {

@@ -1,6 +1,6 @@
+use crate::ir::types::X86Regs;
 use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use crate::lattices::{ConstLattice, VariableState};
-use crate::ir::types::X86Regs;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum SwitchValue {

@@ -1,8 +1,8 @@
-use std::convert::TryFrom;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
-use crate::ir::types::{ValSize ,X86Regs};
+use crate::ir::types::{ValSize, X86Regs};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarSlot};
 
@@ -10,7 +10,7 @@ use X86Regs::*;
 
 #[derive(Default, PartialEq, Eq, Clone, Debug)]
 pub struct X86RegsLattice<T> {
-    pub map: HashMap<X86Regs, VarSlot<T>>
+    pub map: HashMap<X86Regs, VarSlot<T>>,
 }
 
 fn hashmap_le<T: PartialOrd>(s1: &X86RegsLattice<T>, s2: &X86RegsLattice<T>) -> bool {
@@ -43,9 +43,16 @@ impl<T: PartialOrd> PartialOrd for X86RegsLattice<T> {
 
 impl<T: Lattice + Clone> X86RegsLattice<T> {
     pub fn get_reg(&self, index: X86Regs, size: ValSize) -> T {
-        if let ValSize::SizeOther = size {
-            return Default::default(); // TODO: what is happening here
-        }
+        // if let ValSize::Size128 = size {
+        //     return Default::default(); // TODO: what is happening here
+        // }
+        // if let ValSize::Size256 = size {
+        //     return Default::default(); // TODO: what is happening here
+        // }
+        // if let ValSize::Size256 = size {
+        //     return Default::default(); // TODO: what is happening here
+        // }
+
         if let Some(slot) = self.map.get(&index) {
             slot.value.clone()
         } else {
@@ -62,10 +69,22 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
     }
 
     pub fn set_reg(&mut self, index: X86Regs, size: ValSize, value: T) {
-        if let ValSize::SizeOther = size {
-            return; // TODO: what is happening here
-        }
-        self.map.insert(index, VarSlot { size: size.into_bits(), value });
+        // if let ValSize::Size128 = size {
+        //     return Default::default(); // TODO: what is happening here
+        // }
+        // if let ValSize::Size256 = size {
+        //     return Default::default(); // TODO: what is happening here
+        // }
+        // if let ValSize::Size256 = size {
+        //     return Default::default(); // TODO: what is happening here
+        // }
+        self.map.insert(
+            index,
+            VarSlot {
+                size: size.into_bits(),
+                value,
+            },
+        );
     }
 
     pub fn set_reg_index(&mut self, index: u8, size: ValSize, value: T) -> () {
@@ -121,7 +140,7 @@ impl<T: Lattice + Clone> Lattice for X86RegsLattice<T> {
                     };
                     newmap.insert(*var_index, newslot);
                 }
-                None => () // this means v2 = ⊥ so v1 ∧ v2 = ⊥
+                None => (), // this means v2 = ⊥ so v1 ∧ v2 = ⊥
             }
         }
         X86RegsLattice { map: newmap }

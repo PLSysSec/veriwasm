@@ -3,7 +3,7 @@
 use lucet_module::{Signature, ValueType};
 use std::collections::HashMap;
 
-use crate::ir::types::{FunType, ValSize, X86Regs, VarIndex};
+use crate::ir::types::{FunType, ValSize, VarIndex, X86Regs};
 
 use X86Regs::*;
 
@@ -54,7 +54,7 @@ pub fn to_system_v(sig: &Signature) -> FunType {
                 match arg {
                     ValueType::I32 => arg_locs.push((index, ValSize::Size32)),
                     ValueType::I64 => arg_locs.push((index, ValSize::Size64)),
-                    _ => ()
+                    _ => (),
                 };
             }
             ValueType::F32 | ValueType::F64 => {
@@ -69,15 +69,12 @@ pub fn to_system_v(sig: &Signature) -> FunType {
 }
 
 pub fn to_system_v_ret_ty(sig: &Signature) -> Option<(X86Regs, ValSize)> {
-    sig.ret_ty
-        .and_then(|ty| {
-            match ty {
-                ValueType::I32 => Some((Rax, ValSize::Size32)),
-                ValueType::I64 => Some((Rax, ValSize::Size64)),
-                float => {
-                    println!("float return type");
-                    None
-                },
-            }
-        })
+    sig.ret_ty.and_then(|ty| match ty {
+        ValueType::I32 => Some((Rax, ValSize::Size32)),
+        ValueType::I64 => Some((Rax, ValSize::Size64)),
+        float => {
+            println!("float return type");
+            None
+        }
+    })
 }

@@ -1,36 +1,36 @@
 use crate::{analyses, checkers, ir, lattices, loaders, utils};
 
-use crate::{IRMap, VW_Metadata, VW_CFG};
-use crate::lattices::VariableState;
 use crate::lattices::calllattice::CallCheckLattice;
 use crate::lattices::reachingdefslattice::ReachingDefnLattice;
-use loaders::utils::{VwFuncInfo, to_system_v};
+use crate::lattices::VariableState;
+use crate::{IRMap, VW_Metadata, VW_CFG};
 use analyses::call_analyzer::CallAnalyzer;
 use analyses::heap_analyzer::HeapAnalyzer;
-use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
-use analyses::{run_worklist, AnalysisResult};
-use analyses::stack_analyzer::StackAnalyzer;
 use analyses::locals_analyzer::LocalsAnalyzer;
+use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
+use analyses::stack_analyzer::StackAnalyzer;
+use analyses::{run_worklist, AnalysisResult};
 use checkers::call_checker::check_calls;
-use checkers::locals_checker::check_locals;
 use checkers::heap_checker::check_heap;
+use checkers::locals_checker::check_locals;
 use checkers::stack_checker::check_stack;
+use ir::types::FunType;
 use ir::utils::has_indirect_calls;
 use ir::VwArch;
-use ir::types::FunType;
+use loaders::utils::{to_system_v, VwFuncInfo};
 use loaders::ExecutableType;
-use utils::utils::{fully_resolved_cfg, get_data};
-use std::convert::TryFrom;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::iter::FromIterator;
+use utils::utils::{fully_resolved_cfg, get_data};
 
+use loaders::lucet::get_plt_funcs;
 use loaders::Loadable;
 use serde_json;
 use std::fs;
 use std::panic;
 use std::time::Instant;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
-use loaders::lucet::get_plt_funcs;
 
 #[derive(Debug)]
 pub struct PassConfig {
@@ -63,8 +63,14 @@ fn run_locals(
     metadata: &VW_Metadata,
     valid_funcs: &Vec<u64>,
 ) -> bool {
-    let fun_type = func_signatures.indexes.get(func_name)
-        .and_then(|index| func_signatures.signatures.get(usize::try_from(*index).unwrap()))
+    let fun_type = func_signatures
+        .indexes
+        .get(func_name)
+        .and_then(|index| {
+            func_signatures
+                .signatures
+                .get(usize::try_from(*index).unwrap())
+        })
         .map(to_system_v)
         .unwrap_or(FunType {
             args: Vec::new(),
@@ -116,7 +122,11 @@ fn run_calls(
     metadata: &VW_Metadata,
     valid_funcs: &Vec<u64>,
     plt: (u64, u64),
-) -> (bool, AnalysisResult<CallCheckLattice>, AnalysisResult<VariableState<ReachingDefnLattice>>) {
+) -> (
+    bool,
+    AnalysisResult<CallCheckLattice>,
+    AnalysisResult<VariableState<ReachingDefnLattice>>,
+) {
     let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
     let call_analyzer = CallAnalyzer {
         metadata: metadata.clone(),
@@ -130,7 +140,13 @@ fn run_calls(
         cfg: cfg.clone(),
     };
     let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
-    let call_safe = check_calls(call_result.clone(), &irmap, &call_analyzer, &valid_funcs, &plt);
+    let call_safe = check_calls(
+        call_result.clone(),
+        &irmap,
+        &call_analyzer,
+        &valid_funcs,
+        &plt,
+    );
     (call_safe, call_result, reaching_defs)
 }
 
@@ -181,14 +197,26 @@ pub fn run(config: Config) {
         if config.active_passes.linear_mem {
             println!("Checking Call Safety");
             // TODO: call analysis should check direct calls too, no?
-            let (call_safe, indirect_calls_result, reaching_defs) = run_calls(&cfg, &irmap, &metadata, &valid_funcs, plt);
+            let (call_safe, indirect_calls_result, reaching_defs) =
+                run_calls(&cfg, &irmap, &metadata, &valid_funcs, plt);
             if !call_safe {
                 panic!("Not Call Safe");
             }
 
             let locals_start = Instant::now();
             println!("Checking Locals Safety");
-            let locals_safe = run_locals(reaching_defs, indirect_calls_result, plt, &all_addrs_map, &func_signatures, &func_name, &cfg, &irmap, &metadata, &valid_funcs);
+            let locals_safe = run_locals(
+                reaching_defs,
+                indirect_calls_result,
+                plt,
+                &all_addrs_map,
+                &func_signatures,
+                &func_name,
+                &cfg,
+                &irmap,
+                &metadata,
+                &valid_funcs,
+            );
             if !locals_safe {
                 panic!("Not Locals Safe");
             }

@@ -37,7 +37,9 @@ fn get_reg_size(reg: yaxpeax_x86::long_mode::RegSpec) -> ValSize {
         register_class::RB => ValSize::Size8,
         register_class::RIP => panic!("Write to RIP: {:?}", reg.class()),
         register_class::EIP => panic!("Write to EIP: {:?}", reg.class()),
-        register_class::X | register_class::Y | register_class::Z => ValSize::SizeOther,
+        register_class::X => ValSize::Size128,
+        register_class::Y => ValSize::Size256,
+        register_class::Z => ValSize::Size512,
         _ => panic!("Unknown register bank: {:?}", reg.class()),
     };
     return size;
@@ -221,13 +223,13 @@ fn generic_clear(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
     stmts
 }
 
-fn get_operand_size(op: yaxpeax_x86::long_mode::Operand) -> Option<ValSize> {
+fn get_operand_size(op: &yaxpeax_x86::long_mode::Operand) -> Option<ValSize> {
     match op {
         Operand::ImmediateI8(_) | Operand::ImmediateU8(_) => Some(ValSize::Size8),
         Operand::ImmediateI16(_) | Operand::ImmediateU16(_) => Some(ValSize::Size16),
         Operand::ImmediateU32(_) | Operand::ImmediateI32(_) => Some(ValSize::Size32),
         Operand::ImmediateU64(_) | Operand::ImmediateI64(_) => Some(ValSize::Size64),
-        Operand::Register(reg) => Some(get_reg_size(reg)),
+        Operand::Register(reg) => Some(get_reg_size(*reg)),
         //u32 and u64 are address sizes
         Operand::DisplacementU32(_)
         | Operand::DisplacementU64(_)
@@ -248,8 +250,8 @@ fn get_operand_size(op: yaxpeax_x86::long_mode::Operand) -> Option<ValSize> {
 
 fn unop(opcode: Unopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     let memsize = match (
-        get_operand_size(instr.operand(0)),
-        get_operand_size(instr.operand(1)),
+        get_operand_size(&instr.operand(0)),
+        get_operand_size(&instr.operand(1)),
     ) {
         (None, None) => panic!("Two Memory Args?"),
         (Some(x), None) => x,
@@ -265,8 +267,8 @@ fn unop(opcode: Unopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
 
 fn binop(opcode: Binopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     let memsize = match (
-        get_operand_size(instr.operand(0)),
-        get_operand_size(instr.operand(1)),
+        get_operand_size(&instr.operand(0)),
+        get_operand_size(&instr.operand(1)),
     ) {
         (None, None) => panic!("Two Memory Args?"),
         (Some(x), None) => x,
@@ -313,12 +315,12 @@ fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &Addr) -> Vec<Stmt> {
             let target = (*addr as i64) + (length as i64) + (disp as i64);
             return vec![Stmt::Unop(
                 Unopcode::Mov,
-                convert_operand(dst, ValSize::SizeOther),
+                convert_operand(dst.clone(), get_operand_size(&dst).unwrap()),
                 Value::Imm(ImmType::Signed, ValSize::Size64, target),
             )];
         }
     }
-    match convert_operand(src1, get_operand_size(dst).unwrap()) {
+    match convert_operand(src1, get_operand_size(&dst).unwrap()) {
         Value::Mem(_, memargs) => match memargs {
             MemArgs::Mem1Arg(arg) => match arg {
                 MemArg::Imm(_, _, _val) => vec![unop(Unopcode::Mov, instr)],
@@ -354,8 +356,8 @@ pub fn lift(
 
         Opcode::TEST => {
             let memsize = match (
-                get_operand_size(instr.operand(0)),
-                get_operand_size(instr.operand(1)),
+                get_operand_size(&instr.operand(0)),
+                get_operand_size(&instr.operand(1)),
             ) {
                 (None, None) => panic!("Two Memory Args?"),
                 (Some(x), None) => x,
@@ -378,8 +380,8 @@ pub fn lift(
 
         Opcode::CMP => {
             let memsize = match (
-                get_operand_size(instr.operand(0)),
-                get_operand_size(instr.operand(1)),
+                get_operand_size(&instr.operand(0)),
+                get_operand_size(&instr.operand(1)),
             ) {
                 (None, None) => panic!("Two Memory Args?"),
                 (Some(x), None) => x,
@@ -474,7 +476,7 @@ pub fn lift(
                     valsize((width * 8) as u32),
                     MemArgs::Mem1Arg(MemArg::Reg(Rsp, ValSize::Size64)),
                 ),
-                convert_operand(instr.operand(0), ValSize::SizeOther),
+                convert_operand(instr.operand(0), ValSize::Size64),
             ))
         }
         Opcode::POP => {
@@ -482,7 +484,7 @@ pub fn lift(
             assert_eq!(width, 8); //8 bytes
             instrs.push(Stmt::Unop(
                 Unopcode::Mov,
-                convert_operand(instr.operand(0), ValSize::SizeOther),
+                convert_operand(instr.operand(0), ValSize::Size64),
                 Value::Mem(
                     valsize((width * 8) as u32),
                     MemArgs::Mem1Arg(MemArg::Reg(Rsp, ValSize::Size64)),
@@ -551,25 +553,25 @@ pub fn lift(
         Opcode::BSF => {
             instrs.push(Stmt::Clear(
                 Value::Reg(Zf, ValSize::Size8),
-                vec![convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap())],
+                vec![convert_operand(instr.operand(1), get_operand_size(&instr.operand(1)).unwrap())],
             ));
             instrs.push(Stmt::Clear(
-                convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap()),
+                convert_operand(instr.operand(0), get_operand_size(&instr.operand(0)).unwrap()),
                 vec![
-                    convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap()),
-                    convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap()),
+                    convert_operand(instr.operand(0), get_operand_size(&instr.operand(0)).unwrap()),
+                    convert_operand(instr.operand(1), get_operand_size(&instr.operand(1)).unwrap()),
                 ],
             ));
         }
         Opcode::LZCNT => {
             instrs.push(Stmt::Clear(
                 Value::Reg(Zf, ValSize::Size8),
-                vec![convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap())],
+                vec![convert_operand(instr.operand(1), get_operand_size(&instr.operand(1)).unwrap())],
             ));
             instrs.push(Stmt::Clear(
-                convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap()),
+                convert_operand(instr.operand(0), get_operand_size(&instr.operand(0)).unwrap()),
                 vec![
-                    convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap()),
+                    convert_operand(instr.operand(1), get_operand_size(&instr.operand(1)).unwrap()),
                 ],
             ));
         }
@@ -765,7 +767,9 @@ fn parse_probestack_arg<'a>(
     if move_instr.len() != 1 {
         return Err(ParseErr::Error(instrs));
     }
-    if let Stmt::Unop(Unopcode::Mov, Value::Reg(Rax, ValSize::Size32), Value::Imm(_, _, x)) = move_instr[0] {
+    if let Stmt::Unop(Unopcode::Mov, Value::Reg(Rax, ValSize::Size32), Value::Imm(_, _, x)) =
+        move_instr[0]
+    {
         return Ok((rest, (x as u64, (addr, move_instr))));
     }
     Err(ParseErr::Error(instrs))
@@ -795,8 +799,14 @@ fn parse_probestack_suffix<'a>(
     if sub_instr.len() != 1 {
         return Err(ParseErr::Error(instrs));
     }
-    if let Stmt::Binop(Binopcode::Sub, Value::Reg(Rsp, ValSize::Size64), Value::Reg(Rax, ValSize::Size64), _) = sub_instr[0] {
-        return Ok((rest, (addr, sub_instr)))
+    if let Stmt::Binop(
+        Binopcode::Sub,
+        Value::Reg(Rsp, ValSize::Size64),
+        Value::Reg(Rax, ValSize::Size64),
+        _,
+    ) = sub_instr[0]
+    {
+        return Ok((rest, (addr, sub_instr)));
     }
     Err(ParseErr::Error(instrs))
 }
@@ -818,12 +828,19 @@ fn parse_probestack<'a>(
 fn parse_bsf<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value, Value)> {
     if let Some(((addr, instr), rest)) = instrs.split_first() {
         if let Opcode::BSF = instr.opcode() {
-            return Ok((rest,
+            return Ok((
+                rest,
                 (
                     *addr,
-                    convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap()),
-                    convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap()),
-                )
+                    convert_operand(
+                        instr.operand(0),
+                        get_operand_size(&instr.operand(0)).unwrap(),
+                    ),
+                    convert_operand(
+                        instr.operand(1),
+                        get_operand_size(&instr.operand(1)).unwrap(),
+                    ),
+                ),
             ));
         }
     }
@@ -834,15 +851,22 @@ fn parse_bsf<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value, Value)> {
 fn parse_cmovez<'a>(instrs: BlockInstrs<'a>, bsf_dst: &Value) -> IResult<'a, (Addr, Value)> {
     if let Some(((addr, instr), rest)) = instrs.split_first() {
         if let Opcode::CMOVZ = instr.opcode() {
-            let mov_dst = convert_operand(instr.operand(0), get_operand_size(instr.operand(0)).unwrap());
+            let mov_dst = convert_operand(
+                instr.operand(0),
+                get_operand_size(&instr.operand(0)).unwrap(),
+            );
             if let (Value::Reg(bsf_dst_reg, _), Value::Reg(mov_dst_reg, _)) = (bsf_dst, mov_dst) {
                 if *bsf_dst_reg == mov_dst_reg {
-                    return Ok((rest,
-                               (
-                                   *addr,
-                                   convert_operand(instr.operand(1), get_operand_size(instr.operand(1)).unwrap()),
-                               )
-                    ))
+                    return Ok((
+                        rest,
+                        (
+                            *addr,
+                            convert_operand(
+                                instr.operand(1),
+                                get_operand_size(&instr.operand(1)).unwrap(),
+                            ),
+                        ),
+                    ));
                 }
             }
         }
@@ -850,10 +874,7 @@ fn parse_cmovez<'a>(instrs: BlockInstrs<'a>, bsf_dst: &Value) -> IResult<'a, (Ad
     Err(ParseErr::Error(instrs))
 }
 
-fn parse_bsf_cmove<'a>(
-    instrs: BlockInstrs<'a>,
-    metadata: &VW_Metadata,
-) -> IResult<'a, StmtResult> {
+fn parse_bsf_cmove<'a>(instrs: BlockInstrs<'a>, metadata: &VW_Metadata) -> IResult<'a, StmtResult> {
     let (rest, (addr, bsf_dst, bsf_src)) = parse_bsf(instrs)?;
     let (rest, (_addr, mov_src)) = parse_cmovez(rest, &bsf_dst)?;
     let mut stmts = Vec::new();
@@ -861,10 +882,7 @@ fn parse_bsf_cmove<'a>(
         Value::Reg(Zf, ValSize::Size8),
         vec![bsf_src.clone()],
     ));
-    stmts.push(Stmt::Clear(
-        bsf_dst,
-        vec![bsf_src, mov_src],
-    ));
+    stmts.push(Stmt::Clear(bsf_dst, vec![bsf_src, mov_src]));
     Ok((rest, (addr, stmts)))
 }
 
@@ -877,13 +895,9 @@ fn parse_single_instr<'a>(
     } else {
         Err(ParseErr::Incomplete)
     }
-
 }
 
-fn parse_instr<'a>(
-    instrs: BlockInstrs<'a>,
-    metadata: &VW_Metadata,
-) -> IResult<'a, StmtResult> {
+fn parse_instr<'a>(instrs: BlockInstrs<'a>, metadata: &VW_Metadata) -> IResult<'a, StmtResult> {
     if let Ok((rest, stmt)) = parse_bsf_cmove(instrs, metadata) {
         Ok((rest, stmt))
     } else if let Ok((rest, stmt)) = parse_probestack(instrs, metadata) {
@@ -893,10 +907,7 @@ fn parse_instr<'a>(
     }
 }
 
-fn parse_instrs<'a>(
-    instrs: BlockInstrs,
-    metadata: &VW_Metadata,
-) -> Vec<(Addr, Vec<Stmt>)> {
+fn parse_instrs<'a>(instrs: BlockInstrs, metadata: &VW_Metadata) -> Vec<(Addr, Vec<Stmt>)> {
     let mut block_ir: Vec<(Addr, Vec<Stmt>)> = Vec::new();
     let mut rest = instrs;
     while let Ok((more, (addr, stmts))) = parse_instr(rest, metadata) {
@@ -922,11 +933,9 @@ pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &VW_Metadata) -> I
     for block_addr in g.nodes() {
         let block = cfg.get_block(block_addr);
 
-        let instrs_vec: Vec<(u64, yaxpeax_x86::long_mode::Instruction)> = program.instructions_spanning(
-            <AMD64 as Arch>::Decoder::default(),
-            block.start,
-            block.end,
-        ).collect();
+        let instrs_vec: Vec<(u64, yaxpeax_x86::long_mode::Instruction)> = program
+            .instructions_spanning(<AMD64 as Arch>::Decoder::default(), block.start, block.end)
+            .collect();
         let instrs = instrs_vec.as_slice();
         let block_ir = parse_instrs(instrs, &metadata);
 
@@ -947,4 +956,4 @@ enum ParseErr<E> {
     Failure(E), // unrecoverable
 }
 
-type BlockInstrs<'a> = &'a[(Addr, yaxpeax_x86::long_mode::Instruction)];
+type BlockInstrs<'a> = &'a [(Addr, yaxpeax_x86::long_mode::Instruction)];

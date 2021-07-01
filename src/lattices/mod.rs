@@ -1,12 +1,12 @@
 pub mod calllattice;
 pub mod davlattice;
 pub mod heaplattice;
+pub mod localslattice;
 pub mod reachingdefslattice;
 pub mod regslattice;
 pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod switchlattice;
-pub mod localslattice;
 use crate::ir::types::{Binopcode, MemArg, MemArgs, ValSize, Value, X86Regs};
 use crate::ir::utils::{get_imm_offset, is_rsp};
 use crate::lattices::reachingdefslattice::LocIdx;
@@ -32,7 +32,6 @@ impl<T: PartialOrd> PartialOrd for VarSlot<T> {
         }
     }
 }
-
 
 pub trait Lattice: PartialOrd + Eq + Default + Debug {
     fn meet(&self, other: &Self, loc: &LocIdx) -> Self;
@@ -178,13 +177,8 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
                 if let Some(offset) = mem_to_stack_offset(memargs) {
                     self.stack.update(offset, value, memsize.into_bytes())
                 }
-            },
-            Value::Reg(regnum, s2) => {
-                if let ValSize::SizeOther = s2 {
-                } else {
-                    self.regs.set_reg(*regnum, *s2, value)
-                }
             }
+            Value::Reg(regnum, s2) => self.regs.set_reg(*regnum, *s2, value),
             Value::Imm(_, _, _) => panic!("Trying to write to an immediate value"),
             Value::RIPConst => panic!("Trying to write to a RIP constant"),
         }
@@ -192,9 +186,8 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
 
     fn get(&self, index: &Value) -> Option<T> {
         match index {
-            Value::Mem(memsize, memargs) => {
-                mem_to_stack_offset(memargs).map(|offset| self.stack.get(offset, memsize.into_bytes()))
-            },
+            Value::Mem(memsize, memargs) => mem_to_stack_offset(memargs)
+                .map(|offset| self.stack.get(offset, memsize.into_bytes())),
             Value::Reg(regnum, s2) => Some(self.regs.get_reg(*regnum, *s2)),
             Value::Imm(_, _, _) => None,
             Value::RIPConst => None,

@@ -9,31 +9,41 @@ pub enum ImmType {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub enum ValSize {
+    Size1,
     Size8,
     Size16,
     Size32,
     Size64,
-    SizeOther,
+    Size128,
+    Size256,
+    Size512,
 }
 
 impl ValSize {
     pub fn try_from_bits(value: u32) -> Result<Self, String> {
         match value {
+            1 => Ok(ValSize::Size1),
             8 => Ok(ValSize::Size8),
             16 => Ok(ValSize::Size16),
             32 => Ok(ValSize::Size32),
             64 => Ok(ValSize::Size64),
-            _ => Err(format!("Unknown size: {:?}", value)),
+            128 => Ok(ValSize::Size128),
+            256 => Ok(ValSize::Size256),
+            512 => Ok(ValSize::Size512),
+            _ => Err(format!("Not a valid bit length: {:?}", value)),
         }
     }
 
     pub fn into_bits(self) -> u32 {
         match self {
+            ValSize::Size1 => 1,
             ValSize::Size8 => 8,
             ValSize::Size16 => 16,
             ValSize::Size32 => 32,
             ValSize::Size64 => 64,
-            ValSize::SizeOther => 64, // TODO?: panic!("unknown size? {:?}")
+            ValSize::Size128 => 128,
+            ValSize::Size256 => 256,
+            ValSize::Size512 => 512,
         }
     }
 
@@ -43,17 +53,23 @@ impl ValSize {
             2 => Ok(ValSize::Size16),
             4 => Ok(ValSize::Size32),
             8 => Ok(ValSize::Size64),
-            _ => Err(format!("Unknown size: {:?}", value)),
+            16 => Ok(ValSize::Size128),
+            32 => Ok(ValSize::Size256),
+            64 => Ok(ValSize::Size512),
+            _ => Err(format!("Not a valid byte length: {:?}", value)),
         }
     }
 
     pub fn into_bytes(self) -> u32 {
         match self {
+            ValSize::Size1 => panic!("1 bit flag cannot be converted to bytes"),
             ValSize::Size8 => 1,
             ValSize::Size16 => 2,
             ValSize::Size32 => 4,
             ValSize::Size64 => 8,
-            ValSize::SizeOther => 8, // TODO?: panic!("unknown size? {:?}")
+            ValSize::Size128 => 16,
+            ValSize::Size256 => 32,
+            ValSize::Size512 => 64,
         }
     }
 }
@@ -67,12 +83,12 @@ pub enum MemArgs {
 }
 #[derive(Debug, Clone)]
 pub enum MemArg {
-    Reg(X86Regs, ValSize), // register mappings captured in `crate::lattices`
+    Reg(X86Regs, ValSize),      // register mappings captured in `crate::lattices`
     Imm(ImmType, ValSize, i64), // signed, size, const
 }
 #[derive(Debug, Clone)]
 pub enum Value {
-    Mem(ValSize, MemArgs),      // mem[memargs]
+    Mem(ValSize, MemArgs), // mem[memargs]
     Reg(X86Regs, ValSize),
     Imm(ImmType, ValSize, i64), // signed, size, const
     RIPConst,
@@ -112,7 +128,7 @@ pub type IRMap = HashMap<u64, IRBlock>;
 #[derive(Clone, Debug)]
 pub enum VarIndex {
     Reg(X86Regs),
-    Stack(i64)
+    Stack(i64),
 }
 
 #[derive(Debug, Clone)]
@@ -142,17 +158,27 @@ pub enum X86Regs {
     R15,
     Zf,
     Cf,
+    // Zmm0,
+    // Zmm1,
+    // Zmm2,
+    // Zmm3,
+    // Zmm4,
+    // Zmm5,
+    // Zmm6,
+    // Zmm7,
 }
 
 use self::X86Regs::*;
 
 pub struct X86RegsIterator {
-    current_reg: Option<X86Regs>
+    current_reg: Option<X86Regs>,
 }
 
 impl X86Regs {
     pub fn iter() -> X86RegsIterator {
-        X86RegsIterator { current_reg: Some(Rax) }
+        X86RegsIterator {
+            current_reg: Some(Rax),
+        }
     }
 }
 
@@ -162,82 +188,80 @@ impl Iterator for X86RegsIterator {
     fn next(&mut self) -> Option<Self::Item> {
         match self.current_reg {
             None => None,
-            Some(reg) => {
-                match reg {
-                    Rax => {
-                        self.current_reg = Some(Rcx);
-                        return Some(Rax);
-                    }
-                    Rcx => {
-                        self.current_reg = Some(Rdx);
-                        return Some(Rcx);
-                    }
-                    Rdx => {
-                        self.current_reg = Some(Rbx);
-                        return Some(Rdx);
-                    }
-                    Rbx => {
-                        self.current_reg = Some(Rsp);
-                        return Some(Rbx);
-                    }
-                    Rsp => {
-                        self.current_reg = Some(Rbp);
-                        return Some(Rsp);
-                    }
-                    Rbp => {
-                        self.current_reg = Some(Rsi);
-                        return Some(Rbp);
-                    }
-                    Rsi => {
-                        self.current_reg = Some(Rdi);
-                        return Some(Rsi);
-                    }
-                    Rdi => {
-                        self.current_reg = Some(R8);
-                        return Some(Rdi);
-                    }
-                    R8 => {
-                        self.current_reg = Some(R9);
-                        return Some(R8);
-                    }
-                    R9 => {
-                        self.current_reg = Some(R10);
-                        return Some(R9);
-                    }
-                    R10 => {
-                        self.current_reg = Some(R11);
-                        return Some(R10);
-                    }
-                    R11 => {
-                        self.current_reg = Some(R12);
-                        return Some(R11);
-                    }
-                    R12 => {
-                        self.current_reg = Some(R13);
-                        return Some(R12);
-                    }
-                    R13 => {
-                        self.current_reg = Some(R14);
-                        return Some(R13);
-                    }
-                    R14 => {
-                        self.current_reg = Some(R15);
-                        return Some(R14);
-                    }
-                    R15 => {
-                        self.current_reg = Some(Zf);
-                        return Some(R15);
-                    }
-                    Zf => {
-                        self.current_reg = Some(Cf);
-                        return Some(Zf);
-                    }
-                    Cf => {
-                        self.current_reg = None;
-                        return Some(Cf);
-                    }
+            Some(reg) => match reg {
+                Rax => {
+                    self.current_reg = Some(Rcx);
+                    return Some(Rax);
                 }
-            }
+                Rcx => {
+                    self.current_reg = Some(Rdx);
+                    return Some(Rcx);
+                }
+                Rdx => {
+                    self.current_reg = Some(Rbx);
+                    return Some(Rdx);
+                }
+                Rbx => {
+                    self.current_reg = Some(Rsp);
+                    return Some(Rbx);
+                }
+                Rsp => {
+                    self.current_reg = Some(Rbp);
+                    return Some(Rsp);
+                }
+                Rbp => {
+                    self.current_reg = Some(Rsi);
+                    return Some(Rbp);
+                }
+                Rsi => {
+                    self.current_reg = Some(Rdi);
+                    return Some(Rsi);
+                }
+                Rdi => {
+                    self.current_reg = Some(R8);
+                    return Some(Rdi);
+                }
+                R8 => {
+                    self.current_reg = Some(R9);
+                    return Some(R8);
+                }
+                R9 => {
+                    self.current_reg = Some(R10);
+                    return Some(R9);
+                }
+                R10 => {
+                    self.current_reg = Some(R11);
+                    return Some(R10);
+                }
+                R11 => {
+                    self.current_reg = Some(R12);
+                    return Some(R11);
+                }
+                R12 => {
+                    self.current_reg = Some(R13);
+                    return Some(R12);
+                }
+                R13 => {
+                    self.current_reg = Some(R14);
+                    return Some(R13);
+                }
+                R14 => {
+                    self.current_reg = Some(R15);
+                    return Some(R14);
+                }
+                R15 => {
+                    self.current_reg = Some(Zf);
+                    return Some(R15);
+                }
+                Zf => {
+                    self.current_reg = Some(Cf);
+                    return Some(Zf);
+                }
+                Cf => {
+                    self.current_reg = None;
+                    return Some(Cf);
+                }
+            },
         }
     }
 }

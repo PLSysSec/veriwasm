@@ -1,9 +1,9 @@
 pub mod call_analyzer;
 pub mod heap_analyzer;
 pub mod jump_analyzer;
+pub mod locals_analyzer;
 pub mod reaching_defs;
 pub mod stack_analyzer;
-pub mod locals_analyzer;
 use crate::ir::types::{Binopcode, IRBlock, IRMap, Stmt, Unopcode, Value};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarState};

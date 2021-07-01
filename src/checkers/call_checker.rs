@@ -115,14 +115,12 @@ impl CallChecker<'_> {
                     Some(CallCheckValue::PtrOffset(DAV::Checked)),
                     Some(CallCheckValue::GuestTableBase),
                 ) => return true,
-                (
-                    Some(CallCheckValue::TypedPtrOffset(_)),
-                    Some(CallCheckValue::GuestTableBase),
-                ) => return true,
-                (
-                    Some(CallCheckValue::GuestTableBase),
-                    Some(CallCheckValue::TypedPtrOffset(_)),
-                ) => return true,
+                (Some(CallCheckValue::TypedPtrOffset(_)), Some(CallCheckValue::GuestTableBase)) => {
+                    return true
+                }
+                (Some(CallCheckValue::GuestTableBase), Some(CallCheckValue::TypedPtrOffset(_))) => {
+                    return true
+                }
                 (_x, Some(CallCheckValue::GuestTableBase))
                 | (Some(CallCheckValue::GuestTableBase), _x) => return false,
                 (_x, _y) => return true, // not a calltable lookup
@@ -134,7 +132,9 @@ impl CallChecker<'_> {
 
 pub fn memarg_repr(state: &CallCheckLattice, memarg: &MemArg) -> String {
     match memarg {
-        MemArg::Reg(regnum, size) => format!("r{:?}: {:?}", regnum, state.regs.get_reg(*regnum, *size).v),
+        MemArg::Reg(regnum, size) => {
+            format!("r{:?}: {:?}", regnum, state.regs.get_reg(*regnum, *size).v)
+        }
         MemArg::Imm(_, _, x) => format!("{:?}", x),
     }
 }
