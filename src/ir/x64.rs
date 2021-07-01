@@ -271,6 +271,18 @@ fn unop(opcode: Unopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     )
 }
 
+fn unop_w_memsize(
+    opcode: Unopcode,
+    instr: &yaxpeax_x86::long_mode::Instruction,
+    memsize: ValSize,
+) -> Stmt {
+    Stmt::Unop(
+        opcode,
+        convert_operand(instr.operand(0), memsize),
+        convert_operand(instr.operand(1), memsize),
+    )
+}
+
 fn binop(opcode: Binopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     let memsize = match (
         get_operand_size(&instr.operand(0)),
@@ -348,10 +360,11 @@ pub fn lift(
     match instr.opcode() {
         Opcode::MOV |
         Opcode::MOVQ |
-        Opcode::MOVD |
-        Opcode::MOVSD |
         Opcode::MOVZX_b |
         Opcode::MOVZX_w => instrs.push(unop(Unopcode::Mov, instr)),
+
+        Opcode::MOVD  => instrs.push(unop_w_memsize(Unopcode::Mov, instr, ValSize::Size32)),
+        Opcode::MOVSD => instrs.push(unop_w_memsize(Unopcode::Mov, instr, ValSize::Size64)),
 
         Opcode::MOVSX |
         Opcode::MOVSX_w |
