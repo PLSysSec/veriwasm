@@ -164,10 +164,7 @@ pub fn run(config: Config) {
     let func_signatures = config.executable_type.get_func_signatures(&program);
     // println!("{:?}", func_signatures);
     // TODO: entry0?
-    let mut all_addrs_map = HashMap::new();
-    for (addr, func_name) in all_addrs {
-        all_addrs_map.insert(addr, func_name);
-    }
+    let all_addrs_map = HashMap::from_iter(all_addrs.clone());
     for (addr, func_name) in func_addrs {
         if config.only_func.is_some() && func_name != config.only_func.as_ref().unwrap().as_str() {
             continue;
