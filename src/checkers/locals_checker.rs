@@ -7,6 +7,7 @@ use crate::checkers::Checker;
 use crate::ir::types::{IRMap, MemArgs, Stmt, Value, X86Regs};
 use crate::lattices::localslattice::{LocalsLattice, SlotVal};
 use crate::lattices::reachingdefslattice::LocIdx;
+use crate::loaders::utils::to_system_v;
 
 use SlotVal::*;
 use X86Regs::*;
@@ -38,14 +39,15 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
     }
 
     fn check_statement(&self, state: &LocalsLattice, stmt: &Stmt, loc_idx: &LocIdx) -> bool {
-        let debug_addrs: HashSet<u64> = vec![].into_iter().collect();
+        let debug_addrs: HashSet<u64> = vec![
+        ].into_iter().collect();
         if debug_addrs.contains(&loc_idx.addr) {
             println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            println!("{:?}", state);
+            println!("{}", state);
             println!("check_statement debug 0x{:x?}: {:?}", loc_idx.addr, stmt);
             let mut cloned = state.clone();
             self.aexec(&mut cloned, stmt, loc_idx);
-            println!("{:?}", cloned);
+            println!("{}", cloned);
             println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         }
         let error = match stmt {
@@ -54,7 +56,7 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
                     match dst {
                         Value::Mem(memsize, memargs) => true,
                         Value::Reg(reg_num, _) => {
-                            *reg_num != Rsp && *reg_num != Zf && *reg_num != Cf && *reg_num != Rbp
+                            *reg_num != Rsp && *reg_num != Rbp && !(X86Regs::is_flag(*reg_num))
                         }
                         Value::Imm(_, _, _) => false,
                         Value::RIPConst => false,
@@ -68,7 +70,7 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
                     match dst {
                         Value::Mem(memsize, memargs) => true,
                         Value::Reg(reg_num, _) => {
-                            *reg_num != Rsp && *reg_num != Zf && *reg_num != Cf && *reg_num != Rbp
+                            *reg_num != Rsp && *reg_num != Rbp && !(X86Regs::is_flag(*reg_num))
                         }
                         Value::Imm(_, _, _) => false,
                         Value::RIPConst => false,
@@ -86,7 +88,7 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
                     match dst {
                         Value::Mem(memsize, memargs) => true,
                         Value::Reg(reg_num, _) => {
-                            *reg_num != Rsp && *reg_num != Zf && *reg_num != Cf && *reg_num != Rbp
+                            *reg_num != Rsp && *reg_num != Rbp && !(X86Regs::is_flag(*reg_num))
                         }
                         Value::Imm(_, _, _) => false,
                         Value::RIPConst => false,
@@ -100,8 +102,9 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
         };
         if error {
             println!("----------------------------------------");
-            println!("{:?}", state);
+            println!("{}", state);
             println!("Darn: 0x{:x?}: {:?}", loc_idx.addr, stmt);
+            println!("{:?}", self.analyzer.fun_type);
             println!("----------------------------------------")
         }
 

@@ -254,6 +254,16 @@ fn get_operand_size(op: &yaxpeax_x86::long_mode::Operand) -> Option<ValSize> {
     }
 }
 
+fn set_from_flags(operand: Operand, flags: Vec<X86Regs>) -> Stmt {
+    Stmt::Clear(
+        convert_operand(operand, ValSize::Size8),
+        flags
+            .iter()
+            .map(|flag| Value::Reg(*flag, ValSize::Size8))
+            .collect()
+    )
+}
+
 fn unop(opcode: Unopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     let memsize = match (
         get_operand_size(&instr.operand(0)),
@@ -397,7 +407,9 @@ pub fn lift(
             ));
         }
 
-        Opcode::CMP => {
+        Opcode::UCOMISS
+        | Opcode::UCOMISD
+        | Opcode::CMP => {
             let memsize = match (
                 get_operand_size(&instr.operand(0)),
                 get_operand_size(&instr.operand(1)),
@@ -416,6 +428,24 @@ pub fn lift(
             instrs.push(Stmt::Binop(
                 Binopcode::Cmp,
                 Value::Reg(Cf, ValSize::Size8),
+                convert_operand(instr.operand(0), memsize),
+                convert_operand(instr.operand(1), memsize),
+            ));
+            instrs.push(Stmt::Binop(
+                Binopcode::Cmp,
+                Value::Reg(Pf, ValSize::Size8),
+                convert_operand(instr.operand(0), memsize),
+                convert_operand(instr.operand(1), memsize),
+            ));
+            instrs.push(Stmt::Binop(
+                Binopcode::Cmp,
+                Value::Reg(Sf, ValSize::Size8),
+                convert_operand(instr.operand(0), memsize),
+                convert_operand(instr.operand(1), memsize),
+            ));
+            instrs.push(Stmt::Binop(
+                Binopcode::Cmp,
+                Value::Reg(Of, ValSize::Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
             ));
@@ -528,7 +558,9 @@ pub fn lift(
             ));
         }
 
-        Opcode::XOR => {
+        Opcode::XORPS // TODO: do we need to generalize the size logic?
+        | Opcode::XORPD
+        | Opcode::XOR => {
             //XOR reg, reg => mov reg, 0
             if instr.operand_count() == 2 && instr.operand(0) == instr.operand(1) {
                 instrs.push(Stmt::Unop(
@@ -552,22 +584,30 @@ pub fn lift(
             instrs.push(Stmt::Clear(Value::Reg(Rdx, ValSize::Size64), vec![]));
         }
 
-        // TODO: check
-        SETLE
-        | SETNZ
-        | SETZ => {
-            instrs.push(Stmt::Clear(
-                convert_operand(instr.operand(0), ValSize::Size8),
-                vec![Value::Reg(Zf, ValSize::Size8)],
-            ));
-        }
+        SETG
+        | SETLE => instrs.push(set_from_flags(instr.operand(0), vec![Zf, Sf, Of])),
 
-        SETB => {
-            instrs.push(Stmt::Clear(
-                convert_operand(instr.operand(0), ValSize::Size8),
-                vec![Value::Reg(Cf, ValSize::Size8)],
-            ));
-        }
+        SETO
+        | SETNO => instrs.push(set_from_flags(instr.operand(0), vec![Of])),
+
+        SETS
+        | SETNS => instrs.push(set_from_flags(instr.operand(0), vec![Sf])),
+
+        SETGE
+        | SETL => instrs.push(set_from_flags(instr.operand(0), vec![Sf, Of])),
+
+        SETNZ
+        | SETZ => instrs.push(set_from_flags(instr.operand(0), vec![Zf])),
+
+        SETAE
+        | SETB => instrs.push(set_from_flags(instr.operand(0), vec![Cf])),
+
+
+        SETA
+        | SETBE => instrs.push(set_from_flags(instr.operand(0), vec![Cf, Zf])),
+
+        SETP
+        | SETNP => instrs.push(set_from_flags(instr.operand(0), vec![Pf])),
 
         Opcode::BSF => {
             instrs.push(Stmt::Clear(
@@ -597,10 +637,17 @@ pub fn lift(
 
         // TODO: is this right?
         Opcode::MOVSS => {
-            instrs.push(Stmt::Unop(
-                Unopcode::Mov,
-                convert_operand(instr.operand(0), ValSize::Size32),
-                convert_operand(instr.operand(1), ValSize::Size32),
+            instrs.push(unop_w_memsize(Unopcode::Mov, instr, ValSize::Size32));
+        }
+        Opcode::MOVAPS => {
+            instrs.push(unop(Unopcode::Mov, instr));
+        }
+        Opcode::CVTSI2SS => {
+            instrs.push(Stmt::Clear(
+                convert_operand(instr.operand(0), get_operand_size(&instr.operand(0)).unwrap()),
+                vec![
+                    convert_operand(instr.operand(1), get_operand_size(&instr.operand(1)).unwrap()),
+                ],
             ));
         }
 
@@ -626,48 +673,27 @@ pub fn lift(
         | Opcode::CMOVP
         | Opcode::CMOVS
         | Opcode::CMOVZ
-        | SETO
-        | SETNO
-        // | SETB
-        | SETAE
-        // | SETZ
-        // | SETNZ
-        | SETBE
-        | SETA
-        | SETS
-        | SETNS
-        | SETP
-        | SETNP
-        | SETL
-        | SETGE
-        // | SETLE
-        | SETG
         | Opcode::SAR
         | Opcode::ADC
         | Opcode::ROUNDSS
         | Opcode::MUL
         | Opcode::IMUL
-        | Opcode::XORPD
         | Opcode::POR
         | Opcode::PSHUFB
         | Opcode::PSHUFD
         | Opcode::PTEST
         | Opcode::PXOR
         | Opcode::ANDNPS
-        | Opcode::XORPS
         | Opcode::CMPPD
         | Opcode::CMPPS
         | Opcode::ANDPS
         | Opcode::ORPS
-        | Opcode::MOVAPS
         | Opcode::DIVSD
         | Opcode::MULSS
         | Opcode::ADDSD
-        | Opcode::UCOMISD
         | Opcode::SUBSS
         | Opcode::ROUNDSD
         | Opcode::NOT
-        | Opcode::UCOMISS
         | Opcode::POPCNT
         | Opcode::SUBSD
         | Opcode::MULSD
@@ -692,7 +718,6 @@ pub fn lift(
         | Opcode::CVTDQ2PS
         | Opcode::CVTSD2SS
         | Opcode::CVTSI2SD
-        | Opcode::CVTSI2SS
         | Opcode::CVTSS2SD
         | Opcode::CVTTSD2SI
         | Opcode::CVTTSS2SI

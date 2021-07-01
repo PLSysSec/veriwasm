@@ -74,7 +74,7 @@ impl ValSize {
     }
 
     pub fn fp_offset() -> u8 {
-        18
+        u8::from(Zmm0)
     }
 }
 
@@ -142,6 +142,7 @@ pub struct FunType {
 }
 
 // TODO: this should not implement PartialOrd
+// TODO: add flags iter
 #[derive(PartialEq, PartialOrd, Clone, Eq, Debug, Copy, Hash)]
 pub enum X86Regs {
     Rax,
@@ -162,6 +163,9 @@ pub enum X86Regs {
     R15,
     Zf,
     Cf,
+    Pf,
+    Sf,
+    Of,
     Zmm0,
     Zmm1,
     Zmm2,
@@ -181,6 +185,15 @@ pub enum X86Regs {
 }
 
 use self::X86Regs::*;
+
+impl X86Regs {
+    pub fn is_flag(self) -> bool {
+        match self {
+            Zf | Cf | Pf | Sf | Of => true,
+            _ => false,
+        }
+    }
+}
 
 pub struct X86RegsIterator {
     current_reg: Option<X86Regs>,
@@ -270,8 +283,20 @@ impl Iterator for X86RegsIterator {
                     return Some(Zf);
                 }
                 Cf => {
-                    self.current_reg = Some(Zmm0);
+                    self.current_reg = Some(Pf);
                     return Some(Cf);
+                }
+                Pf => {
+                    self.current_reg = Some(Sf);
+                    return Some(Pf);
+                }
+                Sf => {
+                    self.current_reg = Some(Of);
+                    return Some(Sf);
+                }
+                Of => {
+                    self.current_reg = Some(Zmm0);
+                    return Some(Of);
                 }
                 Zmm0 => {
                     self.current_reg = Some(Zmm1);
@@ -365,22 +390,25 @@ impl TryFrom<u8> for X86Regs {
             15 => Ok(R15),
             16 => Ok(Zf),
             17 => Ok(Cf),
-            18 => Ok(Zmm0),
-            19 => Ok(Zmm1),
-            20 => Ok(Zmm2),
-            21 => Ok(Zmm3),
-            22 => Ok(Zmm4),
-            23 => Ok(Zmm5),
-            24 => Ok(Zmm6),
-            25 => Ok(Zmm7),
-            26 => Ok(Zmm8),
-            27 => Ok(Zmm9),
-            28 => Ok(Zmm10),
-            29 => Ok(Zmm11),
-            30 => Ok(Zmm12),
-            31 => Ok(Zmm13),
-            32 => Ok(Zmm14),
-            33 => Ok(Zmm15),
+            18 => Ok(Pf),
+            19 => Ok(Sf),
+            20 => Ok(Of),
+            21 => Ok(Zmm0),
+            22 => Ok(Zmm1),
+            23 => Ok(Zmm2),
+            24 => Ok(Zmm3),
+            25 => Ok(Zmm4),
+            26 => Ok(Zmm5),
+            27 => Ok(Zmm6),
+            28 => Ok(Zmm7),
+            29 => Ok(Zmm8),
+            30 => Ok(Zmm9),
+            31 => Ok(Zmm10),
+            32 => Ok(Zmm11),
+            33 => Ok(Zmm12),
+            34 => Ok(Zmm13),
+            35 => Ok(Zmm14),
+            36 => Ok(Zmm15),
             _ => Err(format!("Unknown register: index = {:?}", value)),
         }
     }

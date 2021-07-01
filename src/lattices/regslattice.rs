@@ -119,6 +119,9 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
         self.map.remove(&R11);
         self.map.remove(&Zf);
         self.map.remove(&Cf);
+        self.map.remove(&Pf);
+        self.map.remove(&Sf);
+        self.map.remove(&Of);
     }
 
     pub fn show(&self) -> () {

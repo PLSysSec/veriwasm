@@ -130,9 +130,15 @@ impl<T: Eq + Clone + Debug> ConstLattice<T> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Default, Clone, Debug)]
-pub struct VariableState<T: Lattice + Clone> {
+pub struct VariableState<T> {
     pub regs: X86RegsLattice<T>,
     pub stack: StackLattice<T>,
+}
+
+impl<T: std::fmt::Debug + Clone> std::fmt::Display for VariableState<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{\n\t{:?}\n\n\t{}\n}}", self.regs, self.stack)
+    }
 }
 
 // offset from current stack pointer
@@ -206,7 +212,6 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
         if is_rsp(dst) {
             if is_rsp(src1) {
                 let adjustment = get_imm_offset(src2);
-                //println!("opcode = {:?} {:?} = {:?} {:?} {:?}", opcode, dst, src1, src2, adjustment);
                 match opcode {
                     Binopcode::Add => self.stack.update_stack_offset(adjustment),
                     Binopcode::Sub => self.stack.update_stack_offset(-adjustment),

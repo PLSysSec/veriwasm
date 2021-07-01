@@ -100,7 +100,7 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
         let debug_addrs: HashSet<u64> = vec![].into_iter().collect();
         if debug_addrs.contains(&loc_idx.addr) {
             println!("========================================");
-            println!("{:?}", in_state);
+            println!("{}", in_state);
             println!("aexec debug 0x{:x?}: {:?}", loc_idx.addr, ir_instr);
         }
         match ir_instr {
@@ -158,7 +158,7 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
             }
         }
         if debug_addrs.contains(&loc_idx.addr) {
-            println!("{:?}", in_state);
+            println!("{}", in_state);
             println!("========================================");
         }
     }

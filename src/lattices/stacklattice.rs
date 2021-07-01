@@ -23,6 +23,7 @@ impl<T: std::fmt::Debug + Clone> std::fmt::Display for StackLattice<T> {
 
 impl<T: Lattice + Clone> StackLattice<T> {
     pub fn update(&mut self, offset: i64, value: T, size: u32) -> () {
+        // println!("stack update: {:?} + {:?} = {:?} <- {:?} {:?}", self.offset, offset, self.offset + offset, value, size);
         //Check if 4 aligned
         if (offset & 3) != 0 {
             panic!("Unsafe: Attempt to store value on the stack on not 4-byte aligned address.");
@@ -154,7 +155,7 @@ impl<T: Lattice + Clone> Lattice for StackLattice<T> {
     }
 }
 
-impl<T: Lattice + Clone> Default for StackLattice<T> {
+impl<T: Default> Default for StackLattice<T> {
     fn default() -> Self {
         StackLattice {
             offset: 0,
