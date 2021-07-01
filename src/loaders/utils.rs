@@ -42,22 +42,37 @@ pub fn to_system_v(sig: &Signature) -> FunType {
                     3 => VarIndex::Reg(R8),
                     4 => VarIndex::Reg(R9),
                     _ => {
-                        if let ValueType::I32 = arg {
-                            stack_offset += 4;
-                        } else {
-                            stack_offset += 8;
-                        };
+                        stack_offset += 8;
                         VarIndex::Stack(stack_offset)
                     }
                 };
-                i_ctr += 1;
                 match arg {
                     ValueType::I32 => arg_locs.push((index, ValSize::Size32)),
                     ValueType::I64 => arg_locs.push((index, ValSize::Size64)),
                     _ => (),
                 };
+                i_ctr += 1;
             }
             ValueType::F32 | ValueType::F64 => {
+                let index = match f_ctr {
+                    0 => VarIndex::Reg(Zmm0),
+                    1 => VarIndex::Reg(Zmm1),
+                    2 => VarIndex::Reg(Zmm2),
+                    3 => VarIndex::Reg(Zmm3),
+                    4 => VarIndex::Reg(Zmm4),
+                    5 => VarIndex::Reg(Zmm5),
+                    6 => VarIndex::Reg(Zmm6),
+                    7 => VarIndex::Reg(Zmm7),
+                    _ => {
+                        stack_offset += 8; //stack slots are 8 byte aligned
+                        VarIndex::Stack(stack_offset)
+                    }
+                };
+                match arg {
+                    ValueType::F32 => arg_locs.push((index, ValSize::Size32)),
+                    ValueType::F64 => arg_locs.push((index, ValSize::Size64)),
+                    _ => (),
+                };
                 f_ctr += 1;
             }
         }
@@ -72,9 +87,7 @@ pub fn to_system_v_ret_ty(sig: &Signature) -> Option<(X86Regs, ValSize)> {
     sig.ret_ty.and_then(|ty| match ty {
         ValueType::I32 => Some((Rax, ValSize::Size32)),
         ValueType::I64 => Some((Rax, ValSize::Size64)),
-        float => {
-            println!("float return type");
-            None
-        }
+        ValueType::F32 => Some((Zmm0, ValSize::Size32)),
+        ValueType::F64 => Some((Zmm0, ValSize::Size64)),
     })
 }
