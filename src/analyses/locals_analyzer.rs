@@ -132,7 +132,8 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
                 if let Some((ret_reg, reg_size)) = signature.and_then(|sig| to_system_v_ret_ty(sig)) {
 
                     in_state.regs.set_reg(ret_reg, reg_size, Init);
-                } else {
+                }
+                if let None = signature {
                     panic!("0x{:x?}: 0x{:x?}", loc_idx.addr, target);
                 }
             }
