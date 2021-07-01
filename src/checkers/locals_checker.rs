@@ -52,12 +52,10 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
             Stmt::Clear(dst, srcs) => {
                 if self.analyzer.aeval_vals(state, srcs, loc_idx) == Uninit {
                     match dst {
-                        Value::Mem(memsize, memargs) => {
-                            true
-                        },
+                        Value::Mem(memsize, memargs) => true,
                         Value::Reg(reg_num, _) => {
                             *reg_num != Rsp && *reg_num != Zf && *reg_num != Cf && *reg_num != Rbp
-                        },
+                        }
                         Value::Imm(_, _, _) => false,
                         Value::RIPConst => false,
                     }
@@ -68,12 +66,10 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
             Stmt::Unop(_, dst, src) => {
                 if self.analyzer.aeval_val(state, src, loc_idx) == Uninit {
                     match dst {
-                        Value::Mem(memsize, memargs) => {
-                            true
-                        },
+                        Value::Mem(memsize, memargs) => true,
                         Value::Reg(reg_num, _) => {
                             *reg_num != Rsp && *reg_num != Zf && *reg_num != Cf && *reg_num != Rbp
-                        },
+                        }
                         Value::Imm(_, _, _) => false,
                         Value::RIPConst => false,
                     }
@@ -82,14 +78,16 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
                 }
             }
             Stmt::Binop(opcode, dst, src1, src2) => {
-                if self.analyzer.aeval_vals(state, &vec![src1.clone(), src2.clone()], loc_idx) == Uninit {
+                if self
+                    .analyzer
+                    .aeval_vals(state, &vec![src1.clone(), src2.clone()], loc_idx)
+                    == Uninit
+                {
                     match dst {
-                        Value::Mem(memsize, memargs) => {
-                            true
-                        },
+                        Value::Mem(memsize, memargs) => true,
                         Value::Reg(reg_num, _) => {
                             *reg_num != Rsp && *reg_num != Zf && *reg_num != Cf && *reg_num != Rbp
-                        },
+                        }
                         Value::Imm(_, _, _) => false,
                         Value::RIPConst => false,
                     }
@@ -97,12 +95,8 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
                     false
                 }
             }
-            Stmt::Branch(br_type, val) => {
-                self.analyzer.aeval_val(state, val, loc_idx) == Uninit
-            }
-            _ => {
-                false
-            }
+            Stmt::Branch(br_type, val) => self.analyzer.aeval_val(state, val, loc_idx) == Uninit,
+            _ => false,
         };
         if error {
             println!("----------------------------------------");

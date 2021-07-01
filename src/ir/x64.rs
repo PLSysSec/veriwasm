@@ -595,6 +595,15 @@ pub fn lift(
             ));
         }
 
+        // TODO: is this right?
+        Opcode::MOVSS => {
+            instrs.push(Stmt::Unop(
+                Unopcode::Mov,
+                convert_operand(instr.operand(0), ValSize::Size32),
+                convert_operand(instr.operand(1), ValSize::Size32),
+            ));
+        }
+
         Opcode::OR
         | Opcode::SHR
         | Opcode::RCL
@@ -637,7 +646,6 @@ pub fn lift(
         | Opcode::ADC
         | Opcode::ROUNDSS
         | Opcode::MUL
-        | Opcode::MOVSS
         | Opcode::IMUL
         | Opcode::XORPD
         | Opcode::POR

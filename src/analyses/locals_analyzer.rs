@@ -29,11 +29,12 @@ impl<'a> LocalsAnalyzer<'a> {
         match value {
             Value::Mem(memsize, memargs) => {
                 if let Some(offset) = mem_to_stack_offset(memargs) {
-                    println!("reading from stack 0x{:x?}: {:?} + {:?}\n\t{:?}", loc_idx.addr, state.stack.offset, offset, value);
-                    println!("{}", state.stack);
-                    println!("{:?}", self.fun_type);
+                    // println!("reading from stack 0x{:x?}: {:?} + {:?}\n\t{:?}", loc_idx.addr, state.stack.offset, offset, value);
+                    // println!("{}", state.stack);
+                    // println!("{:?}", self.fun_type);
                     state.stack.get(offset, memsize.into_bytes())
                 } else {
+                    // println!("reading from mem 0x{:x?}: {:?}", loc_idx.addr, value);
                     Init
                 }
             }
@@ -44,7 +45,12 @@ impl<'a> LocalsAnalyzer<'a> {
     }
 
     // if all values are initialized then the value is initialized
-    pub fn aeval_vals(&self, state: &LocalsLattice, values: &Vec<Value>, loc_idx: &LocIdx) -> SlotVal {
+    pub fn aeval_vals(
+        &self,
+        state: &LocalsLattice,
+        values: &Vec<Value>,
+        loc_idx: &LocIdx,
+    ) -> SlotVal {
         values.iter().fold(Init, |acc, value| -> SlotVal {
             if (acc == Init) && (self.aeval_val(state, value, loc_idx) == Init) {
                 Init
@@ -98,12 +104,8 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
             println!("aexec debug 0x{:x?}: {:?}", loc_idx.addr, ir_instr);
         }
         match ir_instr {
-            Stmt::Clear(dst, srcs) => {
-                in_state.set(dst, self.aeval_vals(in_state, srcs, loc_idx))
-            }
-            Stmt::Unop(_, dst, src) => {
-                in_state.set(dst, self.aeval_val(in_state, src, loc_idx))
-            }
+            Stmt::Clear(dst, srcs) => in_state.set(dst, self.aeval_vals(in_state, srcs, loc_idx)),
+            Stmt::Unop(_, dst, src) => in_state.set(dst, self.aeval_val(in_state, src, loc_idx)),
             Stmt::Binop(opcode, dst, src1, src2) => {
                 let dst_val = self
                     .aeval_val(in_state, src1, loc_idx)
@@ -129,12 +131,9 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
                     .and_then(|name| self.symbol_table.indexes.get(name))
                     .and_then(|sig_index| self.symbol_table.signatures.get(*sig_index as usize));
                 in_state.on_call();
-                if let Some((ret_reg, reg_size)) = signature.and_then(|sig| to_system_v_ret_ty(sig)) {
-
+                if let Some((ret_reg, reg_size)) = signature.and_then(|sig| to_system_v_ret_ty(sig))
+                {
                     in_state.regs.set_reg(ret_reg, reg_size, Init);
-                }
-                if let None = signature {
-                    panic!("0x{:x?}: 0x{:x?}", loc_idx.addr, target);
                 }
             }
             Stmt::Call(val @ Value::Reg(_, _)) => {
