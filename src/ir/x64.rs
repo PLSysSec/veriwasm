@@ -15,13 +15,7 @@ use yaxpeax_x86::long_mode::{register_class, Arch as AMD64, Opcode, Operand, Reg
 use X86Regs::*;
 
 pub fn valsize(num: u32) -> ValSize {
-    match num {
-        8 => ValSize::Size8,
-        16 => ValSize::Size16,
-        32 => ValSize::Size32,
-        64 => ValSize::Size64,
-        _ => unimplemented!("{:?}", num),
-    }
+    ValSize::try_from_bits(num).unwrap()
 }
 
 pub fn mk_value_i64(num: i64) -> Value {
@@ -46,8 +40,20 @@ fn get_reg_size(reg: yaxpeax_x86::long_mode::RegSpec) -> ValSize {
 }
 
 fn convert_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> Value {
-    let size = get_reg_size(reg);
-    Value::Reg(X86Regs::try_from(reg.num()).unwrap(), size)
+    let (num, size) = match (reg.num(), reg.class()) {
+        (n, register_class::Q) => (n, ValSize::Size64),
+        (n, register_class::D) => (n, ValSize::Size32),
+        (n, register_class::W) => (n, ValSize::Size16),
+        (n, register_class::B) => (n, ValSize::Size8),
+        (n, register_class::RB) => (n, ValSize::Size8),
+        (_, register_class::RIP) => panic!("Write to RIP: {:?}", reg.class()),
+        (_, register_class::EIP) => panic!("Write to EIP: {:?}", reg.class()),
+        (n, register_class::X) => (n + ValSize::fp_offset(), ValSize::Size128),
+        (n, register_class::Y) => (n + ValSize::fp_offset(), ValSize::Size256),
+        (n, register_class::Z) => (n + ValSize::fp_offset(), ValSize::Size512),
+        _ => panic!("Unknown register bank: {:?}", reg.class()),
+    };
+    Value::Reg(X86Regs::try_from(num).unwrap(), size)
 }
 
 fn convert_memarg_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> MemArg {

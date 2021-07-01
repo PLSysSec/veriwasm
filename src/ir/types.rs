@@ -72,6 +72,10 @@ impl ValSize {
             ValSize::Size512 => 64,
         }
     }
+
+    pub fn fp_offset() -> u8 {
+        18
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -158,14 +162,22 @@ pub enum X86Regs {
     R15,
     Zf,
     Cf,
-    // Zmm0,
-    // Zmm1,
-    // Zmm2,
-    // Zmm3,
-    // Zmm4,
-    // Zmm5,
-    // Zmm6,
-    // Zmm7,
+    Zmm0,
+    Zmm1,
+    Zmm2,
+    Zmm3,
+    Zmm4,
+    Zmm5,
+    Zmm6,
+    Zmm7,
+    Zmm8,
+    Zmm9,
+    Zmm10,
+    Zmm11,
+    Zmm12,
+    Zmm13,
+    Zmm14,
+    Zmm15,
 }
 
 use self::X86Regs::*;
@@ -258,8 +270,72 @@ impl Iterator for X86RegsIterator {
                     return Some(Zf);
                 }
                 Cf => {
-                    self.current_reg = None;
+                    self.current_reg = Some(Zmm0);
                     return Some(Cf);
+                }
+                Zmm0 => {
+                    self.current_reg = Some(Zmm1);
+                    return Some(Zmm0);
+                }
+                Zmm1 => {
+                    self.current_reg = Some(Zmm2);
+                    return Some(Zmm1);
+                }
+                Zmm2 => {
+                    self.current_reg = Some(Zmm3);
+                    return Some(Zmm2);
+                }
+                Zmm3 => {
+                    self.current_reg = Some(Zmm4);
+                    return Some(Zmm3);
+                }
+                Zmm4 => {
+                    self.current_reg = Some(Zmm5);
+                    return Some(Zmm4);
+                }
+                Zmm5 => {
+                    self.current_reg = Some(Zmm6);
+                    return Some(Zmm5);
+                }
+                Zmm6 => {
+                    self.current_reg = Some(Zmm7);
+                    return Some(Zmm6);
+                }
+                Zmm7 => {
+                    self.current_reg = Some(Zmm8);
+                    return Some(Zmm7);
+                }
+                Zmm8 => {
+                    self.current_reg = Some(Zmm9);
+                    return Some(Zmm8);
+                }
+                Zmm9 => {
+                    self.current_reg = Some(Zmm10);
+                    return Some(Zmm9);
+                }
+                Zmm10 => {
+                    self.current_reg = Some(Zmm11);
+                    return Some(Zmm10);
+                }
+                Zmm11 => {
+                    self.current_reg = Some(Zmm12);
+                    return Some(Zmm11);
+                }
+                Zmm12 => {
+                    self.current_reg = Some(Zmm13);
+                    return Some(Zmm12);
+                }
+                Zmm13 => {
+                    self.current_reg = Some(Zmm14);
+                    return Some(Zmm13);
+                }
+                Zmm14 => {
+                    self.current_reg = Some(Zmm15);
+                    return Some(Zmm14);
+                }
+                Zmm15 => {
+                    self.current_reg = None;
+                    return Some(Zmm15);
                 }
             },
         }
@@ -289,6 +365,22 @@ impl TryFrom<u8> for X86Regs {
             15 => Ok(R15),
             16 => Ok(Zf),
             17 => Ok(Cf),
+            18 => Ok(Zmm0),
+            19 => Ok(Zmm1),
+            20 => Ok(Zmm2),
+            21 => Ok(Zmm3),
+            22 => Ok(Zmm4),
+            23 => Ok(Zmm5),
+            24 => Ok(Zmm6),
+            25 => Ok(Zmm7),
+            26 => Ok(Zmm8),
+            27 => Ok(Zmm9),
+            28 => Ok(Zmm10),
+            29 => Ok(Zmm11),
+            30 => Ok(Zmm12),
+            31 => Ok(Zmm13),
+            32 => Ok(Zmm14),
+            33 => Ok(Zmm15),
             _ => Err(format!("Unknown register: index = {:?}", value)),
         }
     }
