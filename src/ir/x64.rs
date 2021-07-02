@@ -651,6 +651,13 @@ pub fn lift(
             ));
         }
 
+
+        Opcode::CVTTSD2SI => {
+            let new = clear_dst(instr);
+            println!("cvtt 0x{:x?}: {:?} {:?}\n\t{:?}\n\t{:?}\n\t{}", addr, convert_operand(instr.operand(0), ValSize::Size64), convert_operand(instr.operand(1), ValSize::Size64), instr, new, instr);
+            instrs.extend(clear_dst(instr));
+        }
+
         Opcode::OR
         | Opcode::SHR
         | Opcode::RCL
@@ -719,7 +726,6 @@ pub fn lift(
         | Opcode::CVTSD2SS
         | Opcode::CVTSI2SD
         | Opcode::CVTSS2SD
-        | Opcode::CVTTSD2SI
         | Opcode::CVTTSS2SI
         | Opcode::ADDPS
         | Opcode::ADDPD

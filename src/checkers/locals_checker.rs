@@ -40,6 +40,7 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
 
     fn check_statement(&self, state: &LocalsLattice, stmt: &Stmt, loc_idx: &LocIdx) -> bool {
         let debug_addrs: HashSet<u64> = vec![
+            0x00028998,
         ].into_iter().collect();
         if debug_addrs.contains(&loc_idx.addr) {
             println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
