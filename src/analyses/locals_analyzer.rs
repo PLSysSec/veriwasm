@@ -13,6 +13,7 @@ use crate::lattices::{Lattice, VarState, VariableState};
 use crate::loaders::utils::{to_system_v_ret_ty, VwFuncInfo};
 
 use SlotVal::*;
+use ValSize::*;
 use X86Regs::*;
 
 pub struct LocalsAnalyzer<'a> {
@@ -75,24 +76,12 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
             }
         }
         // rbp, rbx, and r12-r15 are the callee-saved registers
-        lattice
-            .regs
-            .set_reg(Rbp, ValSize::Size64, InitialRegVal(Rbp));
-        lattice
-            .regs
-            .set_reg(Rbx, ValSize::Size64, InitialRegVal(Rbx));
-        lattice
-            .regs
-            .set_reg(R12, ValSize::Size64, InitialRegVal(R12));
-        lattice
-            .regs
-            .set_reg(R13, ValSize::Size64, InitialRegVal(R13));
-        lattice
-            .regs
-            .set_reg(R14, ValSize::Size64, InitialRegVal(R14));
-        lattice
-            .regs
-            .set_reg(R15, ValSize::Size64, InitialRegVal(R15));
+        lattice.regs.set_reg(Rbp, Size64, InitialRegVal(Rbp));
+        lattice.regs.set_reg(Rbx, Size64, InitialRegVal(Rbx));
+        lattice.regs.set_reg(R12, Size64, InitialRegVal(R12));
+        lattice.regs.set_reg(R13, Size64, InitialRegVal(R13));
+        lattice.regs.set_reg(R14, Size64, InitialRegVal(R14));
+        lattice.regs.set_reg(R15, Size64, InitialRegVal(R15));
         lattice
     }
 

@@ -25,6 +25,17 @@ pub fn check_locals(
     LocalsChecker { irmap, analyzer }.check(result)
 }
 
+fn is_uninit_illegal(v: &Value) -> bool {
+    match v {
+        Value::Mem(memsize, memargs) => true,
+        Value::Reg(reg_num, _) => {
+            *reg_num != Rsp && *reg_num != Rbp && !(X86Regs::is_flag(*reg_num))
+        }
+        Value::Imm(_, _, _) => false, //imm are always "init"
+        Value::RIPConst => false,
+    }
+}
+
 impl Checker<LocalsLattice> for LocalsChecker<'_> {
     fn check(&self, result: AnalysisResult<LocalsLattice>) -> bool {
         self.check_state_at_statements(result)
@@ -50,52 +61,20 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
             println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         }
         let error = match stmt {
+            // 1. No writes to registers or memory of uninit values (overly strict, but correct)
             Stmt::Clear(dst, srcs) => {
-                if self.analyzer.aeval_vals(state, srcs, loc_idx) == Uninit {
-                    match dst {
-                        Value::Mem(memsize, memargs) => true,
-                        Value::Reg(reg_num, _) => {
-                            *reg_num != Rsp && *reg_num != Rbp && !(X86Regs::is_flag(*reg_num))
-                        }
-                        Value::Imm(_, _, _) => false,
-                        Value::RIPConst => false,
-                    }
-                } else {
-                    false
-                }
+                self.analyzer.aeval_vals(state, srcs, loc_idx) == &&is_uninit_illegal(dst)
             }
             Stmt::Unop(_, dst, src) => {
-                if self.analyzer.aeval_val(state, src, loc_idx) == Uninit {
-                    match dst {
-                        Value::Mem(memsize, memargs) => true,
-                        Value::Reg(reg_num, _) => {
-                            *reg_num != Rsp && *reg_num != Rbp && !(X86Regs::is_flag(*reg_num))
-                        }
-                        Value::Imm(_, _, _) => false,
-                        Value::RIPConst => false,
-                    }
-                } else {
-                    false
-                }
+                (self.analyzer.aeval_val(state, src, loc_idx) == Uninit) && is_uninit_illegal(dst)
             }
             Stmt::Binop(opcode, dst, src1, src2) => {
-                if self
-                    .analyzer
+                self.analyzer
                     .aeval_vals(state, &vec![src1.clone(), src2.clone()], loc_idx)
                     == Uninit
-                {
-                    match dst {
-                        Value::Mem(memsize, memargs) => true,
-                        Value::Reg(reg_num, _) => {
-                            *reg_num != Rsp && *reg_num != Rbp && !(X86Regs::is_flag(*reg_num))
-                        }
-                        Value::Imm(_, _, _) => false,
-                        Value::RIPConst => false,
-                    }
-                } else {
-                    false
-                }
+                    && is_uninit_illegal(dst)
             }
+            // 2. No branch on uninit allowed
             Stmt::Branch(br_type, val) => self.analyzer.aeval_val(state, val, loc_idx) == Uninit,
             _ => false,
         };
@@ -106,80 +85,6 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
             println!("{:?}", self.analyzer.fun_type);
             println!("----------------------------------------")
         }
-
-        // //1, stackgrowth is never Bottom or >= 0
-        // match state.v {
-        //     None => {
-        //         println!("Failure Case at {:?}: Stackgrowth = None", ir_stmt);
-        //         return false;
-        //     }
-        //     Some((stackgrowth, _, _)) => {
-        //         if stackgrowth > 0 {
-        //             return false;
-        //         }
-        //     }
-        // }
-
-        // // 2. Reads and writes are in bounds
-        // match ir_stmt {
-        //     //encapsulates both load and store
-        //     Stmt::Unop(_, dst, src) =>
-        //     // stack write: probestack <= stackgrowth + c < 0
-        //     {
-        //         if is_stack_access(dst) {
-        //             if !self.check_stack_write(state, dst) {
-        //                 log::debug!(
-        //                     "check_stack_write failed: access = {:?} state = {:?}",
-        //                     dst,
-        //                     state
-        //                 );
-        //                 return false;
-        //             }
-        //         }
-        //         if is_bp_access(dst) {
-        //             if !self.check_bp_write(state, dst) {
-        //                 log::debug!(
-        //                     "check_bp_write failed: access = {:?} state = {:?}",
-        //                     dst,
-        //                     state
-        //                 );
-        //                 return false;
-        //             }
-        //         }
-        //         //stack read: probestack <= stackgrowth + c < 8K
-        //         if is_stack_access(src) {
-        //             if !self.check_stack_read(state, src) {
-        //                 log::debug!(
-        //                     "check_stack_read failed: access = {:?} state = {:?}",
-        //                     src,
-        //                     state
-        //                 );
-        //                 return false;
-        //             }
-        //         } else if is_bp_access(src) {
-        //             if !self.check_bp_read(state, src) {
-        //                 log::debug!(
-        //                     "check_bp_read failed: access = {:?} state = {:?}",
-        //                     src,
-        //                     state
-        //                 );
-        //                 return false;
-        //             }
-        //         }
-        //     }
-        //     _ => (),
-        // }
-
-        // // 3. For all rets stackgrowth = 0
-        // if let Stmt::Ret = ir_stmt {
-        //     if let Some((stackgrowth, _, _)) = state.v {
-        //         if stackgrowth != 0 {
-        //             log::debug!("stackgrowth != 0 at ret: stackgrowth = {:?}", stackgrowth);
-        //             return false;
-        //         }
-        //     }
-        // }
-
         true
     }
 }
