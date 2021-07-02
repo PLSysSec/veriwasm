@@ -6,6 +6,8 @@ use crate::ir::utils::{is_mem_access, is_stack_access};
 use crate::lattices::heaplattice::{HeapLattice, HeapValue};
 use crate::lattices::reachingdefslattice::LocIdx;
 
+use HeapValue::*;
+use ValSize::*;
 use X86Regs::*;
 
 pub struct HeapChecker<'a> {
@@ -27,7 +29,7 @@ pub fn check_heap(
 
 fn memarg_is_frame(memarg: &MemArg) -> bool {
     if let MemArg::Reg(Rbp, size) = memarg {
-        assert_eq!(*size, ValSize::Size64);
+        assert_eq!(*size, Size64);
         true
     } else {
         false
@@ -67,8 +69,8 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
     fn check_statement(&self, state: &HeapLattice, ir_stmt: &Stmt, _loc_idx: &LocIdx) -> bool {
         match ir_stmt {
             //1. Check that at each call rdi = HeapBase
-            Stmt::Call(_) => match state.regs.get_reg(Rdi, ValSize::Size64).v {
-                Some(HeapValue::HeapBase) => (),
+            Stmt::Call(_) => match state.regs.get_reg(Rdi, Size64).v {
+                Some(HeapBase) => (),
                 _ => {
                     log::debug!("Call failure {:?}", state.stack.get(0, 8));
                     return false;
@@ -116,20 +118,16 @@ impl HeapChecker<'_> {
     fn check_global_access(&self, state: &HeapLattice, access: &Value) -> bool {
         if let Value::Mem(_, memargs) = access {
             match memargs {
-                MemArgs::Mem1Arg(MemArg::Reg(regnum, ValSize::Size64)) => {
-                    if let Some(HeapValue::GlobalsBase) =
-                        state.regs.get_reg(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64)) => {
+                    if let Some(GlobalsBase) = state.regs.get_reg(*regnum, Size64).v {
                         return true;
                     }
                 }
                 MemArgs::Mem2Args(
-                    MemArg::Reg(regnum, ValSize::Size64),
+                    MemArg::Reg(regnum, Size64),
                     MemArg::Imm(_, _, globals_offset),
                 ) => {
-                    if let Some(HeapValue::GlobalsBase) =
-                        state.regs.get_reg(*regnum, ValSize::Size64).v
-                    {
+                    if let Some(GlobalsBase) = state.regs.get_reg(*regnum, Size64).v {
                         return *globals_offset <= 4096;
                     }
                 }
@@ -157,13 +155,11 @@ impl HeapChecker<'_> {
                 //   relocations, we accept this approximation to the trusted
                 //   base: we trust any memory access based at such a
                 //   constant/global-variable-produced address.
-                MemArgs::Mem1Arg(MemArg::Reg(regnum, ValSize::Size64))
-                | MemArgs::Mem2Args(MemArg::Reg(regnum, ValSize::Size64), _)
-                | MemArgs::Mem3Args(MemArg::Reg(regnum, ValSize::Size64), _, _)
-                | MemArgs::MemScale(MemArg::Reg(regnum, ValSize::Size64), _, _) => {
-                    if let Some(HeapValue::RIPConst) =
-                        state.regs.get_reg(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64))
+                | MemArgs::Mem2Args(MemArg::Reg(regnum, Size64), _)
+                | MemArgs::Mem3Args(MemArg::Reg(regnum, Size64), _, _)
+                | MemArgs::MemScale(MemArg::Reg(regnum, Size64), _, _) => {
+                    if let Some(RIPConst) = state.regs.get_reg(*regnum, Size64).v {
                         return true;
                     }
                 }
@@ -177,38 +173,28 @@ impl HeapChecker<'_> {
         if let Value::Mem(_, memargs) = access {
             match memargs {
                 // if only arg is heapbase or heapaddr
-                MemArgs::Mem1Arg(MemArg::Reg(regnum, ValSize::Size64)) => {
-                    if let Some(HeapValue::HeapBase) =
-                        state.regs.get_reg(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64)) => {
+                    if let Some(HeapBase) = state.regs.get_reg(*regnum, Size64).v {
                         return true;
                     }
-                    if let Some(HeapValue::HeapAddr) =
-                        state.regs.get_reg(*regnum, ValSize::Size64).v
-                    {
+                    if let Some(HeapAddr) = state.regs.get_reg(*regnum, Size64).v {
                         return true;
                     }
                 }
                 // if arg1 is heapbase and arg2 is bounded ||
                 // if arg1 is heapaddr and arg2 is constant offset
-                MemArgs::Mem2Args(MemArg::Reg(regnum, ValSize::Size64), memarg2) => {
-                    if let Some(HeapValue::HeapBase) =
-                        state.regs.get_reg(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem2Args(MemArg::Reg(regnum, Size64), memarg2) => {
+                    if let Some(HeapBase) = state.regs.get_reg(*regnum, Size64).v {
                         match memarg2 {
                             MemArg::Reg(regnum2, size2) => {
-                                if let Some(HeapValue::Bounded4GB) =
-                                    state.regs.get_reg(*regnum2, *size2).v
-                                {
+                                if let Some(Bounded4GB) = state.regs.get_reg(*regnum2, *size2).v {
                                     return true;
                                 }
                             }
                             MemArg::Imm(_, _, v) => return *v >= -0x1000 && *v <= 0xffffffff,
                         }
                     }
-                    if let Some(HeapValue::HeapAddr) =
-                        state.regs.get_reg(*regnum, ValSize::Size64).v
-                    {
+                    if let Some(HeapAddr) = state.regs.get_reg(*regnum, Size64).v {
                         match memarg2 {
                             MemArg::Imm(_, _, v) => return *v >= -0x1000 && *v <= 0xffffffff,
                             _ => {}
@@ -217,22 +203,18 @@ impl HeapChecker<'_> {
                 }
                 // if arg1 is heapbase and arg2 and arg3 are bounded ||
                 // if arg1 is bounded and arg1 and arg3 are bounded
-                MemArgs::Mem3Args(MemArg::Reg(regnum, ValSize::Size64), memarg2, memarg3)
-                | MemArgs::Mem3Args(memarg2, MemArg::Reg(regnum, ValSize::Size64), memarg3) => {
-                    if let Some(HeapValue::HeapBase) =
-                        state.regs.get_reg(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem3Args(MemArg::Reg(regnum, Size64), memarg2, memarg3)
+                | MemArgs::Mem3Args(memarg2, MemArg::Reg(regnum, Size64), memarg3) => {
+                    if let Some(HeapBase) = state.regs.get_reg(*regnum, Size64).v {
                         match (memarg2, memarg3) {
                             (MemArg::Reg(regnum2, size2), MemArg::Imm(_, _, v))
                             | (MemArg::Imm(_, _, v), MemArg::Reg(regnum2, size2)) => {
-                                if let Some(HeapValue::Bounded4GB) =
-                                    state.regs.get_reg(*regnum2, *size2).v
-                                {
+                                if let Some(Bounded4GB) = state.regs.get_reg(*regnum2, *size2).v {
                                     return *v <= 0xffffffff;
                                 }
                             }
                             (MemArg::Reg(regnum2, size2), MemArg::Reg(regnum3, size3)) => {
-                                if let (Some(HeapValue::Bounded4GB), Some(HeapValue::Bounded4GB)) = (
+                                if let (Some(Bounded4GB), Some(Bounded4GB)) = (
                                     state.regs.get_reg(*regnum2, *size2).v,
                                     state.regs.get_reg(*regnum3, *size3).v,
                                 ) {
@@ -253,47 +235,36 @@ impl HeapChecker<'_> {
         if let Value::Mem(_size, memargs) = access {
             match memargs {
                 //Case 1: mem[globals_base]
-                MemArgs::Mem1Arg(MemArg::Reg(regnum, ValSize::Size64)) => {
-                    if let Some(HeapValue::GlobalsBase) =
-                        state.regs.get_reg(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64)) => {
+                    if let Some(GlobalsBase) = state.regs.get_reg(*regnum, Size64).v {
                         return true;
                     }
                 }
                 //Case 2: mem[lucet_tables + 8]
-                MemArgs::Mem2Args(MemArg::Reg(regnum, ValSize::Size64), MemArg::Imm(_, _, 8)) => {
-                    if let Some(HeapValue::LucetTables) =
-                        state.regs.get_reg(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem2Args(MemArg::Reg(regnum, Size64), MemArg::Imm(_, _, 8)) => {
+                    if let Some(LucetTables) = state.regs.get_reg(*regnum, Size64).v {
                         return true;
                     }
                 }
-                MemArgs::Mem2Args(
-                    MemArg::Reg(regnum1, ValSize::Size64),
-                    MemArg::Reg(regnum2, ValSize::Size64),
-                ) => {
-                    if let Some(HeapValue::GuestTable0) =
-                        state.regs.get_reg(*regnum1, ValSize::Size64).v
-                    {
+                MemArgs::Mem2Args(MemArg::Reg(regnum1, Size64), MemArg::Reg(regnum2, Size64)) => {
+                    if let Some(GuestTable0) = state.regs.get_reg(*regnum1, Size64).v {
                         return true;
                     }
-                    if let Some(HeapValue::GuestTable0) =
-                        state.regs.get_reg(*regnum2, ValSize::Size64).v
-                    {
+                    if let Some(GuestTable0) = state.regs.get_reg(*regnum2, Size64).v {
                         return true;
                     }
                 }
                 MemArgs::Mem3Args(
-                    MemArg::Reg(regnum1, ValSize::Size64),
-                    MemArg::Reg(regnum2, ValSize::Size64),
+                    MemArg::Reg(regnum1, Size64),
+                    MemArg::Reg(regnum2, Size64),
                     MemArg::Imm(_, _, 8),
                 ) => {
                     match (
-                        state.regs.get_reg(*regnum1, ValSize::Size64).v,
-                        state.regs.get_reg(*regnum2, ValSize::Size64).v,
+                        state.regs.get_reg(*regnum1, Size64).v,
+                        state.regs.get_reg(*regnum2, Size64).v,
                     ) {
-                        (Some(HeapValue::GuestTable0), _) => return true,
-                        (_, Some(HeapValue::GuestTable0)) => return true,
+                        (Some(GuestTable0), _) => return true,
+                        (_, Some(GuestTable0)) => return true,
                         _ => (),
                     }
                 }
