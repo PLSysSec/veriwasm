@@ -51,7 +51,11 @@ pub fn get_plt_funcs(binpath: &str) -> Vec<(u64, String)> {
     }
     // Parse PLT to get mapping from address to target
     let mut addr_to_target = HashMap::new();
-    let plt_section = elf.sections.iter().find(|sec| sec.name == ".plt").unwrap();
+    let plt_section = elf.sections.iter().find(|sec| sec.name == ".plt");
+    // if plt_section.is_none(){
+    //     return Vec::new();
+    // };
+    let plt_section = plt_section.unwrap();
     let plt_start = plt_section.header.addr;
     if let SectionContent::Raw(buf) = &plt_section.content {
         let mut rdr = Cursor::new(buf);

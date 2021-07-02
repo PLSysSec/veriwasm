@@ -260,7 +260,7 @@ fn set_from_flags(operand: Operand, flags: Vec<X86Regs>) -> Stmt {
         flags
             .iter()
             .map(|flag| Value::Reg(*flag, ValSize::Size8))
-            .collect()
+            .collect(),
     )
 }
 
