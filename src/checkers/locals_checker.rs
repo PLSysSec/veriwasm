@@ -38,18 +38,26 @@ fn is_uninit_illegal(v: &Value) -> bool {
 
 impl LocalsChecker<'_> {
     fn all_args_are_init(&self, state: &LocalsLattice, sig: FunType) -> bool {
-        for arg in self.analyzer.fun_type.args.iter() {
+        for arg in sig.args.iter() {
             match arg {
                 (VarIndex::Stack(offset), size) => {
                     let bytesize = size.into_bytes();
                     let v = state.stack.get(i64::from(*offset), bytesize);
                     if v == Uninit {
+                        println!(
+                            "found arg that was not initialized: stack[{:?}] sig: {:?}",
+                            offset, sig
+                        );
                         return false;
                     }
                 }
-                (VarIndex::Reg(reg_num), size) => {
-                    let v = state.regs.get_reg(*reg_num, *size);
+                (VarIndex::Reg(reg), size) => {
+                    let v = state.regs.get_reg(*reg, *size);
                     if v == Uninit {
+                        println!(
+                            "found arg that was not initialized: {:?} sig: {:?}",
+                            reg, sig
+                        );
                         return false;
                     }
                 }
@@ -175,7 +183,7 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
             println!("----------------------------------------");
             println!("{}", state);
             println!("Darn: 0x{:x?}: {:?}", loc_idx.addr, stmt);
-            println!("{:?}", self.analyzer.fun_type);
+            // println!("{:?}", self.analyzer.fun_type);
             println!("----------------------------------------")
         }
         true
