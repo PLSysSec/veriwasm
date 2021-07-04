@@ -10,7 +10,9 @@ use yaxpeax_core::arch::InstructionSpan;
 use yaxpeax_core::data::{Direction, ValueLocations};
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_x86::long_mode::Opcode::*;
-use yaxpeax_x86::long_mode::{register_class, Arch as AMD64, Opcode, Operand, RegSpec, Instruction as X64Instruction};
+use yaxpeax_x86::long_mode::{
+    register_class, Arch as AMD64, Instruction as X64Instruction, Opcode, Operand, RegSpec,
+};
 use X86Regs::*;
 
 pub fn valsize(num: u32) -> ValSize {
@@ -228,7 +230,7 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
 //     stmts
 // }
 
-// Captures all register and flag sources 
+// Captures all register and flag sources
 // TODO: Memory?
 fn get_sources(instr: &X64Instruction) -> Vec<Value> {
     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
@@ -297,7 +299,7 @@ fn generic_clear(instr: &X64Instruction) -> Vec<Stmt> {
     let sources = get_sources(&instr);
     let dsts = get_destinations(&instr);
 
-    for dst in dsts{
+    for dst in dsts {
         stmts.push(Stmt::Clear(dst, sources.clone()));
     }
 
@@ -441,9 +443,9 @@ fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &Addr) -> Vec<Stmt> {
         Value::Mem(_, memargs) => match memargs {
             MemArgs::Mem1Arg(arg) => match arg {
                 MemArg::Imm(_, _, _val) => vec![unop(Unopcode::Mov, instr)],
-                _ => generic_clear(instr),//clear_dst(instr),
+                _ => generic_clear(instr), //clear_dst(instr),
             },
-            _ => generic_clear(instr),//clear_dst(instr),
+            _ => generic_clear(instr), //clear_dst(instr),
         },
         _ => panic!("Illegal lea"),
     }

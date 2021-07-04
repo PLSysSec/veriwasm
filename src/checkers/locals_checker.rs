@@ -47,7 +47,8 @@ impl LocalsChecker<'_> {
                     if v == Uninit {
                         println!(
                             "found arg that was not initialized: stack[{:?}] sig: {:?}",
-                            offset - 8, sig
+                            offset - 8,
+                            sig
                         );
                         return false;
                     }
