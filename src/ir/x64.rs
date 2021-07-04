@@ -13,6 +13,7 @@ use yaxpeax_x86::long_mode::Opcode::*;
 use yaxpeax_x86::long_mode::{
     register_class, Arch as AMD64, Instruction as X64Instruction, Opcode, Operand, RegSpec,
 };
+use ValSize::{Size128, Size16, Size256, Size32, Size512, Size64, Size8};
 use X86Regs::*;
 
 pub fn valsize(num: u32) -> ValSize {
@@ -20,21 +21,21 @@ pub fn valsize(num: u32) -> ValSize {
 }
 
 pub fn mk_value_i64(num: i64) -> Value {
-    Value::Imm(ImmType::Signed, ValSize::Size64, num)
+    Value::Imm(ImmType::Signed, Size64, num)
 }
 
 fn get_reg_size(reg: yaxpeax_x86::long_mode::RegSpec) -> ValSize {
     let size = match reg.class() {
-        register_class::Q => ValSize::Size64,
-        register_class::D => ValSize::Size32,
-        register_class::W => ValSize::Size16,
-        register_class::B => ValSize::Size8,
-        register_class::RB => ValSize::Size8,
+        register_class::Q => Size64,
+        register_class::D => Size32,
+        register_class::W => Size16,
+        register_class::B => Size8,
+        register_class::RB => Size8,
         register_class::RIP => panic!("Write to RIP: {:?}", reg.class()),
         register_class::EIP => panic!("Write to EIP: {:?}", reg.class()),
-        register_class::X => ValSize::Size128,
-        register_class::Y => ValSize::Size256,
-        register_class::Z => ValSize::Size512,
+        register_class::X => Size128,
+        register_class::Y => Size256,
+        register_class::Z => Size512,
         _ => panic!("Unknown register bank: {:?}", reg.class()),
     };
     return size;
@@ -42,16 +43,16 @@ fn get_reg_size(reg: yaxpeax_x86::long_mode::RegSpec) -> ValSize {
 
 fn convert_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> Value {
     let (num, size) = match (reg.num(), reg.class()) {
-        (n, register_class::Q) => (n, ValSize::Size64),
-        (n, register_class::D) => (n, ValSize::Size32),
-        (n, register_class::W) => (n, ValSize::Size16),
-        (n, register_class::B) => (n, ValSize::Size8),
-        (n, register_class::RB) => (n, ValSize::Size8),
+        (n, register_class::Q) => (n, Size64),
+        (n, register_class::D) => (n, Size32),
+        (n, register_class::W) => (n, Size16),
+        (n, register_class::B) => (n, Size8),
+        (n, register_class::RB) => (n, Size8),
         (_, register_class::RIP) => panic!("Write to RIP: {:?}", reg.class()),
         (_, register_class::EIP) => panic!("Write to EIP: {:?}", reg.class()),
-        (n, register_class::X) => (n + ValSize::fp_offset(), ValSize::Size128),
-        (n, register_class::Y) => (n + ValSize::fp_offset(), ValSize::Size256),
-        (n, register_class::Z) => (n + ValSize::fp_offset(), ValSize::Size512),
+        (n, register_class::X) => (n + ValSize::fp_offset(), Size128),
+        (n, register_class::Y) => (n + ValSize::fp_offset(), Size256),
+        (n, register_class::Z) => (n + ValSize::fp_offset(), Size512),
         _ => panic!("Unknown register bank: {:?}", reg.class()),
     };
     Value::Reg(X86Regs::try_from(num).unwrap(), size)
@@ -59,10 +60,10 @@ fn convert_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> Value {
 
 fn convert_memarg_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> MemArg {
     let size = match reg.class() {
-        register_class::Q => ValSize::Size64,
-        register_class::D => ValSize::Size32,
-        register_class::W => ValSize::Size16,
-        register_class::B => ValSize::Size8,
+        register_class::Q => Size64,
+        register_class::D => Size32,
+        register_class::W => Size16,
+        register_class::B => Size8,
         _ => panic!("Unknown register bank: {:?}", reg.class()),
     };
     MemArg::Reg(X86Regs::try_from(reg.num()).unwrap(), size)
@@ -70,23 +71,23 @@ fn convert_memarg_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> MemArg {
 
 fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Value {
     match op {
-        Operand::ImmediateI8(imm) => Value::Imm(ImmType::Signed, ValSize::Size8, imm as i64),
-        Operand::ImmediateU8(imm) => Value::Imm(ImmType::Unsigned, ValSize::Size8, imm as i64),
-        Operand::ImmediateI16(imm) => Value::Imm(ImmType::Signed, ValSize::Size16, imm as i64),
-        Operand::ImmediateU16(imm) => Value::Imm(ImmType::Unsigned, ValSize::Size16, imm as i64),
-        Operand::ImmediateU32(imm) => Value::Imm(ImmType::Unsigned, ValSize::Size32, imm as i64),
-        Operand::ImmediateI32(imm) => Value::Imm(ImmType::Signed, ValSize::Size32, imm as i64),
-        Operand::ImmediateU64(imm) => Value::Imm(ImmType::Unsigned, ValSize::Size64, imm as i64),
-        Operand::ImmediateI64(imm) => Value::Imm(ImmType::Signed, ValSize::Size64, imm as i64),
+        Operand::ImmediateI8(imm) => Value::Imm(ImmType::Signed, Size8, imm as i64),
+        Operand::ImmediateU8(imm) => Value::Imm(ImmType::Unsigned, Size8, imm as i64),
+        Operand::ImmediateI16(imm) => Value::Imm(ImmType::Signed, Size16, imm as i64),
+        Operand::ImmediateU16(imm) => Value::Imm(ImmType::Unsigned, Size16, imm as i64),
+        Operand::ImmediateU32(imm) => Value::Imm(ImmType::Unsigned, Size32, imm as i64),
+        Operand::ImmediateI32(imm) => Value::Imm(ImmType::Signed, Size32, imm as i64),
+        Operand::ImmediateU64(imm) => Value::Imm(ImmType::Unsigned, Size64, imm as i64),
+        Operand::ImmediateI64(imm) => Value::Imm(ImmType::Signed, Size64, imm as i64),
         Operand::Register(reg) => convert_reg(reg),
         //u32 and u64 are address sizes
         Operand::DisplacementU32(imm) => Value::Mem(
             memsize,
-            MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size32, imm as i64)),
+            MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, Size32, imm as i64)),
         ), //mem[c]
         Operand::DisplacementU64(imm) => Value::Mem(
             memsize,
-            MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, ValSize::Size64, imm as i64)),
+            MemArgs::Mem1Arg(MemArg::Imm(ImmType::Unsigned, Size64, imm as i64)),
         ), //mem[c]
         Operand::RegDeref(reg) if reg == RegSpec::rip() => Value::RIPConst,
         Operand::RegDeref(reg) => Value::Mem(memsize, MemArgs::Mem1Arg(convert_memarg_reg(reg))), // mem[reg]
@@ -95,7 +96,7 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
             memsize,
             MemArgs::Mem2Args(
                 convert_memarg_reg(reg),
-                MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64),
+                MemArg::Imm(ImmType::Signed, Size32, imm as i64),
             ),
         ), //mem[reg + c]
         Operand::RegIndexBase(reg1, reg2) => Value::Mem(
@@ -107,7 +108,7 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
             MemArgs::Mem3Args(
                 convert_memarg_reg(reg1),
                 convert_memarg_reg(reg2),
-                MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64),
+                MemArg::Imm(ImmType::Signed, Size32, imm as i64),
             ),
         ), //mem[reg1 + reg2 + c]
         Operand::RegScale(_, _) => panic!("Memory operations with scaling prohibited"), // mem[reg * c]
@@ -126,7 +127,7 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
                     MemArgs::MemScale(
                         convert_memarg_reg(reg1),
                         convert_memarg_reg(reg2),
-                        MemArg::Imm(ImmType::Signed, ValSize::Size32, scale as i64),
+                        MemArg::Imm(ImmType::Signed, Size32, scale as i64),
                     ),
                 )
             }
@@ -138,7 +139,7 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
                 MemArgs::Mem3Args(
                     convert_memarg_reg(reg1),
                     convert_memarg_reg(reg2),
-                    MemArg::Imm(ImmType::Signed, ValSize::Size32, imm as i64),
+                    MemArg::Imm(ImmType::Signed, Size32, imm as i64),
                 ),
             )
         } //mem[reg1 + reg2*c1 + c2]
@@ -148,87 +149,6 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
         }
     }
 }
-
-// fn get_sources(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Value> {
-//     match instr.operand_count() {
-//         0 => vec![],
-//         1 => vec![convert_operand(instr.operand(0), ValSize::Size32)],
-//         2 => vec![
-//             convert_operand(instr.operand(0), ValSize::Size32),
-//             convert_operand(instr.operand(1), ValSize::Size32),
-//         ],
-//         3 => vec![
-//             convert_operand(instr.operand(0), ValSize::Size32),
-//             convert_operand(instr.operand(1), ValSize::Size32),
-//             convert_operand(instr.operand(2), ValSize::Size32),
-//         ],
-//         4 => vec![
-//             convert_operand(instr.operand(0), ValSize::Size32),
-//             convert_operand(instr.operand(1), ValSize::Size32),
-//             convert_operand(instr.operand(2), ValSize::Size32),
-//             convert_operand(instr.operand(3), ValSize::Size32),
-//         ],
-//         _ => panic!("Too many arguments?"),
-//     }
-// }
-
-// fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
-//     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
-//     let writes_to_zf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
-//         (Some(Location::ZF), Direction::Write) => true,
-//         _ => false,
-//     });
-//     let writes_to_cf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
-//         (Some(Location::CF), Direction::Write) => true,
-//         _ => false,
-//     });
-//     let srcs: Vec<Value> = get_sources(instr);
-//     let mut stmts: Vec<Stmt> = Vec::new();
-
-//     stmts.push(Stmt::Clear(
-//         convert_operand(instr.operand(0), ValSize::Size8),
-//         srcs.clone(),
-//     ));
-//     if writes_to_zf {
-//         stmts.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), srcs.clone()));
-//     };
-//     if writes_to_cf {
-//         stmts.push(Stmt::Clear(Value::Reg(Cf, ValSize::Size8), srcs));
-//     };
-//     stmts
-// }
-
-// Generic handling for unknown opcodes.
-// fn generic_clear(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
-//     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
-//     let writes_to_zf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
-//         (Some(Location::ZF), Direction::Write) => true,
-//         _ => false,
-//     });
-//     let writes_to_cf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
-//         (Some(Location::CF), Direction::Write) => true,
-//         _ => false,
-//     });
-//     let mut stmts = vec![];
-
-//     for (loc, dir) in uses_vec {
-//         match (loc, dir) {
-//             (Some(Location::Register(reg)), Direction::Write) => {
-//                 stmts.push(Stmt::Clear(convert_reg(reg), vec![]));
-//             }
-//             _ => {}
-//         }
-//     }
-//     // TODO: dangerous
-//     if writes_to_zf {
-//         stmts.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), vec![]));
-//     }
-//     if writes_to_cf {
-//         stmts.push(Stmt::Clear(Value::Reg(Cf, ValSize::Size8), vec![]));
-//     }
-
-//     stmts
-// }
 
 // Captures all register and flag sources
 // TODO: Memory?
@@ -241,10 +161,10 @@ fn get_sources(instr: &X64Instruction) -> Vec<Value> {
                 sources.push(convert_reg(reg));
             }
             (Some(Location::ZF), Direction::Read) => {
-                sources.push(Value::Reg(Zf, ValSize::Size8));
+                sources.push(Value::Reg(Zf, Size8));
             }
             (Some(Location::CF), Direction::Read) => {
-                sources.push(Value::Reg(Cf, ValSize::Size8));
+                sources.push(Value::Reg(Cf, Size8));
             }
             _ => {}
         }
@@ -263,10 +183,10 @@ fn get_destinations(instr: &X64Instruction) -> Vec<Value> {
                 destinations.push(convert_reg(reg));
             }
             (Some(Location::ZF), Direction::Write) => {
-                destinations.push(Value::Reg(Zf, ValSize::Size8));
+                destinations.push(Value::Reg(Zf, Size8));
             }
             (Some(Location::CF), Direction::Write) => {
-                destinations.push(Value::Reg(Cf, ValSize::Size8));
+                destinations.push(Value::Reg(Cf, Size8));
             }
             _ => {}
         }
@@ -274,58 +194,22 @@ fn get_destinations(instr: &X64Instruction) -> Vec<Value> {
     return destinations;
 }
 
-// fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
-//     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
-//     let srcs: Vec<Value> = get_sources(&uses_vec);
-//     let mut stmts: Vec<Stmt> = Vec::new();
-//     stmts.push(Stmt::Clear(convert_operand(dst), sources.clone()));
-
-//     stmts.push(Stmt::Clear(
-//         convert_operand(instr.operand(0), ValSize::Size8),
-//         srcs.clone(),
-//     ));
-//     if writes_to_zf {
-//         stmts.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), srcs.clone()));
-//     };
-//     if writes_to_cf {
-//         stmts.push(Stmt::Clear(Value::Reg(Cf, ValSize::Size8), srcs));
-//     };
-//     stmts
-// }
-
 fn generic_clear(instr: &X64Instruction) -> Vec<Stmt> {
-    // let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
     let mut stmts = vec![];
     let sources = get_sources(&instr);
     let dsts = get_destinations(&instr);
-
     for dst in dsts {
         stmts.push(Stmt::Clear(dst, sources.clone()));
     }
-
-    // for (loc, dir) in uses_vec {
-    //     match (loc, dir) {
-    //         (Some(Location::Register(reg)), Direction::Write) => {
-    //             stmts.push(Stmt::Clear(convert_reg(reg), sources));
-    //         }
-    //         (Some(Location::ZF), Direction::Write) => {
-    //             stmts.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), sources));
-    //         }
-    //         (Some(Location::CF), Direction::Write) => {
-    //             stmts.push(Stmt::Clear(Value::Reg(Cf, ValSize::Size8), sources));
-    //         }
-    //         _ => {}
-    //     }
-    // }
     stmts
 }
 
 fn get_operand_size(op: &yaxpeax_x86::long_mode::Operand) -> Option<ValSize> {
     match op {
-        Operand::ImmediateI8(_) | Operand::ImmediateU8(_) => Some(ValSize::Size8),
-        Operand::ImmediateI16(_) | Operand::ImmediateU16(_) => Some(ValSize::Size16),
-        Operand::ImmediateU32(_) | Operand::ImmediateI32(_) => Some(ValSize::Size32),
-        Operand::ImmediateU64(_) | Operand::ImmediateI64(_) => Some(ValSize::Size64),
+        Operand::ImmediateI8(_) | Operand::ImmediateU8(_) => Some(Size8),
+        Operand::ImmediateI16(_) | Operand::ImmediateU16(_) => Some(Size16),
+        Operand::ImmediateU32(_) | Operand::ImmediateI32(_) => Some(Size32),
+        Operand::ImmediateU64(_) | Operand::ImmediateI64(_) => Some(Size64),
         Operand::Register(reg) => Some(get_reg_size(*reg)),
         //u32 and u64 are address sizes
         Operand::DisplacementU32(_)
@@ -347,15 +231,12 @@ fn get_operand_size(op: &yaxpeax_x86::long_mode::Operand) -> Option<ValSize> {
 
 fn set_from_flags(operand: Operand, flags: Vec<X86Regs>) -> Stmt {
     Stmt::Clear(
-        convert_operand(operand, ValSize::Size8),
-        flags
-            .iter()
-            .map(|flag| Value::Reg(*flag, ValSize::Size8))
-            .collect(),
+        convert_operand(operand, Size8),
+        flags.iter().map(|flag| Value::Reg(*flag, Size8)).collect(),
     )
 }
 
-fn unop(opcode: Unopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
+fn unop(opcode: Unopcode, instr: &X64Instruction) -> Stmt {
     let memsize = match (
         get_operand_size(&instr.operand(0)),
         get_operand_size(&instr.operand(1)),
@@ -372,11 +253,7 @@ fn unop(opcode: Unopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
     )
 }
 
-fn unop_w_memsize(
-    opcode: Unopcode,
-    instr: &yaxpeax_x86::long_mode::Instruction,
-    memsize: ValSize,
-) -> Stmt {
+fn unop_w_memsize(opcode: Unopcode, instr: &X64Instruction, memsize: ValSize) -> Stmt {
     Stmt::Unop(
         opcode,
         convert_operand(instr.operand(0), memsize),
@@ -384,7 +261,7 @@ fn unop_w_memsize(
     )
 }
 
-fn binop(opcode: Binopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
+fn binop(opcode: Binopcode, instr: &X64Instruction) -> Stmt {
     let memsize = match (
         get_operand_size(&instr.operand(0)),
         get_operand_size(&instr.operand(1)),
@@ -412,19 +289,16 @@ fn binop(opcode: Binopcode, instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt
     }
 }
 
-fn branch(instr: &yaxpeax_x86::long_mode::Instruction) -> Stmt {
-    Stmt::Branch(
-        instr.opcode(),
-        convert_operand(instr.operand(0), ValSize::Size64),
-    )
+fn branch(instr: &X64Instruction) -> Stmt {
+    Stmt::Branch(instr.opcode(), convert_operand(instr.operand(0), Size64))
 }
 
-fn call(instr: &yaxpeax_x86::long_mode::Instruction, _metadata: &VW_Metadata) -> Stmt {
-    let dst = convert_operand(instr.operand(0), ValSize::Size64);
+fn call(instr: &X64Instruction, _metadata: &VW_Metadata) -> Stmt {
+    let dst = convert_operand(instr.operand(0), Size64);
     Stmt::Call(dst)
 }
 
-fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &Addr) -> Vec<Stmt> {
+fn lea(instr: &X64Instruction, addr: &Addr) -> Vec<Stmt> {
     let dst = instr.operand(0);
     let src1 = instr.operand(1);
     if let Operand::RegDisp(reg, disp) = src1 {
@@ -435,7 +309,7 @@ fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &Addr) -> Vec<Stmt> {
             return vec![Stmt::Unop(
                 Unopcode::Mov,
                 convert_operand(dst.clone(), get_operand_size(&dst).unwrap()),
-                Value::Imm(ImmType::Signed, ValSize::Size64, target),
+                Value::Imm(ImmType::Signed, Size64, target),
             )];
         }
     }
@@ -451,21 +325,17 @@ fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &Addr) -> Vec<Stmt> {
     }
 }
 
-pub fn lift(
-    instr: &yaxpeax_x86::long_mode::Instruction,
-    addr: &Addr,
-    metadata: &VW_Metadata,
-) -> Vec<Stmt> {
+pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VW_Metadata) -> Vec<Stmt> {
     log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
     let mut instrs = Vec::new();
     match instr.opcode() {
-        Opcode::MOV => instrs.push(unop_w_memsize(Unopcode::Mov, instr, ValSize::Size32)),
-        Opcode::MOVQ => instrs.push(unop_w_memsize(Unopcode::Mov, instr, ValSize::Size64)),
+        Opcode::MOV => instrs.push(unop_w_memsize(Unopcode::Mov, instr, Size32)),
+        Opcode::MOVQ => instrs.push(unop_w_memsize(Unopcode::Mov, instr, Size64)),
         Opcode::MOVZX_b |
         Opcode::MOVZX_w => instrs.push(unop(Unopcode::Mov, instr)),
 
-        Opcode::MOVD  => instrs.push(unop_w_memsize(Unopcode::Mov, instr, ValSize::Size32)),
-        Opcode::MOVSD => instrs.push(unop_w_memsize(Unopcode::Mov, instr, ValSize::Size64)),
+        Opcode::MOVD  => instrs.push(unop_w_memsize(Unopcode::Mov, instr, Size32)),
+        Opcode::MOVSD => instrs.push(unop_w_memsize(Unopcode::Mov, instr, Size64)),
 
         Opcode::MOVSX |
         Opcode::MOVSX_w |
@@ -486,13 +356,13 @@ pub fn lift(
             };
             instrs.push(Stmt::Binop(
                 Binopcode::Test,
-                Value::Reg(Zf, ValSize::Size8),
+                Value::Reg(Zf, Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
             ));
             instrs.push(Stmt::Binop(
                 Binopcode::Test,
-                Value::Reg(Cf, ValSize::Size8),
+                Value::Reg(Cf, Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
             ));
@@ -512,31 +382,31 @@ pub fn lift(
             };
             instrs.push(Stmt::Binop(
                 Binopcode::Cmp,
-                Value::Reg(Zf, ValSize::Size8),
+                Value::Reg(Zf, Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
             ));
             instrs.push(Stmt::Binop(
                 Binopcode::Cmp,
-                Value::Reg(Cf, ValSize::Size8),
+                Value::Reg(Cf, Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
             ));
             instrs.push(Stmt::Binop(
                 Binopcode::Cmp,
-                Value::Reg(Pf, ValSize::Size8),
+                Value::Reg(Pf, Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
             ));
             instrs.push(Stmt::Binop(
                 Binopcode::Cmp,
-                Value::Reg(Sf, ValSize::Size8),
+                Value::Reg(Sf, Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
             ));
             instrs.push(Stmt::Binop(
                 Binopcode::Cmp,
-                Value::Reg(Of, ValSize::Size8),
+                Value::Reg(Of, Size8),
                 convert_operand(instr.operand(0), memsize),
                 convert_operand(instr.operand(1), memsize),
             ));
@@ -545,28 +415,28 @@ pub fn lift(
         Opcode::AND => {
             instrs.push(binop(Binopcode::And, instr));
             instrs.push(Stmt::Clear(
-                Value::Reg(Zf, ValSize::Size8),
+                Value::Reg(Zf, Size8),
                 get_sources(instr),
             ))
         }
         Opcode::ADD => {
             instrs.push(binop(Binopcode::Add, instr));
             instrs.push(Stmt::Clear(
-                Value::Reg(Zf, ValSize::Size8),
+                Value::Reg(Zf, Size8),
                 get_sources(instr),
             ))
         }
         Opcode::SUB => {
             instrs.push(binop(Binopcode::Sub, instr));
             instrs.push(Stmt::Clear(
-                Value::Reg(Zf, ValSize::Size8),
+                Value::Reg(Zf, Size8),
                 get_sources(instr),
             ))
         }
         Opcode::SHL => {
             instrs.push(binop(Binopcode::Shl, instr));
             instrs.push(Stmt::Clear(
-                Value::Reg(Zf, ValSize::Size8),
+                Value::Reg(Zf, Size8),
                 get_sources(instr),
             ))
         }
@@ -606,17 +476,17 @@ pub fn lift(
             assert_eq!(width, 8); //8 bytes
             instrs.push(Stmt::Binop(
                 Binopcode::Sub,
-                Value::Reg(Rsp, ValSize::Size64),
-                Value::Reg(Rsp, ValSize::Size64),
+                Value::Reg(Rsp, Size64),
+                Value::Reg(Rsp, Size64),
                 mk_value_i64(width.into()),
             ));
             instrs.push(Stmt::Unop(
                 Unopcode::Mov,
                 Value::Mem(
                     valsize((width * 8) as u32),
-                    MemArgs::Mem1Arg(MemArg::Reg(Rsp, ValSize::Size64)),
+                    MemArgs::Mem1Arg(MemArg::Reg(Rsp, Size64)),
                 ),
-                convert_operand(instr.operand(0), ValSize::Size64),
+                convert_operand(instr.operand(0), Size64),
             ))
         }
         Opcode::POP => {
@@ -624,16 +494,16 @@ pub fn lift(
             assert_eq!(width, 8); //8 bytes
             instrs.push(Stmt::Unop(
                 Unopcode::Mov,
-                convert_operand(instr.operand(0), ValSize::Size64),
+                convert_operand(instr.operand(0), Size64),
                 Value::Mem(
                     valsize((width * 8) as u32),
-                    MemArgs::Mem1Arg(MemArg::Reg(Rsp, ValSize::Size64)),
+                    MemArgs::Mem1Arg(MemArg::Reg(Rsp, Size64)),
                 ),
             ));
             instrs.push(Stmt::Binop(
                 Binopcode::Add,
-                Value::Reg(Rsp, ValSize::Size64),
-                Value::Reg(Rsp, ValSize::Size64),
+                Value::Reg(Rsp, Size64),
+                Value::Reg(Rsp, Size64),
                 mk_value_i64(width.into()),
             ))
         }
@@ -641,10 +511,10 @@ pub fn lift(
         Opcode::NOP | Opcode::FILD | Opcode::STD | Opcode::CLD | Opcode::STI => (),
         Opcode::IDIV | Opcode::DIV => {
             // instrs.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), vec![]));
-            instrs.push(Stmt::Clear(Value::Reg(Rax, ValSize::Size64), vec![])); // clear RAX
-            instrs.push(Stmt::Clear(Value::Reg(Rdx, ValSize::Size64), vec![])); // clear RDX
+            instrs.push(Stmt::Clear(Value::Reg(Rax, Size64), vec![])); // clear RAX
+            instrs.push(Stmt::Clear(Value::Reg(Rdx, Size64), vec![])); // clear RDX
             instrs.push(Stmt::Clear(
-                Value::Reg(Zf, ValSize::Size8),
+                Value::Reg(Zf, Size8),
                 get_sources(instr),
             ));
         }
@@ -656,11 +526,11 @@ pub fn lift(
             if instr.operand_count() == 2 && instr.operand(0) == instr.operand(1) {
                 instrs.push(Stmt::Unop(
                     Unopcode::Mov,
-                    convert_operand(instr.operand(0), ValSize::Size64),
-                    Value::Imm(ImmType::Signed, ValSize::Size64, 0),
+                    convert_operand(instr.operand(0), Size64),
+                    Value::Imm(ImmType::Signed, Size64, 0),
                 ));
                 instrs.push(Stmt::Clear(
-                    Value::Reg(Zf, ValSize::Size8),
+                    Value::Reg(Zf, Size8),
                     get_sources(instr),
                 ));
             } else {
@@ -703,7 +573,7 @@ pub fn lift(
 
         Opcode::BSF => {
             instrs.push(Stmt::Clear(
-                Value::Reg(Zf, ValSize::Size8),
+                Value::Reg(Zf, Size8),
                 vec![convert_operand(instr.operand(1), get_operand_size(&instr.operand(1)).unwrap())],
             ));
             instrs.push(Stmt::Clear(
@@ -716,7 +586,7 @@ pub fn lift(
         }
         Opcode::LZCNT => {
             instrs.push(Stmt::Clear(
-                Value::Reg(Zf, ValSize::Size8),
+                Value::Reg(Zf, Size8),
                 vec![convert_operand(instr.operand(1), get_operand_size(&instr.operand(1)).unwrap())],
             ));
             instrs.push(Stmt::Clear(
@@ -729,7 +599,7 @@ pub fn lift(
 
         // TODO: is this right?
         Opcode::MOVSS => {
-            instrs.push(unop_w_memsize(Unopcode::Mov, instr, ValSize::Size32));
+            instrs.push(unop_w_memsize(Unopcode::Mov, instr, Size32));
         }
         Opcode::MOVAPS => {
             instrs.push(unop(Unopcode::Mov, instr));
@@ -910,9 +780,7 @@ fn parse_probestack_arg<'a>(
     if move_instr.len() != 1 {
         return Err(ParseErr::Error(instrs));
     }
-    if let Stmt::Unop(Unopcode::Mov, Value::Reg(Rax, ValSize::Size32), Value::Imm(_, _, x)) =
-        move_instr[0]
-    {
+    if let Stmt::Unop(Unopcode::Mov, Value::Reg(Rax, Size32), Value::Imm(_, _, x)) = move_instr[0] {
         return Ok((rest, (x as u64, (addr, move_instr))));
     }
     Err(ParseErr::Error(instrs))
@@ -942,12 +810,8 @@ fn parse_probestack_suffix<'a>(
     if sub_instr.len() != 1 {
         return Err(ParseErr::Error(instrs));
     }
-    if let Stmt::Binop(
-        Binopcode::Sub,
-        Value::Reg(Rsp, ValSize::Size64),
-        Value::Reg(Rax, ValSize::Size64),
-        _,
-    ) = sub_instr[0]
+    if let Stmt::Binop(Binopcode::Sub, Value::Reg(Rsp, Size64), Value::Reg(Rax, Size64), _) =
+        sub_instr[0]
     {
         return Ok((rest, (addr, sub_instr)));
     }
@@ -1021,10 +885,7 @@ fn parse_bsf_cmove<'a>(instrs: BlockInstrs<'a>, metadata: &VW_Metadata) -> IResu
     let (rest, (addr, bsf_dst, bsf_src)) = parse_bsf(instrs)?;
     let (rest, (_addr, mov_src)) = parse_cmovez(rest, &bsf_dst)?;
     let mut stmts = Vec::new();
-    stmts.push(Stmt::Clear(
-        Value::Reg(Zf, ValSize::Size8),
-        vec![bsf_src.clone()],
-    ));
+    stmts.push(Stmt::Clear(Value::Reg(Zf, Size8), vec![bsf_src.clone()]));
     stmts.push(Stmt::Clear(bsf_dst, vec![bsf_src, mov_src]));
     Ok((rest, (addr, stmts)))
 }
@@ -1076,7 +937,7 @@ pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &VW_Metadata) -> I
     for block_addr in g.nodes() {
         let block = cfg.get_block(block_addr);
 
-        let instrs_vec: Vec<(u64, yaxpeax_x86::long_mode::Instruction)> = program
+        let instrs_vec: Vec<(u64, X64Instruction)> = program
             .instructions_spanning(<AMD64 as Arch>::Decoder::default(), block.start, block.end)
             .collect();
         let instrs = instrs_vec.as_slice();
@@ -1099,4 +960,4 @@ enum ParseErr<E> {
     Failure(E), // unrecoverable
 }
 
-type BlockInstrs<'a> = &'a [(Addr, yaxpeax_x86::long_mode::Instruction)];
+type BlockInstrs<'a> = &'a [(Addr, X64Instruction)];
