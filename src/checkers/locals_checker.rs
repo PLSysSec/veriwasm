@@ -42,11 +42,12 @@ impl LocalsChecker<'_> {
             match arg {
                 (VarIndex::Stack(offset), size) => {
                     let bytesize = size.into_bytes();
-                    let v = state.stack.get(i64::from(*offset), bytesize);
+                    // -8 is because the return address has not been pushed
+                    let v = state.stack.get(i64::from(*offset - 8), bytesize);
                     if v == Uninit {
                         println!(
                             "found arg that was not initialized: stack[{:?}] sig: {:?}",
-                            offset, sig
+                            offset - 8, sig
                         );
                         return false;
                     }
@@ -183,6 +184,7 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
             println!("----------------------------------------");
             println!("{}", state);
             println!("Darn: 0x{:x?}: {:?}", loc_idx.addr, stmt);
+            // println!("", self.irmap.get(loc_idx));
             // println!("{:?}", self.analyzer.fun_type);
             println!("----------------------------------------")
         }

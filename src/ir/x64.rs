@@ -10,8 +10,7 @@ use yaxpeax_core::arch::InstructionSpan;
 use yaxpeax_core::data::{Direction, ValueLocations};
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_x86::long_mode::Opcode::*;
-use yaxpeax_x86::long_mode::{register_class, Arch as AMD64, Opcode, Operand, RegSpec};
-
+use yaxpeax_x86::long_mode::{register_class, Arch as AMD64, Opcode, Operand, RegSpec, Instruction as X64Instruction};
 use X86Regs::*;
 
 pub fn valsize(num: u32) -> ValSize {
@@ -148,84 +147,174 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
     }
 }
 
-fn get_sources(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Value> {
-    match instr.operand_count() {
-        0 => vec![],
-        1 => vec![convert_operand(instr.operand(0), ValSize::Size32)],
-        2 => vec![
-            convert_operand(instr.operand(0), ValSize::Size32),
-            convert_operand(instr.operand(1), ValSize::Size32),
-        ],
-        3 => vec![
-            convert_operand(instr.operand(0), ValSize::Size32),
-            convert_operand(instr.operand(1), ValSize::Size32),
-            convert_operand(instr.operand(2), ValSize::Size32),
-        ],
-        4 => vec![
-            convert_operand(instr.operand(0), ValSize::Size32),
-            convert_operand(instr.operand(1), ValSize::Size32),
-            convert_operand(instr.operand(2), ValSize::Size32),
-            convert_operand(instr.operand(3), ValSize::Size32),
-        ],
-        _ => panic!("Too many arguments?"),
-    }
-}
+// fn get_sources(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Value> {
+//     match instr.operand_count() {
+//         0 => vec![],
+//         1 => vec![convert_operand(instr.operand(0), ValSize::Size32)],
+//         2 => vec![
+//             convert_operand(instr.operand(0), ValSize::Size32),
+//             convert_operand(instr.operand(1), ValSize::Size32),
+//         ],
+//         3 => vec![
+//             convert_operand(instr.operand(0), ValSize::Size32),
+//             convert_operand(instr.operand(1), ValSize::Size32),
+//             convert_operand(instr.operand(2), ValSize::Size32),
+//         ],
+//         4 => vec![
+//             convert_operand(instr.operand(0), ValSize::Size32),
+//             convert_operand(instr.operand(1), ValSize::Size32),
+//             convert_operand(instr.operand(2), ValSize::Size32),
+//             convert_operand(instr.operand(3), ValSize::Size32),
+//         ],
+//         _ => panic!("Too many arguments?"),
+//     }
+// }
 
-fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
-    let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
-    let writes_to_zf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
-        (Some(Location::ZF), Direction::Write) => true,
-        _ => false,
-    });
-    let writes_to_cf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
-        (Some(Location::CF), Direction::Write) => true,
-        _ => false,
-    });
-    let srcs: Vec<Value> = get_sources(instr);
-    let mut stmts: Vec<Stmt> = Vec::new();
+// fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
+//     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
+//     let writes_to_zf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
+//         (Some(Location::ZF), Direction::Write) => true,
+//         _ => false,
+//     });
+//     let writes_to_cf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
+//         (Some(Location::CF), Direction::Write) => true,
+//         _ => false,
+//     });
+//     let srcs: Vec<Value> = get_sources(instr);
+//     let mut stmts: Vec<Stmt> = Vec::new();
 
-    stmts.push(Stmt::Clear(
-        convert_operand(instr.operand(0), ValSize::Size8),
-        srcs.clone(),
-    ));
-    if writes_to_zf {
-        stmts.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), srcs.clone()));
-    };
-    if writes_to_cf {
-        stmts.push(Stmt::Clear(Value::Reg(Cf, ValSize::Size8), srcs));
-    };
-    stmts
-}
+//     stmts.push(Stmt::Clear(
+//         convert_operand(instr.operand(0), ValSize::Size8),
+//         srcs.clone(),
+//     ));
+//     if writes_to_zf {
+//         stmts.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), srcs.clone()));
+//     };
+//     if writes_to_cf {
+//         stmts.push(Stmt::Clear(Value::Reg(Cf, ValSize::Size8), srcs));
+//     };
+//     stmts
+// }
 
 // Generic handling for unknown opcodes.
-fn generic_clear(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
-    let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
-    let writes_to_zf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
-        (Some(Location::ZF), Direction::Write) => true,
-        _ => false,
-    });
-    let writes_to_cf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
-        (Some(Location::CF), Direction::Write) => true,
-        _ => false,
-    });
-    let mut stmts = vec![];
+// fn generic_clear(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
+//     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
+//     let writes_to_zf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
+//         (Some(Location::ZF), Direction::Write) => true,
+//         _ => false,
+//     });
+//     let writes_to_cf = uses_vec.iter().any(|(loc, dir)| match (loc, dir) {
+//         (Some(Location::CF), Direction::Write) => true,
+//         _ => false,
+//     });
+//     let mut stmts = vec![];
 
+//     for (loc, dir) in uses_vec {
+//         match (loc, dir) {
+//             (Some(Location::Register(reg)), Direction::Write) => {
+//                 stmts.push(Stmt::Clear(convert_reg(reg), vec![]));
+//             }
+//             _ => {}
+//         }
+//     }
+//     // TODO: dangerous
+//     if writes_to_zf {
+//         stmts.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), vec![]));
+//     }
+//     if writes_to_cf {
+//         stmts.push(Stmt::Clear(Value::Reg(Cf, ValSize::Size8), vec![]));
+//     }
+
+//     stmts
+// }
+
+// Captures all register and flag sources 
+// TODO: Memory?
+fn get_sources(instr: &X64Instruction) -> Vec<Value> {
+    let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
+    let mut sources = Vec::new();
     for (loc, dir) in uses_vec {
         match (loc, dir) {
-            (Some(Location::Register(reg)), Direction::Write) => {
-                stmts.push(Stmt::Clear(convert_reg(reg), vec![]));
+            (Some(Location::Register(reg)), Direction::Read) => {
+                sources.push(convert_reg(reg));
+            }
+            (Some(Location::ZF), Direction::Read) => {
+                sources.push(Value::Reg(Zf, ValSize::Size8));
+            }
+            (Some(Location::CF), Direction::Read) => {
+                sources.push(Value::Reg(Cf, ValSize::Size8));
             }
             _ => {}
         }
     }
-    // TODO: dangerous
-    if writes_to_zf {
-        stmts.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), vec![]));
+    return sources;
+}
+
+// Captures all register and flag destinations
+// TODO: Memory?
+fn get_destinations(instr: &X64Instruction) -> Vec<Value> {
+    let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
+    let mut destinations = Vec::new();
+    for (loc, dir) in uses_vec {
+        match (loc, dir) {
+            (Some(Location::Register(reg)), Direction::Write) => {
+                destinations.push(convert_reg(reg));
+            }
+            (Some(Location::ZF), Direction::Write) => {
+                destinations.push(Value::Reg(Zf, ValSize::Size8));
+            }
+            (Some(Location::CF), Direction::Write) => {
+                destinations.push(Value::Reg(Cf, ValSize::Size8));
+            }
+            _ => {}
+        }
     }
-    if writes_to_cf {
-        stmts.push(Stmt::Clear(Value::Reg(Cf, ValSize::Size8), vec![]));
+    return destinations;
+}
+
+// fn clear_dst(instr: &yaxpeax_x86::long_mode::Instruction) -> Vec<Stmt> {
+//     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
+//     let srcs: Vec<Value> = get_sources(&uses_vec);
+//     let mut stmts: Vec<Stmt> = Vec::new();
+//     stmts.push(Stmt::Clear(convert_operand(dst), sources.clone()));
+
+//     stmts.push(Stmt::Clear(
+//         convert_operand(instr.operand(0), ValSize::Size8),
+//         srcs.clone(),
+//     ));
+//     if writes_to_zf {
+//         stmts.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), srcs.clone()));
+//     };
+//     if writes_to_cf {
+//         stmts.push(Stmt::Clear(Value::Reg(Cf, ValSize::Size8), srcs));
+//     };
+//     stmts
+// }
+
+fn generic_clear(instr: &X64Instruction) -> Vec<Stmt> {
+    // let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
+    let mut stmts = vec![];
+    let sources = get_sources(&instr);
+    let dsts = get_destinations(&instr);
+
+    for dst in dsts{
+        stmts.push(Stmt::Clear(dst, sources.clone()));
     }
 
+    // for (loc, dir) in uses_vec {
+    //     match (loc, dir) {
+    //         (Some(Location::Register(reg)), Direction::Write) => {
+    //             stmts.push(Stmt::Clear(convert_reg(reg), sources));
+    //         }
+    //         (Some(Location::ZF), Direction::Write) => {
+    //             stmts.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), sources));
+    //         }
+    //         (Some(Location::CF), Direction::Write) => {
+    //             stmts.push(Stmt::Clear(Value::Reg(Cf, ValSize::Size8), sources));
+    //         }
+    //         _ => {}
+    //     }
+    // }
     stmts
 }
 
@@ -352,9 +441,9 @@ fn lea(instr: &yaxpeax_x86::long_mode::Instruction, addr: &Addr) -> Vec<Stmt> {
         Value::Mem(_, memargs) => match memargs {
             MemArgs::Mem1Arg(arg) => match arg {
                 MemArg::Imm(_, _, _val) => vec![unop(Unopcode::Mov, instr)],
-                _ => clear_dst(instr),
+                _ => generic_clear(instr),//clear_dst(instr),
             },
-            _ => clear_dst(instr),
+            _ => generic_clear(instr),//clear_dst(instr),
         },
         _ => panic!("Illegal lea"),
     }
@@ -368,8 +457,8 @@ pub fn lift(
     log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
     let mut instrs = Vec::new();
     match instr.opcode() {
-        Opcode::MOV |
-        Opcode::MOVQ |
+        Opcode::MOV => instrs.push(unop_w_memsize(Unopcode::Mov, instr, ValSize::Size32)),
+        Opcode::MOVQ => instrs.push(unop_w_memsize(Unopcode::Mov, instr, ValSize::Size64)),
         Opcode::MOVZX_b |
         Opcode::MOVZX_w => instrs.push(unop(Unopcode::Mov, instr)),
 
@@ -573,16 +662,17 @@ pub fn lift(
                     get_sources(instr),
                 ));
             } else {
-                instrs.extend(clear_dst(instr))
+                instrs.extend(generic_clear(instr));
+                // instrs.extend(clear_dst(instr))
             }
         }
 
-        Opcode::CDQ | Opcode::CDQE => {
-            // clear rax
-            instrs.push(Stmt::Clear(Value::Reg(Rax, ValSize::Size64), vec![]));
-            // clear rdx
-            instrs.push(Stmt::Clear(Value::Reg(Rdx, ValSize::Size64), vec![]));
-        }
+        // Opcode::CDQ | Opcode::CDQE => {
+        //     // clear rax
+        //     instrs.push(Stmt::Clear(Value::Reg(Rax, ValSize::Size64), vec![]));
+        //     // clear rdx
+        //     instrs.push(Stmt::Clear(Value::Reg(Rdx, ValSize::Size64), vec![]));
+        // }
 
         SETG
         | SETLE => instrs.push(set_from_flags(instr.operand(0), vec![Zf, Sf, Of])),
@@ -649,13 +739,6 @@ pub fn lift(
                     convert_operand(instr.operand(1), get_operand_size(&instr.operand(1)).unwrap()),
                 ],
             ));
-        }
-
-
-        Opcode::CVTTSD2SI => {
-            let new = clear_dst(instr);
-            println!("cvtt 0x{:x?}: {:?} {:?}\n\t{:?}\n\t{:?}\n\t{}", addr, convert_operand(instr.operand(0), ValSize::Size64), convert_operand(instr.operand(1), ValSize::Size64), instr, new, instr);
-            instrs.extend(clear_dst(instr));
         }
 
         Opcode::OR
@@ -810,7 +893,7 @@ pub fn lift(
         | Opcode::SBB
         | Opcode::BSR
         | Opcode::ANDPD
-        | Opcode::ORPD => instrs.extend(clear_dst(instr)),
+        | Opcode::ORPD => instrs.extend(generic_clear(instr)),/*instrs.extend(clear_dst(instr)),*/
 
         _ => unimplemented!(),/*instrs.extend(generic_clear(instr)),*/
     };

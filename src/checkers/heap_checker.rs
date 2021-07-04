@@ -327,7 +327,7 @@ impl HeapChecker<'_> {
 pub fn memarg_repr(state: &HeapLattice, memarg: &MemArg) -> String {
     match memarg {
         MemArg::Reg(regnum, size) => {
-            format!("r{:?}: {:?}", regnum, state.regs.get_reg(*regnum, *size).v)
+            format!("{:?}: {:?}", regnum, state.regs.get_reg(*regnum, *size).v)
         }
         MemArg::Imm(_, _, x) => format!("{:?}", x),
     }
