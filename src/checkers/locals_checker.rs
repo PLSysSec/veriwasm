@@ -44,7 +44,7 @@ impl LocalsChecker<'_> {
                     let bytesize = size.into_bytes();
                     // -8 is because the return address has not been pushed
                     let v = state.stack.get(i64::from(*offset - 8), bytesize);
-                    if v == Uninit {
+                    if v != Init {
                         println!(
                             "found arg that was not initialized: stack[{:?}] sig: {:?}",
                             offset - 8,
@@ -55,7 +55,7 @@ impl LocalsChecker<'_> {
                 }
                 (VarIndex::Reg(reg), size) => {
                     let v = state.regs.get_reg(*reg, *size);
-                    if v == Uninit {
+                    if v != Init {
                         println!(
                             "found arg that was not initialized: {:?} sig: {:?}",
                             reg, sig
@@ -74,7 +74,7 @@ impl LocalsChecker<'_> {
             false
         } else {
             let (r, sz) = ret_ty.unwrap();
-            state.regs.get_reg(r, sz) == Uninit
+            state.regs.get_reg(r, sz) != Init
         }
     }
 
@@ -126,19 +126,19 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
         let error = match stmt {
             // 1. No writes to registers or memory of uninit values (overly strict, but correct)
             Stmt::Clear(dst, srcs) => {
-                (self.analyzer.aeval_vals(state, srcs, loc_idx) == Uninit) && is_uninit_illegal(dst)
+                (self.analyzer.aeval_vals(state, srcs, loc_idx) != Init) && is_uninit_illegal(dst)
             }
             Stmt::Unop(_, dst, src) => {
-                (self.analyzer.aeval_val(state, src, loc_idx) == Uninit) && is_uninit_illegal(dst)
+                (self.analyzer.aeval_val(state, src, loc_idx) != Init) && is_uninit_illegal(dst)
             }
             Stmt::Binop(opcode, dst, src1, src2) => {
                 self.analyzer
                     .aeval_vals(state, &vec![src1.clone(), src2.clone()], loc_idx)
-                    == Uninit
+                    != Init
                     && is_uninit_illegal(dst)
             }
             // 2. No branch on uninit allowed
-            Stmt::Branch(br_type, val) => self.analyzer.aeval_val(state, val, loc_idx) == Uninit,
+            Stmt::Branch(br_type, val) => self.analyzer.aeval_val(state, val, loc_idx) != Init,
             // 3. check that return values are initialized (if the function has any)
             // 3.1 also check that all caller saved regs have been restored
             Stmt::Ret => self.ret_is_uninitialized(state) || self.regs_not_restored(state),
