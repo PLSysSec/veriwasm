@@ -66,7 +66,7 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
         self.analyzer.aexec(state, ir_stmt, loc)
     }
 
-    fn check_statement(&self, state: &HeapLattice, ir_stmt: &Stmt, _loc_idx: &LocIdx) -> bool {
+    fn check_statement(&self, state: &HeapLattice, ir_stmt: &Stmt, loc_idx: &LocIdx) -> bool {
         match ir_stmt {
             //1. Check that at each call rdi = HeapBase
             Stmt::Call(_) => match state.regs.get_reg(Rdi, Size64).v {
@@ -78,32 +78,32 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
             },
             //2. Check that all load and store are safe
             Stmt::Unop(_, dst, src) => {
-                if is_mem_access(dst) && !self.check_mem_access(state, dst) {
+                if is_mem_access(dst) && !self.check_mem_access(state, dst, loc_idx) {
                     return false;
                 }
                 //stack read: probestack <= stackgrowth + c < 8K
-                if is_mem_access(src) && !self.check_mem_access(state, src) {
+                if is_mem_access(src) && !self.check_mem_access(state, src, loc_idx) {
                     return false;
                 }
             }
 
             Stmt::Binop(_, dst, src1, src2) => {
-                if is_mem_access(dst) && !self.check_mem_access(state, dst) {
+                if is_mem_access(dst) && !self.check_mem_access(state, dst, loc_idx) {
                     return false;
                 }
-                if is_mem_access(src1) && !self.check_mem_access(state, src1) {
+                if is_mem_access(src1) && !self.check_mem_access(state, src1, loc_idx) {
                     return false;
                 }
-                if is_mem_access(src2) && !self.check_mem_access(state, src2) {
+                if is_mem_access(src2) && !self.check_mem_access(state, src2, loc_idx) {
                     return false;
                 }
             }
             Stmt::Clear(dst, srcs) => {
-                if is_mem_access(dst) && !self.check_mem_access(state, dst) {
+                if is_mem_access(dst) && !self.check_mem_access(state, dst, loc_idx) {
                     return false;
                 }
                 for src in srcs {
-                    if is_mem_access(src) && !self.check_mem_access(state, src) {
+                    if is_mem_access(src) && !self.check_mem_access(state, src, loc_idx) {
                         return false;
                     }
                 }
@@ -284,7 +284,7 @@ impl HeapChecker<'_> {
         false
     }
 
-    fn check_mem_access(&self, state: &HeapLattice, access: &Value) -> bool {
+    fn check_mem_access(&self, state: &HeapLattice, access: &Value, loc_idx: &LocIdx) -> bool {
         // Case 1: its a stack access
         if is_stack_access(access) {
             return true;
@@ -318,7 +318,7 @@ impl HeapChecker<'_> {
             return true;
         };
         // Case 8: its unknown
-        log::debug!("None of the memory accesses!");
+        log::debug!("None of the memory accesses at 0x{:x}", loc_idx.addr);
         print_mem_access(state, access);
         return false;
     }
