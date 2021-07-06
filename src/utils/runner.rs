@@ -156,7 +156,6 @@ pub fn run(config: Config) {
     let (x86_64_data, func_addrs, plt, mut all_addrs) = get_data(&program, &config.executable_type);
     let plt_funcs = get_plt_funcs(&config.module_path);
     all_addrs.extend(plt_funcs);
-    println!("plt: {:?}", plt);
 
     let mut func_counter = 0;
     let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64)> = vec![];
