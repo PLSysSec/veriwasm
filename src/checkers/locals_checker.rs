@@ -142,41 +142,43 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
             // 3.1 also check that all caller saved regs have been restored
             Stmt::Ret => self.ret_is_uninitialized(state) || self.regs_not_restored(state),
             // 4. TODO: check that all function arguments are initialized (if the called function has any)
-            // 4.1 Check direct calls
-            Stmt::Call(Value::Imm(_, _, dst)) => {
-                let target = (*dst + (loc_idx.addr as i64) + 5) as u64;
-                let name = self.analyzer.name_addr_map.get(&target);
-                let signature = name
-                    .and_then(|name| self.analyzer.symbol_table.indexes.get(name))
-                    .and_then(|sig_index| {
-                        self.analyzer
-                            .symbol_table
-                            .signatures
-                            .get(*sig_index as usize)
-                    });
-                if let Some(ty_sig) = signature.map(|sig| to_system_v(sig)) {
+            Stmt::Call(val) => {
+                let signature = match val {
+                    // 4.1 Check direct calls
+                    Value::Imm(_, _, dst) => {
+                        let target = (*dst + (loc_idx.addr as i64) + 5) as u64;
+                        let name = self.analyzer.name_addr_map.get(&target);
+                        name
+                            .and_then(|name| self.analyzer.symbol_table.indexes.get(name))
+                            .and_then(|sig_index| {
+                                self.analyzer
+                                    .symbol_table
+                                    .signatures
+                                    .get(*sig_index as usize)
+                            })
+                    },
+                    // 4.2 Check indirect calls
+                    Value::Reg(_, _) => {
+                        self
+                            .analyzer
+                            .call_analyzer
+                            .get_fn_ptr_type(&self.analyzer.call_analysis, loc_idx, val)
+                            .and_then(|fn_ptr_index| {
+                                self.analyzer
+                                    .symbol_table
+                                    .signatures
+                                    .get(fn_ptr_index as usize)
+                            })
+                    },
+                    _ => panic!("bad call value: {:?}", val)
+                };
+                let type_check_result = if let Some(ty_sig) = signature.map(|sig| to_system_v(sig)) {
                     !self.all_args_are_init(state, ty_sig)
                 } else {
                     true
-                }
-            }
-            // 4.2 Check indirect calls
-            Stmt::Call(val @ Value::Reg(_, _)) => {
-                let fn_ptr_type = self
-                    .analyzer
-                    .call_analyzer
-                    .get_fn_ptr_type(&self.analyzer.call_analysis, loc_idx, val)
-                    .and_then(|fn_ptr_index| {
-                        self.analyzer
-                            .symbol_table
-                            .signatures
-                            .get(fn_ptr_index as usize)
-                    });
-                if let Some(ty_sig) = fn_ptr_type.map(|sig| to_system_v(sig)) {
-                    !self.all_args_are_init(state, ty_sig)
-                } else {
-                    true
-                }
+                };
+                // checks that call targets aren't uninitialized values
+                type_check_result && self.analyzer.aeval_val(state, val, loc_idx) != Init
             }
             _ => false,
         };
