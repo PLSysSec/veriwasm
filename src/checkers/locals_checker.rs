@@ -189,6 +189,6 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
             // println!("{:?}", self.analyzer.fun_type);
             println!("----------------------------------------")
         }
-        true
+        !error
     }
 }
