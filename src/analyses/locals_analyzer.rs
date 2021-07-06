@@ -76,12 +76,12 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
             }
         }
         // rbp, rbx, and r12-r15 are the callee-saved registers
-        lattice.regs.set_reg(Rbp, Size64, InitialRegVal(Rbp));
-        lattice.regs.set_reg(Rbx, Size64, InitialRegVal(Rbx));
-        lattice.regs.set_reg(R12, Size64, InitialRegVal(R12));
-        lattice.regs.set_reg(R13, Size64, InitialRegVal(R13));
-        lattice.regs.set_reg(R14, Size64, InitialRegVal(R14));
-        lattice.regs.set_reg(R15, Size64, InitialRegVal(R15));
+        lattice.regs.set_reg(Rbp, Size64, UninitCalleeReg(Rbp));
+        lattice.regs.set_reg(Rbx, Size64, UninitCalleeReg(Rbx));
+        lattice.regs.set_reg(R12, Size64, UninitCalleeReg(R12));
+        lattice.regs.set_reg(R13, Size64, UninitCalleeReg(R13));
+        lattice.regs.set_reg(R14, Size64, UninitCalleeReg(R14));
+        lattice.regs.set_reg(R15, Size64, UninitCalleeReg(R15));
         lattice
     }
 

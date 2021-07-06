@@ -12,7 +12,7 @@ use X86Regs::*;
 pub enum SlotVal {
     Uninit,
     Init,
-    InitialRegVal(X86Regs),
+    UninitCalleeReg(X86Regs),
 }
 
 impl PartialOrd for SlotVal {
@@ -24,7 +24,7 @@ impl PartialOrd for SlotVal {
             (Init, Init) => Some(Equal),
             (Init, _) => Some(Greater),
             (_, Init) => Some(Less),
-            (InitialRegVal(r1), InitialRegVal(r2)) => {
+            (UninitCalleeReg(r1), UninitCalleeReg(r2)) => {
                 if r1 == r1 {
                     Some(Equal)
                 } else {
@@ -49,11 +49,11 @@ impl Lattice for SlotVal {
             (Init, Init) => Init,
             (Uninit, _) => Uninit,
             (_, Uninit) => Uninit,
-            (Init, InitialRegVal(_)) => Uninit,
-            (InitialRegVal(_), Init) => Uninit,
-            (InitialRegVal(r1), InitialRegVal(r2)) => {
+            (Init, UninitCalleeReg(_)) => Uninit,
+            (UninitCalleeReg(_), Init) => Uninit,
+            (UninitCalleeReg(r1), UninitCalleeReg(r2)) => {
                 if r1 == r2 {
-                    InitialRegVal(*r1)
+                    UninitCalleeReg(*r1)
                 } else {
                     Uninit
                 }

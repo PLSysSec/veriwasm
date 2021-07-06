@@ -5,6 +5,7 @@ use crate::analyses::locals_analyzer::LocalsAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
 use crate::ir::types::{FunType, IRMap, MemArgs, Stmt, Value, VarIndex, X86Regs};
+use crate::ir::utils::is_stack_access;
 use crate::lattices::localslattice::{LocalsLattice, SlotVal};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::loaders::utils::to_system_v;
@@ -25,12 +26,10 @@ pub fn check_locals(
     LocalsChecker { irmap, analyzer }.check(result)
 }
 
-fn is_uninit_illegal(v: &Value) -> bool {
+fn is_noninit_illegal(v: &Value) -> bool {
     match v {
-        Value::Mem(memsize, memargs) => true,
-        Value::Reg(reg_num, _) => {
-            *reg_num != Rsp && *reg_num != Rbp && !(X86Regs::is_flag(*reg_num))
-        }
+        Value::Mem(memsize, memargs) => !is_stack_access(v),
+        Value::Reg(reg_num, _) => false,
         Value::Imm(_, _, _) => false, //imm are always "init"
         Value::RIPConst => false,
     }
@@ -88,7 +87,7 @@ impl LocalsChecker<'_> {
                 | (VarIndex::Reg(reg @ R14), size)
                 | (VarIndex::Reg(reg @ R15), size) => {
                     let v = state.regs.get_reg(*reg, *size);
-                    if v != InitialRegVal(*reg) {
+                    if v != UninitCalleeReg(*reg) {
                         return true;
                     }
                 }
@@ -124,18 +123,18 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
             println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         }
         let error = match stmt {
-            // 1. No writes to registers or memory of uninit values (overly strict, but correct)
+            // 1. No writes to memory of uninit values
             Stmt::Clear(dst, srcs) => {
-                (self.analyzer.aeval_vals(state, srcs, loc_idx) != Init) && is_uninit_illegal(dst)
+                (self.analyzer.aeval_vals(state, srcs, loc_idx) != Init) && is_noninit_illegal(dst)
             }
             Stmt::Unop(_, dst, src) => {
-                (self.analyzer.aeval_val(state, src, loc_idx) != Init) && is_uninit_illegal(dst)
+                (self.analyzer.aeval_val(state, src, loc_idx) != Init) && is_noninit_illegal(dst)
             }
             Stmt::Binop(opcode, dst, src1, src2) => {
                 self.analyzer
                     .aeval_vals(state, &vec![src1.clone(), src2.clone()], loc_idx)
                     != Init
-                    && is_uninit_illegal(dst)
+                    && is_noninit_illegal(dst)
             }
             // 2. No branch on uninit allowed
             Stmt::Branch(br_type, val) => self.analyzer.aeval_val(state, val, loc_idx) != Init,
