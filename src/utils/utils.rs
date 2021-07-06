@@ -69,10 +69,12 @@ fn get_function_starts(
 
     // copy in symbols (not really necessary here)
     for sym in symbols {
-        x86_64_data.contexts.put(
-            sym.addr as u64,
-            BaseUpdate::DefineSymbol(Symbol(Library::This, sym.name.clone())),
-        );
+        if sym.name != "" {
+            x86_64_data.contexts.put(
+                sym.addr as u64,
+                BaseUpdate::DefineSymbol(Symbol(Library::This, sym.name.clone())),
+            );
+        }
     }
 
     //All symbols in text section should be function starts
