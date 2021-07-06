@@ -166,6 +166,9 @@ fn get_sources(instr: &X64Instruction) -> Vec<Value> {
             (Some(Location::CF), Direction::Read) => {
                 sources.push(Value::Reg(Cf, Size8));
             }
+            (Some(Location::UnevalMem(op)), Direction::Read) => {
+                sources.push(convert_operand(op, Size32)); // is Size32 right?
+            }
             _ => {}
         }
     }
@@ -178,6 +181,7 @@ fn get_destinations(instr: &X64Instruction) -> Vec<Value> {
     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
     let mut destinations = Vec::new();
     for (loc, dir) in uses_vec {
+        println!("Destination: {:?} {:?}", loc, dir);
         match (loc, dir) {
             (Some(Location::Register(reg)), Direction::Write) => {
                 destinations.push(convert_reg(reg));
@@ -187,6 +191,9 @@ fn get_destinations(instr: &X64Instruction) -> Vec<Value> {
             }
             (Some(Location::CF), Direction::Write) => {
                 destinations.push(Value::Reg(Cf, Size8));
+            }
+            (Some(Location::UnevalMem(op)), Direction::Read) => {
+                destinations.push(convert_operand(op, Size32)); // is Size32 right?
             }
             _ => {}
         }
@@ -329,7 +336,7 @@ pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VW_Metadata) -> Vec<
     log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
     let mut instrs = Vec::new();
     match instr.opcode() {
-        Opcode::MOV => instrs.push(unop_w_memsize(Unopcode::Mov, instr, Size32)),
+        Opcode::MOV => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::MOVQ => instrs.push(unop_w_memsize(Unopcode::Mov, instr, Size64)),
         Opcode::MOVZX_b |
         Opcode::MOVZX_w => instrs.push(unop(Unopcode::Mov, instr)),
@@ -509,15 +516,15 @@ pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VW_Metadata) -> Vec<
         }
 
         Opcode::NOP | Opcode::FILD | Opcode::STD | Opcode::CLD | Opcode::STI => (),
-        Opcode::IDIV | Opcode::DIV => {
-            // instrs.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), vec![]));
-            instrs.push(Stmt::Clear(Value::Reg(Rax, Size64), vec![])); // clear RAX
-            instrs.push(Stmt::Clear(Value::Reg(Rdx, Size64), vec![])); // clear RDX
-            instrs.push(Stmt::Clear(
-                Value::Reg(Zf, Size8),
-                get_sources(instr),
-            ));
-        }
+        // Opcode::IDIV | Opcode::DIV => {
+        //     // instrs.push(Stmt::Clear(Value::Reg(Zf, ValSize::Size8), vec![]));
+        //     instrs.push(Stmt::Clear(Value::Reg(Rax, Size64), vec![])); // clear RAX
+        //     instrs.push(Stmt::Clear(Value::Reg(Rdx, Size64), vec![])); // clear RDX
+        //     instrs.push(Stmt::Clear(
+        //         Value::Reg(Zf, Size8),
+        //         get_sources(instr),
+        //     ));
+        // }
 
         Opcode::XORPS // TODO: do we need to generalize the size logic?
         | Opcode::XORPD
@@ -539,12 +546,12 @@ pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VW_Metadata) -> Vec<
             }
         }
 
-        // Opcode::CDQ | Opcode::CDQE => {
-        //     // clear rax
-        //     instrs.push(Stmt::Clear(Value::Reg(Rax, ValSize::Size64), vec![]));
-        //     // clear rdx
-        //     instrs.push(Stmt::Clear(Value::Reg(Rdx, ValSize::Size64), vec![]));
-        // }
+        Opcode::CDQ | Opcode::CDQE => {
+            // clear rax
+            instrs.push(Stmt::Clear(Value::Reg(Rax, ValSize::Size64), vec![]));
+            // clear rdx
+            instrs.push(Stmt::Clear(Value::Reg(Rdx, ValSize::Size64), vec![]));
+        }
 
         SETG
         | SETLE => instrs.push(set_from_flags(instr.operand(0), vec![Zf, Sf, Of])),
@@ -579,7 +586,19 @@ pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VW_Metadata) -> Vec<
             instrs.push(Stmt::Clear(
                 convert_operand(instr.operand(0), get_operand_size(&instr.operand(0)).unwrap()),
                 vec![
-                    convert_operand(instr.operand(0), get_operand_size(&instr.operand(0)).unwrap()),
+                    // convert_operand(instr.operand(0), get_operand_size(&instr.operand(0)).unwrap()),
+                    convert_operand(instr.operand(1), get_operand_size(&instr.operand(1)).unwrap()),
+                ],
+            ));
+        }
+        Opcode::BSR => {
+            instrs.push(Stmt::Clear(
+                Value::Reg(Zf, Size8),
+                vec![convert_operand(instr.operand(1), get_operand_size(&instr.operand(1)).unwrap())],
+            ));
+            instrs.push(Stmt::Clear(
+                convert_operand(instr.operand(0), get_operand_size(&instr.operand(0)).unwrap()),
+                vec![
                     convert_operand(instr.operand(1), get_operand_size(&instr.operand(1)).unwrap()),
                 ],
             ));
@@ -614,6 +633,10 @@ pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VW_Metadata) -> Vec<
         }
 
         Opcode::OR
+        // | Opcode::CDQ
+        // | Opcode::CDQE
+        | Opcode::IDIV
+        | Opcode::DIV
         | Opcode::SHR
         | Opcode::RCL
         | Opcode::RCR
@@ -763,11 +786,11 @@ pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VW_Metadata) -> Vec<
         | Opcode::SUBPS
         | Opcode::TZCNT
         | Opcode::SBB
-        | Opcode::BSR
         | Opcode::ANDPD
+        | Opcode::CVTTSD2SI
         | Opcode::ORPD => instrs.extend(generic_clear(instr)),/*instrs.extend(clear_dst(instr)),*/
 
-        _ => unimplemented!(),/*instrs.extend(generic_clear(instr)),*/
+        _ => {println!("Unknown instruction {:?}", instr); unimplemented!()},/*instrs.extend(generic_clear(instr)),*/
     };
     instrs
 }
@@ -854,7 +877,31 @@ fn parse_bsf<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value, Value)> {
     Err(ParseErr::Incomplete)
 }
 
+// returns (addr, operand(0), operand(1))
+fn parse_bsr<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value, Value)> {
+    if let Some(((addr, instr), rest)) = instrs.split_first() {
+        if let Opcode::BSR = instr.opcode() {
+            return Ok((
+                rest,
+                (
+                    *addr,
+                    convert_operand(
+                        instr.operand(0),
+                        get_operand_size(&instr.operand(0)).unwrap(),
+                    ),
+                    convert_operand(
+                        instr.operand(1),
+                        get_operand_size(&instr.operand(1)).unwrap(),
+                    ),
+                ),
+            ));
+        }
+    }
+    Err(ParseErr::Incomplete)
+}
+
 // returns src of the cmove (dst must be the same)
+// although it says bsf, it also handles bsr
 fn parse_cmovez<'a>(instrs: BlockInstrs<'a>, bsf_dst: &Value) -> IResult<'a, (Addr, Value)> {
     if let Some(((addr, instr), rest)) = instrs.split_first() {
         if let Opcode::CMOVZ = instr.opcode() {
@@ -890,6 +937,15 @@ fn parse_bsf_cmove<'a>(instrs: BlockInstrs<'a>, metadata: &VW_Metadata) -> IResu
     Ok((rest, (addr, stmts)))
 }
 
+fn parse_bsr_cmove<'a>(instrs: BlockInstrs<'a>, metadata: &VW_Metadata) -> IResult<'a, StmtResult> {
+    let (rest, (addr, bsr_dst, bsr_src)) = parse_bsr(instrs)?;
+    let (rest, (_addr, mov_src)) = parse_cmovez(rest, &bsr_dst)?;
+    let mut stmts = Vec::new();
+    stmts.push(Stmt::Clear(Value::Reg(Zf, Size8), vec![bsr_src.clone()]));
+    stmts.push(Stmt::Clear(bsr_dst, vec![bsr_src, mov_src]));
+    Ok((rest, (addr, stmts)))
+}
+
 fn parse_single_instr<'a>(
     instrs: BlockInstrs<'a>,
     metadata: &VW_Metadata,
@@ -903,6 +959,8 @@ fn parse_single_instr<'a>(
 
 fn parse_instr<'a>(instrs: BlockInstrs<'a>, metadata: &VW_Metadata) -> IResult<'a, StmtResult> {
     if let Ok((rest, stmt)) = parse_bsf_cmove(instrs, metadata) {
+        Ok((rest, stmt))
+    } else if let Ok((rest, stmt)) = parse_bsr_cmove(instrs, metadata) {
         Ok((rest, stmt))
     } else if let Ok((rest, stmt)) = parse_probestack(instrs, metadata) {
         Ok((rest, stmt))
