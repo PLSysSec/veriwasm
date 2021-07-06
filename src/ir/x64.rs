@@ -181,7 +181,6 @@ fn get_destinations(instr: &X64Instruction) -> Vec<Value> {
     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
     let mut destinations = Vec::new();
     for (loc, dir) in uses_vec {
-        println!("Destination: {:?} {:?}", loc, dir);
         match (loc, dir) {
             (Some(Location::Register(reg)), Direction::Write) => {
                 destinations.push(convert_reg(reg));
