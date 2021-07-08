@@ -163,7 +163,7 @@ pub fn run(config: Config) {
     all_addrs.extend(plt_funcs);
 
     let mut func_counter = 0;
-    let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64)> = vec![];
+    let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64, f64)> = vec![];
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     let func_signatures = config.executable_type.get_func_signatures(&program);
     // println!("{:?}", func_signatures);
@@ -199,33 +199,33 @@ pub fn run(config: Config) {
         }
 
         let call_start = Instant::now();
-        if config.active_passes.linear_mem {
-            println!("Checking Call Safety");
-            // TODO: call analysis should check direct calls too, no?
-            let (call_safe, indirect_calls_result, reaching_defs) =
-                run_calls(&cfg, &irmap, &metadata, &valid_funcs, plt);
-            if !call_safe {
-                panic!("Not Call Safe");
-            }
-
-            let locals_start = Instant::now();
-            println!("Checking Locals Safety");
-            let locals_safe = run_locals(
-                reaching_defs,
-                indirect_calls_result,
-                plt,
-                &all_addrs_map,
-                &func_signatures,
-                &func_name,
-                &cfg,
-                &irmap,
-                &metadata,
-                &valid_funcs,
-            );
-            if !locals_safe {
-                panic!("Not Locals Safe");
-            }
+        // if config.active_passes.linear_mem {
+        println!("Checking Call Safety");
+        // TODO: call analysis should check direct calls too, no?
+        let (call_safe, indirect_calls_result, reaching_defs) =
+            run_calls(&cfg, &irmap, &metadata, &valid_funcs, plt);
+        if !call_safe {
+            panic!("Not Call Safe");
         }
+
+        let locals_start = Instant::now();
+        println!("Checking Locals Safety");
+        let locals_safe = run_locals(
+            reaching_defs,
+            indirect_calls_result,
+            plt,
+            &all_addrs_map,
+            &func_signatures,
+            &func_name,
+            &cfg,
+            &irmap,
+            &metadata,
+            &valid_funcs,
+        );
+        if !locals_safe {
+            panic!("Not Locals Safe");
+        }
+    // }
 
         let end = Instant::now();
         info.push((
@@ -234,16 +234,18 @@ pub fn run(config: Config) {
             (stack_start - start).as_secs_f64(),
             (heap_start - stack_start).as_secs_f64(),
             (call_start - heap_start).as_secs_f64(),
-            (end - call_start).as_secs_f64(), // TODO: proper timing
+            (locals_start - call_start).as_secs_f64(), // TODO: proper timing
+            (end - locals_start).as_secs_f64(),
         ));
         println!(
-            "Verified {:?} at {:?} blocks. CFG: {:?}s Stack: {:?}s Heap: {:?}s Calls: {:?}s",
+            "Verified {:?} at {:?} blocks. CFG: {:?}s Stack: {:?}s Heap: {:?}s Calls: {:?}s locals {:?}s",
             func_name,
             cfg.blocks.len(),
             (stack_start - start).as_secs_f64(),
             (heap_start - stack_start).as_secs_f64(),
             (call_start - heap_start).as_secs_f64(),
-            (end - call_start).as_secs_f64() // TODO: proper timing
+            (locals_start - call_start).as_secs_f64(),
+            (end - locals_start).as_secs_f64(), // TODO: proper timing
         );
     }
     if config.has_output {
@@ -256,20 +258,23 @@ pub fn run(config: Config) {
     let mut total_stack_time = 0.0;
     let mut total_heap_time = 0.0;
     let mut total_call_time = 0.0;
-    for (_, _, cfg_time, stack_time, heap_time, call_time) in &info {
+    let mut total_locals_time = 0.0;
+    for (_, _, cfg_time, stack_time, heap_time, call_time, locals_time) in &info {
         total_cfg_time += cfg_time;
         total_stack_time += stack_time;
         total_heap_time += heap_time;
         total_call_time += call_time;
+        total_locals_time += locals_time;
     }
     println!("Verified {:?} functions", func_counter);
     println!(
-        "Total time = {:?}s CFG: {:?} Stack: {:?}s Heap: {:?}s Call: {:?}s",
-        total_cfg_time + total_stack_time + total_heap_time + total_call_time,
+        "Total time = {:?}s CFG: {:?} Stack: {:?}s Heap: {:?}s Call: {:?}s Locals {:?}s",
+        total_cfg_time + total_stack_time + total_heap_time + total_call_time + total_locals_time,
         total_cfg_time,
         total_stack_time,
         total_heap_time,
-        total_call_time
+        total_call_time,
+        total_locals_time,
     );
     println!("Done!");
 }
