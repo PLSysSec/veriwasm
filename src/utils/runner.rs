@@ -51,7 +51,7 @@ pub struct Config {
     pub architecture: VwArch,
 }
 
-fn run_locals(
+pub fn run_locals(
     reaching_defs: AnalysisResult<VariableState<ReachingDefnLattice>>,
     call_analysis: AnalysisResult<CallCheckLattice>,
     plt_bounds: (u64, u64),
@@ -107,12 +107,17 @@ fn run_stack(cfg: &VW_CFG, irmap: &IRMap) -> bool {
     stack_safe
 }
 
-fn run_heap(cfg: &VW_CFG, irmap: &IRMap, metadata: &VW_Metadata) -> bool {
+fn run_heap(
+    cfg: &VW_CFG,
+    irmap: &IRMap,
+    metadata: &VW_Metadata,
+    all_addrs_map: &HashMap<u64, String>,
+) -> bool {
     let heap_analyzer = HeapAnalyzer {
         metadata: metadata.clone(),
     };
     let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
-    let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
+    let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer, &all_addrs_map);
     heap_safe
 }
 
@@ -187,7 +192,7 @@ pub fn run(config: Config) {
         let heap_start = Instant::now();
         if config.active_passes.linear_mem {
             println!("Checking Heap Safety");
-            let heap_safe = run_heap(&cfg, &irmap, &metadata);
+            let heap_safe = run_heap(&cfg, &irmap, &metadata, &all_addrs_map);
             if !heap_safe {
                 panic!("Not Heap Safe");
             }

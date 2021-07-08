@@ -5,6 +5,8 @@ use crate::ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value, X86Regs};
 use crate::ir::utils::{is_mem_access, is_stack_access};
 use crate::lattices::heaplattice::{HeapLattice, HeapValue};
 use crate::lattices::reachingdefslattice::LocIdx;
+use crate::utils::utils::is_libcall;
+use std::collections::HashMap;
 
 use HeapValue::*;
 use ValSize::*;
@@ -13,16 +15,19 @@ use X86Regs::*;
 pub struct HeapChecker<'a> {
     irmap: &'a IRMap,
     analyzer: &'a HeapAnalyzer,
+    name_addr_map: &'a HashMap<u64, String>,
 }
 
 pub fn check_heap(
     result: AnalysisResult<HeapLattice>,
     irmap: &IRMap,
     analyzer: &HeapAnalyzer,
+    name_addr_map: &HashMap<u64, String>,
 ) -> bool {
     HeapChecker {
         irmap: irmap,
         analyzer: analyzer,
+        name_addr_map: name_addr_map,
     }
     .check(result)
 }
@@ -69,11 +74,20 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
     fn check_statement(&self, state: &HeapLattice, ir_stmt: &Stmt, loc_idx: &LocIdx) -> bool {
         match ir_stmt {
             //1. Check that at each call rdi = HeapBase
-            Stmt::Call(_) => match state.regs.get_reg(Rdi, Size64).v {
+            Stmt::Call(v) => match state.regs.get_reg(Rdi, Size64).v {
                 Some(HeapBase) => (),
                 _ => {
-                    log::debug!("Call failure {:?}", state.stack.get(0, 8));
-                    return false;
+                    if let Value::Imm(_, _, dst) = v {
+                        let target = (*dst + (loc_idx.addr as i64) + 5) as u64;
+                        let name = self.name_addr_map.get(&target).unwrap();
+                        if !is_libcall(name) {
+                            log::debug!("0x{:x}: Call failure", loc_idx.addr);
+                            return false;
+                        }
+                    } else {
+                        log::debug!("0x{:x}: Call failure", loc_idx.addr);
+                        return false;
+                    }
                 }
             },
             //2. Check that all load and store are safe

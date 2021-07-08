@@ -602,7 +602,7 @@ pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VW_Metadata) -> Vec<
                 ],
             ));
         }
-        Opcode::LZCNT => {
+        Opcode::LZCNT | Opcode::TZCNT => {
             instrs.push(Stmt::Clear(
                 Value::Reg(Zf, Size8),
                 vec![convert_operand(instr.operand(1), get_operand_size(&instr.operand(1)).unwrap())],
@@ -783,7 +783,6 @@ pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VW_Metadata) -> Vec<
         | Opcode::MOVUPS
         | Opcode::SUBPD
         | Opcode::SUBPS
-        | Opcode::TZCNT
         | Opcode::SBB
         | Opcode::ANDPD
         | Opcode::CVTTSD2SI
@@ -829,11 +828,17 @@ fn parse_probestack_suffix<'a>(
     metadata: &VW_Metadata,
 ) -> IResult<'a, StmtResult> {
     let (rest, (addr, sub_instr)) = parse_single_instr(instrs, metadata)?;
-    if sub_instr.len() != 1 {
-        return Err(ParseErr::Error(instrs));
-    }
-    if let Stmt::Binop(Binopcode::Sub, Value::Reg(Rsp, Size64), Value::Reg(Rax, Size64), _) =
-        sub_instr[0]
+    log::info!(
+        "Found potential probestack suffix: {:x} {:?}",
+        addr,
+        sub_instr
+    );
+    if let Stmt::Binop(
+        Binopcode::Sub,
+        Value::Reg(Rsp, Size64),
+        Value::Reg(Rsp, Size64),
+        Value::Reg(Rax, Size64),
+    ) = sub_instr[0]
     {
         return Ok((rest, (addr, sub_instr)));
     }
@@ -845,8 +850,11 @@ fn parse_probestack<'a>(
     metadata: &VW_Metadata,
 ) -> IResult<'a, StmtResult> {
     let (rest, (probestack_arg, (addr, mov_instr))) = parse_probestack_arg(instrs, metadata)?;
+    log::info!("Found potential probestack: 0x{:x}", addr);
     let (rest, (_, call_instr)) = parse_probestack_call(rest, metadata)?;
+    log::info!("Found probestack call: 0x{:x}", addr);
     let (rest, (_, suffix_instr)) = parse_probestack_suffix(rest, metadata)?;
+    log::info!("Completed probestack: 0x{:x}", addr);
     let mut stmts = Vec::new();
     stmts.extend(mov_instr);
     stmts.push(Stmt::ProbeStack(probestack_arg));

@@ -165,34 +165,35 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
         succ_addrs: &Vec<u64>,
         addr: &u64,
     ) -> Vec<(u64, CallCheckLattice)> {
-        let br_stmt = irmap
-            .get(addr)
-            .expect("no instruction at given address")
-            .last()
-            .expect("no instructions in block")
-            .1
-            .last()
-            .expect("no IR instructions for last disassembled instruction");
-        let br_opcode = match br_stmt {
-            Stmt::Branch(op, _) => Some(op),
-            _ => None,
-        };
-        let (is_unsigned_cmp, is_je, flip) = match br_opcode {
-            Some(Opcode::JB) => (true, false, false),
-            Some(Opcode::JNB) => (true, false, true),
-            Some(Opcode::JZ) => (false, true, false),
-            _ => (false, false, false),
-        };
-
-        log::debug!(
-            "{:x}: is_unsigned_cmp {} is_je {} flip {}",
-            addr,
-            is_unsigned_cmp,
-            is_je,
-            flip
-        );
-
+        log::info!("Processing branch: 0x{:x}", addr);
         if succ_addrs.len() == 2 {
+            let br_stmt = irmap
+                .get(addr)
+                .expect("no instruction at given address")
+                .last()
+                .expect("no instructions in block")
+                .1
+                .last()
+                .expect("no IR instructions for last disassembled instruction");
+            let br_opcode = match br_stmt {
+                Stmt::Branch(op, _) => Some(op),
+                _ => None,
+            };
+            let (is_unsigned_cmp, is_je, flip) = match br_opcode {
+                Some(Opcode::JB) => (true, false, false),
+                Some(Opcode::JNB) => (true, false, true),
+                Some(Opcode::JZ) => (false, true, false),
+                _ => (false, false, false),
+            };
+
+            log::debug!(
+                "{:x}: is_unsigned_cmp {} is_je {} flip {}",
+                addr,
+                is_unsigned_cmp,
+                is_je,
+                flip
+            );
+
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
             if is_unsigned_cmp {

@@ -21,6 +21,10 @@ use yaxpeax_core::memory::MemoryRepr;
 use yaxpeax_core::ContextWrite;
 use yaxpeax_x86::long_mode::Arch as AMD64;
 
+pub fn is_libcall(name: &String) -> bool {
+    vec!["floor", "ceil", "trunc"].contains(&&name[..])
+}
+
 pub fn deconstruct_elf(
     program: &ModuleData,
 ) -> (
