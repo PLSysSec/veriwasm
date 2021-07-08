@@ -11,6 +11,7 @@ use crate::lattices::mem_to_stack_offset;
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarState, VariableState};
 use crate::loaders::utils::{to_system_v_ret_ty, VwFuncInfo};
+use crate::ir::x64::mk_value_i64;
 
 use SlotVal::*;
 use ValSize::*;
@@ -141,6 +142,9 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
             }
             Stmt::Branch(br_type, val) => {
                 // println!("unhandled branch 0x{:x?}: {:?} {:?}", loc_idx.addr, br_type, val);
+            }
+            Stmt::ProbeStack(x) => {
+                in_state.adjust_stack_offset(&Binopcode::Sub, &Value::Reg(Rsp, Size64), &Value::Reg(Rsp, Size64), &mk_value_i64(*x as i64));
             }
             stmt => {
                 // println!("unhandled instruction 0x{:x?}: {:?}", loc_idx.addr, stmt);
