@@ -157,13 +157,13 @@ pub fn run(config: Config) {
     let module = load_program(&config);
     let (x86_64_data, func_addrs, plt, mut all_addrs) =
         get_data(&module.program, &config.executable_type);
-    let plt_funcs = config.executable_type.get_plt_funcs(&config.module_path);
-    all_addrs.extend(plt_funcs);
+    // let plt_funcs = config.executable_type.get_plt_funcs(&config.module_path);
+    // all_addrs.extend(plt_funcs);
 
     let mut func_counter = 0;
     let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64, f64)> = vec![];
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
-    let func_signatures = config.executable_type.get_func_signatures(&module.program);
+    // let func_signatures = config.executable_type.get_func_signatures(&module.program);
     let all_addrs_map = HashMap::from_iter(all_addrs.clone());
     for (addr, func_name) in func_addrs {
         if config.only_func.is_some() && func_name != config.only_func.as_ref().unwrap().as_str() {
@@ -204,22 +204,22 @@ pub fn run(config: Config) {
                 panic!("Not Call Safe");
             }
 
-            println!("Checking Locals Safety");
-            let locals_safe = run_locals(
-                reaching_defs,
-                indirect_calls_result,
-                plt,
-                &all_addrs_map,
-                &func_signatures,
-                &func_name,
-                &cfg,
-                &irmap,
-                &module.metadata,
-                &valid_funcs,
-            );
-            if !locals_safe {
-                panic!("Not Locals Safe");
-            }
+            // println!("Checking Locals Safety");
+            // let locals_safe = run_locals(
+            //     reaching_defs,
+            //     indirect_calls_result,
+            //     plt,
+            //     &all_addrs_map,
+            //     &func_signatures,
+            //     &func_name,
+            //     &cfg,
+            //     &irmap,
+            //     &module.metadata,
+            //     &valid_funcs,
+            // );
+            // if !locals_safe {
+            //     panic!("Not Locals Safe");
+            // }
         }
         let locals_start = Instant::now(); //alwyas 0 right now, locals time grouped with calls
 
