@@ -124,7 +124,6 @@ impl<T: Lattice + Clone> Lattice for StackLattice<T> {
         for (k, v1) in self.map.iter() {
             match other.map.get(k) {
                 Some(v2) => {
-                    // TODO: sizes?
                     if v1.size == v2.size {
                         let new_v = v1.value.meet(&v2.value.clone(), loc_idx);
                         if new_v != Default::default() {
