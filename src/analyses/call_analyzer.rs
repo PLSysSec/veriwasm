@@ -1,8 +1,9 @@
 use crate::{analyses, ir, lattices, loaders};
 use analyses::reaching_defs::ReachingDefnAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
-use ir::types::X86Regs;
-use ir::types::{Binopcode, IRBlock, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value};
+use ir::types::{
+    Binopcode, IRBlock, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value, X86Regs,
+};
 use ir::utils::{extract_stack_offset, is_stack_access};
 use lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
 use lattices::davlattice::DAV;
@@ -14,6 +15,8 @@ use std::default::Default;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 use yaxpeax_x86::long_mode::Opcode;
 
+use CallCheckValue::*;
+use ValSize::*;
 use X86Regs::*;
 
 pub struct CallAnalyzer {
@@ -67,7 +70,7 @@ impl CallAnalyzer {
         let def_state = self.fetch_result(result, loc_idx);
         if let Value::Reg(regnum, size) = src {
             let aval = def_state.regs.get_reg(*regnum, *size);
-            if let Some(CallCheckValue::FnPtr(ty)) = aval.v {
+            if let Some(FnPtr(ty)) = aval.v {
                 return Some(ty);
             }
         }
@@ -121,23 +124,23 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
     ) -> () {
         match (opcode, src1, src2) {
             (Binopcode::Cmp, Value::Reg(regnum1, size1), Value::Reg(regnum2, size2)) => {
-                if let Some(CallCheckValue::TableSize) = in_state.regs.get_reg(*regnum2, *size2).v {
+                if let Some(TableSize) = in_state.regs.get_reg(*regnum2, *size2).v {
                     in_state.regs.set_reg(
                         Zf,
-                        ValSize::Size64,
-                        CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum1)),
+                        Size64,
+                        CallCheckValueLattice::new(CheckFlag(0, *regnum1)),
                     )
                 }
-                if let Some(CallCheckValue::TableSize) = in_state.regs.get_reg(*regnum1, *size1).v {
+                if let Some(TableSize) = in_state.regs.get_reg(*regnum1, *size1).v {
                     in_state.regs.set_reg(
                         Zf,
-                        ValSize::Size64,
-                        CallCheckValueLattice::new(CallCheckValue::CheckFlag(0, *regnum2)),
+                        Size64,
+                        CallCheckValueLattice::new(CheckFlag(0, *regnum2)),
                     )
                 }
             }
             (Binopcode::Cmp, Value::Reg(regnum, size), Value::Imm(_, _, c)) => {
-                if let Some(CallCheckValue::TypeOf(r)) = in_state.regs.get_reg(*regnum, *size).v {
+                if let Some(TypeOf(r)) = in_state.regs.get_reg(*regnum, *size).v {
                     log::debug!(
                         "{:x}: Settng zf = TypeCheckFlag({:?}, {:?}) from {:?}",
                         loc_idx.addr,
@@ -147,8 +150,8 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     );
                     in_state.regs.set_reg(
                         Zf,
-                        ValSize::Size64,
-                        CallCheckValueLattice::new(CallCheckValue::TypeCheckFlag(r, *c as u32)),
+                        Size64,
+                        CallCheckValueLattice::new(TypeCheckFlag(r, *c as u32)),
                     )
                 }
             }
@@ -196,27 +199,21 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
             if is_unsigned_cmp {
-                if let Some(CallCheckValue::CheckFlag(_, regnum)) =
-                    not_branch_state.regs.get_reg(Zf, ValSize::Size64).v
-                {
+                if let Some(CheckFlag(_, regnum)) = not_branch_state.regs.get_reg(Zf, Size64).v {
                     log::debug!("branch at 0x{:x}: CheckFlag for reg {:?}", addr, regnum);
                     let new_val = CallCheckValueLattice {
-                        v: Some(CallCheckValue::CheckedVal),
+                        v: Some(CheckedVal),
                     };
-                    branch_state
-                        .regs
-                        .set_reg(regnum, ValSize::Size64, new_val.clone());
+                    branch_state.regs.set_reg(regnum, Size64, new_val.clone());
                     //1. propagate checked values
                     let defs_state = self.reaching_defs.get(addr).unwrap();
                     let ir_block = irmap.get(addr).unwrap();
                     let defs_state = self.reaching_analyzer.analyze_block(defs_state, ir_block);
-                    let checked_defs = defs_state.regs.get_reg(regnum, ValSize::Size64);
+                    let checked_defs = defs_state.regs.get_reg(regnum, Size64);
                     for idx in X86Regs::iter() {
-                        let reg_def = defs_state.regs.get_reg(idx, ValSize::Size64);
+                        let reg_def = defs_state.regs.get_reg(idx, Size64);
                         if (!reg_def.is_empty()) && (reg_def == checked_defs) {
-                            branch_state
-                                .regs
-                                .set_reg(idx, ValSize::Size64, new_val.clone());
+                            branch_state.regs.set_reg(idx, Size64, new_val.clone());
                         }
                     }
 
@@ -232,18 +229,13 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 
                     //3. resolve ptr thunks in registers
                     let checked_ptr = CallCheckValueLattice {
-                        v: Some(CallCheckValue::PtrOffset(DAV::Checked)),
+                        v: Some(PtrOffset(DAV::Checked)),
                     };
                     for idx in X86Regs::iter() {
-                        let reg_val = branch_state.regs.get_reg(idx, ValSize::Size64);
-                        if let Some(CallCheckValue::PtrOffset(DAV::Unchecked(reg_def))) = reg_val.v
-                        {
+                        let reg_val = branch_state.regs.get_reg(idx, Size64);
+                        if let Some(PtrOffset(DAV::Unchecked(reg_def))) = reg_val.v {
                             if checked_defs.is_empty() && reg_def == checked_defs {
-                                branch_state.regs.set_reg(
-                                    idx,
-                                    ValSize::Size64,
-                                    checked_ptr.clone(),
-                                );
+                                branch_state.regs.set_reg(idx, Size64, checked_ptr.clone());
                             }
                         }
                     }
@@ -251,9 +243,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                     //4. resolve ptr thunks in stack slots --
                     for (stack_offset, stack_slot) in not_branch_state.stack.map.iter() {
                         let stack_val = stack_slot.value.v.clone();
-                        if let Some(CallCheckValue::PtrOffset(DAV::Unchecked(stack_def))) =
-                            stack_val
-                        {
+                        if let Some(PtrOffset(DAV::Unchecked(stack_def))) = stack_val {
                             if !checked_defs.is_empty() && (stack_def == checked_defs) {
                                 let v = VarSlot {
                                     size: stack_slot.size,
@@ -266,8 +256,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                 }
             } else if is_je {
                 //Handle TypeCheck
-                if let Some(CallCheckValue::TypeCheckFlag(regnum, c)) =
-                    not_branch_state.regs.get_reg(Zf, ValSize::Size64).v
+                if let Some(TypeCheckFlag(regnum, c)) = not_branch_state.regs.get_reg(Zf, Size64).v
                 {
                     log::debug!(
                         "branch at 0x{:x}: TypeCheckFlag for reg {:?}. Making TypedPtrOffset({:?})",
@@ -276,19 +265,15 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                         c
                     );
                     let new_val = CallCheckValueLattice {
-                        v: Some(CallCheckValue::TypedPtrOffset(c)),
+                        v: Some(TypedPtrOffset(c)),
                     };
-                    branch_state
-                        .regs
-                        .set_reg(regnum, ValSize::Size64, new_val.clone());
+                    branch_state.regs.set_reg(regnum, Size64, new_val.clone());
                 }
             }
-            branch_state
-                .regs
-                .set_reg(Zf, ValSize::Size64, Default::default());
+            branch_state.regs.set_reg(Zf, Size64, Default::default());
             not_branch_state
                 .regs
-                .set_reg(Zf, ValSize::Size64, Default::default());
+                .set_reg(Zf, Size64, Default::default());
 
             log::debug!(
                 " ->     branch_state @ 0x{:x} = {:?}",
@@ -324,7 +309,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 // mem[LucetTableBase + 8]
 pub fn is_table_size(in_state: &CallCheckLattice, memargs: &MemArgs) -> bool {
     if let MemArgs::Mem2Args(MemArg::Reg(regnum1, size), MemArg::Imm(_, _, 8)) = memargs {
-        if let Some(CallCheckValue::LucetTablesBase) = in_state.regs.get_reg(*regnum1, *size).v {
+        if let Some(LucetTablesBase) = in_state.regs.get_reg(*regnum1, *size).v {
             return true;
         }
     }
@@ -343,15 +328,8 @@ pub fn is_fn_ptr(in_state: &CallCheckLattice, memargs: &MemArgs) -> Option<u32> 
             in_state.regs.get_reg(*regnum2, *size2).v,
             immval,
         ) {
-            (
-                Some(CallCheckValue::GuestTableBase),
-                Some(CallCheckValue::TypedPtrOffset(c)),
-                // Some(CallCheckValue::PtrOffset(DAV::Checked)),
-                8,
-            ) => return Some(c),
-            (Some(CallCheckValue::TypedPtrOffset(c)), Some(CallCheckValue::GuestTableBase), 8) => {
-                return Some(c)
-            }
+            (Some(GuestTableBase), Some(TypedPtrOffset(c)), 8) => return Some(c),
+            (Some(TypedPtrOffset(c)), Some(GuestTableBase), 8) => return Some(c),
             _ => return None,
         }
     }
@@ -366,14 +344,8 @@ pub fn is_typeof(in_state: &CallCheckLattice, memargs: &MemArgs) -> Option<X86Re
             in_state.regs.get_reg(*regnum1, *size1).v,
             in_state.regs.get_reg(*regnum2, *size2).v,
         ) {
-            (
-                Some(CallCheckValue::GuestTableBase),
-                Some(CallCheckValue::PtrOffset(DAV::Checked)),
-            ) => return Some(*regnum2),
-            (
-                Some(CallCheckValue::PtrOffset(DAV::Checked)),
-                Some(CallCheckValue::GuestTableBase),
-            ) => return Some(*regnum1),
+            (Some(GuestTableBase), Some(PtrOffset(DAV::Checked))) => return Some(*regnum2),
+            (Some(PtrOffset(DAV::Checked)), Some(GuestTableBase)) => return Some(*regnum1),
             _ => return None,
         }
     }
@@ -389,15 +361,11 @@ impl CallAnalyzer {
         match value {
             Value::Mem(memsize, memargs) => {
                 if is_table_size(in_state, memargs) {
-                    return CallCheckValueLattice {
-                        v: Some(CallCheckValue::TableSize),
-                    };
+                    return CallCheckValueLattice { v: Some(TableSize) };
                 } else if is_fn_ptr(in_state, memargs).is_some() {
                     let ty = is_fn_ptr(in_state, memargs).unwrap();
                     log::debug!("Making FnPtr({:?})", ty);
-                    return CallCheckValueLattice {
-                        v: Some(CallCheckValue::FnPtr(ty)),
-                    };
+                    return CallCheckValueLattice { v: Some(FnPtr(ty)) };
                 } else if is_typeof(in_state, memargs).is_some() {
                     let reg = is_typeof(in_state, memargs).unwrap();
                     log::debug!(
@@ -406,7 +374,7 @@ impl CallAnalyzer {
                         reg
                     );
                     return CallCheckValueLattice {
-                        v: Some(CallCheckValue::TypeOf(reg)),
+                        v: Some(TypeOf(reg)),
                     };
                 } else if is_stack_access(value) {
                     let offset = extract_stack_offset(memargs);
@@ -419,15 +387,15 @@ impl CallAnalyzer {
             Value::Imm(_, _, immval) => {
                 if (*immval as u64) == self.metadata.guest_table_0 {
                     return CallCheckValueLattice {
-                        v: Some(CallCheckValue::GuestTableBase),
+                        v: Some(GuestTableBase),
                     };
                 } else if (*immval as u64) == self.metadata.lucet_tables {
                     return CallCheckValueLattice {
-                        v: Some(CallCheckValue::LucetTablesBase),
+                        v: Some(LucetTablesBase),
                     };
                 } else if self.is_func_start(*immval as u64) {
                     return CallCheckValueLattice {
-                        v: Some(CallCheckValue::FnPtr(1337)), //dummy value, TODO remove
+                        v: Some(FnPtr(1337)), //dummy value, TODO remove
                     };
                 }
             }
@@ -435,7 +403,7 @@ impl CallAnalyzer {
             Value::RIPConst => {
                 // The backend uses rip-relative data to embed constant function pointers.
                 return CallCheckValueLattice {
-                    v: Some(CallCheckValue::FnPtr(1337)), //Dummy value, TODO remove
+                    v: Some(FnPtr(1337)), //Dummy value, TODO remove
                 };
             }
         }
@@ -453,10 +421,9 @@ impl CallAnalyzer {
     ) -> CallCheckValueLattice {
         if let Binopcode::Shl = opcode {
             if let (Value::Reg(regnum1, size1), Value::Imm(_, _, 4)) = (src1, src2) {
-                if let Some(CallCheckValue::CheckedVal) = in_state.regs.get_reg(*regnum1, *size1).v
-                {
+                if let Some(CheckedVal) = in_state.regs.get_reg(*regnum1, *size1).v {
                     return CallCheckValueLattice {
-                        v: Some(CallCheckValue::PtrOffset(DAV::Checked)),
+                        v: Some(PtrOffset(DAV::Checked)),
                     };
                 } else {
                     let def_state = self
@@ -464,7 +431,7 @@ impl CallAnalyzer {
                         .fetch_def(&self.reaching_defs, loc_idx);
                     let reg_def = def_state.regs.get_reg(*regnum1, *size1);
                     return CallCheckValueLattice {
-                        v: Some(CallCheckValue::PtrOffset(DAV::Unchecked(reg_def))),
+                        v: Some(PtrOffset(DAV::Unchecked(reg_def))),
                     };
                 }
             }

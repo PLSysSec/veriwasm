@@ -1,15 +1,16 @@
-use crate::analyses::AnalysisResult;
-use crate::ir::types::X86Regs;
 use crate::{analyses, ir, lattices, loaders};
-use analyses::AbstractAnalyzer;
-use ir::types::X86Regs::*;
-use ir::types::{Binopcode, MemArg, MemArgs, Unopcode, ValSize, Value};
+use analyses::{AbstractAnalyzer, AnalysisResult};
+use ir::types::{Binopcode, MemArg, MemArgs, Unopcode, ValSize, Value, X86Regs};
 use ir::utils::{extract_stack_offset, is_stack_access};
 use lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
 use lattices::reachingdefslattice::LocIdx;
 use lattices::{ConstLattice, VarState};
 use loaders::types::VwMetadata;
 use std::default::Default;
+
+use HeapValue::*;
+use ValSize::*;
+use X86Regs::*;
 
 pub struct HeapAnalyzer {
     pub metadata: VwMetadata,
@@ -18,11 +19,9 @@ pub struct HeapAnalyzer {
 impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     fn init_state(&self) -> HeapLattice {
         let mut result: HeapLattice = Default::default();
-        result.regs.set_reg(
-            Rdi,
-            ValSize::Size64,
-            HeapValueLattice::new(HeapValue::HeapBase),
-        );
+        result
+            .regs
+            .set_reg(Rdi, Size64, HeapValueLattice::new(HeapBase));
         result
     }
 
@@ -36,12 +35,12 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     ) -> () {
         // Any write to a 32-bit register will clear the upper 32 bits of the containing 64-bit
         // register.
-        if let &Value::Reg(rd, ValSize::Size32) = dst {
+        if let &Value::Reg(rd, Size32) = dst {
             in_state.regs.set_reg(
                 rd,
-                ValSize::Size64,
+                Size64,
                 ConstLattice {
-                    v: Some(HeapValue::Bounded4GB),
+                    v: Some(Bounded4GB),
                 },
             );
             return;
@@ -70,23 +69,18 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
         match opcode {
             Binopcode::Add => {
                 if let (
-                    &Value::Reg(rd, ValSize::Size64),
-                    &Value::Reg(rs1, ValSize::Size64),
-                    &Value::Reg(rs2, ValSize::Size64),
+                    &Value::Reg(rd, Size64),
+                    &Value::Reg(rs1, Size64),
+                    &Value::Reg(rs2, Size64),
                 ) = (dst, src1, src2)
                 {
-                    let rs1_val = in_state.regs.get_reg(rs1, ValSize::Size64).v;
-                    let rs2_val = in_state.regs.get_reg(rs2, ValSize::Size64).v;
+                    let rs1_val = in_state.regs.get_reg(rs1, Size64).v;
+                    let rs2_val = in_state.regs.get_reg(rs2, Size64).v;
                     match (rs1_val, rs2_val) {
-                        (Some(HeapValue::HeapBase), Some(HeapValue::Bounded4GB))
-                        | (Some(HeapValue::Bounded4GB), Some(HeapValue::HeapBase)) => {
-                            in_state.regs.set_reg(
-                                rd,
-                                ValSize::Size64,
-                                ConstLattice {
-                                    v: Some(HeapValue::HeapAddr),
-                                },
-                            );
+                        (Some(HeapBase), Some(Bounded4GB)) | (Some(Bounded4GB), Some(HeapBase)) => {
+                            in_state
+                                .regs
+                                .set_reg(rd, Size64, ConstLattice { v: Some(HeapAddr) });
                             return;
                         }
                         _ => {}
@@ -98,12 +92,12 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
 
         // Any write to a 32-bit register will clear the upper 32 bits of the containing 64-bit
         // register.
-        if let &Value::Reg(rd, ValSize::Size32) = dst {
+        if let &Value::Reg(rd, Size32) = dst {
             in_state.regs.set_reg(
                 rd,
-                ValSize::Size64,
+                Size64,
                 ConstLattice {
-                    v: Some(HeapValue::Bounded4GB),
+                    v: Some(Bounded4GB),
                 },
             );
             return;
@@ -119,7 +113,7 @@ pub fn is_globalbase_access(in_state: &HeapLattice, memargs: &MemArgs) -> bool {
             assert_eq!(size.into_bits(), 64);
             let base = in_state.regs.get_reg(*regnum, *size);
             if let Some(v) = base.v {
-                if let HeapValue::HeapBase = v {
+                if let HeapBase = v {
                     return true;
                 }
             }
@@ -133,7 +127,7 @@ impl HeapAnalyzer {
         match value {
             Value::Mem(memsize, memargs) => {
                 if is_globalbase_access(in_state, memargs) {
-                    return HeapValueLattice::new(HeapValue::GlobalsBase);
+                    return HeapValueLattice::new(GlobalsBase);
                 }
                 if is_stack_access(value) {
                     let offset = extract_stack_offset(memargs);
@@ -144,24 +138,24 @@ impl HeapAnalyzer {
 
             Value::Reg(regnum, size) => {
                 if size.into_bits() <= 32 {
-                    return HeapValueLattice::new(HeapValue::Bounded4GB);
+                    return HeapValueLattice::new(Bounded4GB);
                 } else {
-                    return in_state.regs.get_reg(*regnum, ValSize::Size64);
+                    return in_state.regs.get_reg(*regnum, Size64);
                 }
             }
 
             Value::Imm(_, _, immval) => {
                 if (*immval as u64) == self.metadata.guest_table_0 {
-                    return HeapValueLattice::new(HeapValue::GuestTable0);
+                    return HeapValueLattice::new(GuestTable0);
                 } else if (*immval as u64) == self.metadata.lucet_tables {
-                    return HeapValueLattice::new(HeapValue::LucetTables);
+                    return HeapValueLattice::new(LucetTables);
                 } else if (*immval >= 0) && (*immval < (1 << 32)) {
-                    return HeapValueLattice::new(HeapValue::Bounded4GB);
+                    return HeapValueLattice::new(Bounded4GB);
                 }
             }
 
             Value::RIPConst => {
-                return HeapValueLattice::new(HeapValue::RIPConst);
+                return HeapValueLattice::new(RIPConst);
             }
         }
         Default::default()

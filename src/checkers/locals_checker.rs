@@ -1,15 +1,16 @@
+use crate::{analyses, ir, lattices, loaders};
 use std::collections::HashSet;
 use std::convert::TryFrom;
 
-use crate::analyses::locals_analyzer::LocalsAnalyzer;
-use crate::analyses::{AbstractAnalyzer, AnalysisResult};
-use crate::checkers::Checker;
-use crate::ir::types::{FunType, IRMap, MemArgs, Stmt, ValSize, Value, VarIndex, X86Regs};
-use crate::ir::utils::is_stack_access;
-use crate::lattices::localslattice::{LocalsLattice, SlotVal};
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::loaders::utils::is_libcall;
-use crate::loaders::utils::to_system_v;
+use analyses::locals_analyzer::LocalsAnalyzer;
+use analyses::{AbstractAnalyzer, AnalysisResult};
+use checkers::Checker;
+use ir::types::{FunType, IRMap, MemArgs, Stmt, ValSize, Value, VarIndex, X86Regs};
+use ir::utils::is_stack_access;
+use lattices::localslattice::{LocalsLattice, SlotVal};
+use lattices::reachingdefslattice::LocIdx;
+use loaders::utils::is_libcall;
+use loaders::utils::to_system_v;
 use yaxpeax_x86::long_mode::Opcode;
 
 use SlotVal::*;

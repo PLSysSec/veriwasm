@@ -6,6 +6,9 @@ use lattices::calllattice::{CallCheckLattice, CallCheckValue};
 use lattices::davlattice::DAV;
 use lattices::reachingdefslattice::LocIdx;
 
+use CallCheckValue::*;
+use ValSize::*;
+
 pub struct CallChecker<'a> {
     irmap: &'a IRMap,
     analyzer: &'a CallAnalyzer,
@@ -74,7 +77,7 @@ impl CallChecker<'_> {
     ) -> bool {
         match target {
             Value::Reg(regnum, size) => {
-                if let Some(CallCheckValue::FnPtr(c)) = state.regs.get_reg(*regnum, *size).v {
+                if let Some(FnPtr(c)) = state.regs.get_reg(*regnum, *size).v {
                     return true;
                 } else {
                     log::debug!("{:?}", state.regs.get_reg(*regnum, *size).v)
@@ -98,29 +101,18 @@ impl CallChecker<'_> {
         log::debug!("Call Table Lookup: {:?}", memargs);
         match memargs {
             MemArgs::Mem3Args(
-                MemArg::Reg(regnum1, ValSize::Size64),
-                MemArg::Reg(regnum2, ValSize::Size64),
+                MemArg::Reg(regnum1, Size64),
+                MemArg::Reg(regnum2, Size64),
                 MemArg::Imm(_, _, 8),
             ) => match (
-                state.regs.get_reg(*regnum1, ValSize::Size64).v,
-                state.regs.get_reg(*regnum2, ValSize::Size64).v,
+                state.regs.get_reg(*regnum1, Size64).v,
+                state.regs.get_reg(*regnum2, Size64).v,
             ) {
-                (
-                    Some(CallCheckValue::GuestTableBase),
-                    Some(CallCheckValue::PtrOffset(DAV::Checked)),
-                ) => return true,
-                (
-                    Some(CallCheckValue::PtrOffset(DAV::Checked)),
-                    Some(CallCheckValue::GuestTableBase),
-                ) => return true,
-                (Some(CallCheckValue::TypedPtrOffset(_)), Some(CallCheckValue::GuestTableBase)) => {
-                    return true
-                }
-                (Some(CallCheckValue::GuestTableBase), Some(CallCheckValue::TypedPtrOffset(_))) => {
-                    return true
-                }
-                (_x, Some(CallCheckValue::GuestTableBase))
-                | (Some(CallCheckValue::GuestTableBase), _x) => return false,
+                (Some(GuestTableBase), Some(PtrOffset(DAV::Checked))) => return true,
+                (Some(PtrOffset(DAV::Checked)), Some(GuestTableBase)) => return true,
+                (Some(TypedPtrOffset(_)), Some(GuestTableBase)) => return true,
+                (Some(GuestTableBase), Some(TypedPtrOffset(_))) => return true,
+                (_x, Some(GuestTableBase)) | (Some(GuestTableBase), _x) => return false,
                 (_x, _y) => return true, // not a calltable lookup
             },
             _ => return true, //not a calltable lookup?

@@ -36,24 +36,14 @@ pub trait Checker<State: Lattice + Clone> {
                         ir_stmt,
                         state
                     );
-                    if !self.check_statement(
-                        &state,
-                        ir_stmt,
-                        &LocIdx {
-                            addr: *addr,
-                            idx: idx as u32,
-                        },
-                    ) {
+                    let loc_idx = LocIdx {
+                        addr: *addr,
+                        idx: idx as u32,
+                    };
+                    if !self.check_statement(&state, ir_stmt, &loc_idx) {
                         return false;
                     }
-                    self.aexec(
-                        &mut state,
-                        ir_stmt,
-                        &LocIdx {
-                            addr: *addr,
-                            idx: idx as u32,
-                        },
-                    );
+                    self.aexec(&mut state, ir_stmt, &loc_idx);
                 }
             }
         }

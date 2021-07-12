@@ -19,6 +19,8 @@ pub enum CallCheckValue {
     TypeCheckFlag(X86Regs, u32), //addr, regnum, typeidx
 }
 
+use CallCheckValue::*;
+
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct CallCheckValueLattice {
     pub v: Option<CallCheckValue>,
@@ -44,11 +46,9 @@ impl Lattice for CallCheckValueLattice {
             CallCheckValueLattice { v: self.v.clone() }
         } else {
             match (self.v.clone(), other.v.clone()) {
-                (Some(CallCheckValue::PtrOffset(x)), Some(CallCheckValue::PtrOffset(y))) => {
-                    CallCheckValueLattice {
-                        v: Some(CallCheckValue::PtrOffset(x.meet(&y, loc_idx))),
-                    }
-                }
+                (Some(PtrOffset(x)), Some(PtrOffset(y))) => CallCheckValueLattice {
+                    v: Some(PtrOffset(x.meet(&y, loc_idx))),
+                },
                 (_, _) => CallCheckValueLattice { v: None },
             }
         }
@@ -62,7 +62,7 @@ impl PartialOrd for CallCheckValueLattice {
             (None, _) => Some(Ordering::Less),
             (_, None) => Some(Ordering::Greater),
             (Some(x), Some(y)) => match (x.clone(), y.clone()) {
-                (CallCheckValue::PtrOffset(x), CallCheckValue::PtrOffset(y)) => x.partial_cmp(&y),
+                (PtrOffset(x), PtrOffset(y)) => x.partial_cmp(&y),
                 (_, _) => {
                     if x == y {
                         Some(Ordering::Equal)
@@ -79,16 +79,16 @@ impl PartialOrd for CallCheckValueLattice {
 fn call_lattice_test() {
     let x1 = CallCheckValueLattice { v: None };
     let x2 = CallCheckValueLattice {
-        v: Some(CallCheckValue::GuestTableBase),
+        v: Some(GuestTableBase),
     };
     let x3 = CallCheckValueLattice {
-        v: Some(CallCheckValue::PtrOffset(DAV::Unknown)),
+        v: Some(PtrOffset(DAV::Unknown)),
     };
     let x4 = CallCheckValueLattice {
-        v: Some(CallCheckValue::PtrOffset(DAV::Unknown)),
+        v: Some(PtrOffset(DAV::Unknown)),
     };
     let x5 = CallCheckValueLattice {
-        v: Some(CallCheckValue::PtrOffset(DAV::Checked)),
+        v: Some(PtrOffset(DAV::Checked)),
     };
 
     assert_eq!(x1 == x2, false);
@@ -122,14 +122,14 @@ fn call_lattice_test() {
     assert_eq!(
         x3.meet(&x4, &LocIdx { addr: 0, idx: 0 })
             == CallCheckValueLattice {
-                v: Some(CallCheckValue::PtrOffset(DAV::Unknown))
+                v: Some(PtrOffset(DAV::Unknown))
             },
         true
     );
     assert_eq!(
         x4.meet(&x5, &LocIdx { addr: 0, idx: 0 })
             == CallCheckValueLattice {
-                v: Some(CallCheckValue::PtrOffset(DAV::Unknown))
+                v: Some(PtrOffset(DAV::Unknown))
             },
         true
     );

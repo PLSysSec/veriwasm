@@ -1,8 +1,7 @@
 use crate::{analyses, ir, lattices, loaders};
 use analyses::reaching_defs::ReachingDefnAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
-use ir::types::X86Regs;
-use ir::types::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value};
+use ir::types::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value, X86Regs};
 use ir::utils::get_rsp_offset;
 use lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
@@ -10,6 +9,8 @@ use lattices::{VarSlot, VarState};
 use loaders::types::VwMetadata;
 use std::default::Default;
 
+use SwitchValue::{JmpOffset, JmpTarget, SwitchBase, UpperBound};
+use ValSize::*;
 use X86Regs::*;
 
 pub struct SwitchAnalyzer {
@@ -46,10 +47,10 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                     let reg_def = self
                         .reaching_analyzer
                         .fetch_def(&self.reaching_defs, loc_idx);
-                    let src_loc = reg_def.regs.get_reg(*regnum, ValSize::Size64);
+                    let src_loc = reg_def.regs.get_reg(*regnum, Size64);
                     in_state.regs.set_reg(
                         Zf,
-                        ValSize::Size64,
+                        Size64,
                         SwitchValueLattice::new(SwitchValue::ZF(*imm as u32, *regnum, src_loc)),
                     );
                 }
@@ -60,9 +61,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         match opcode {
             Binopcode::Cmp => (),
             Binopcode::Test => {
-                in_state
-                    .regs
-                    .set_reg(Zf, ValSize::Size64, Default::default());
+                in_state.regs.set_reg(Zf, Size64, Default::default());
             }
             _ => in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2)),
         }
@@ -79,13 +78,13 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
             if let Some(SwitchValue::ZF(bound, regnum, checked_defs)) =
-                &in_state.regs.get_reg(Zf, ValSize::Size64).v
+                &in_state.regs.get_reg(Zf, Size64).v
             {
                 not_branch_state.regs.set_reg(
                     *regnum,
-                    ValSize::Size64,
+                    Size64,
                     SwitchValueLattice {
-                        v: Some(SwitchValue::UpperBound(*bound)),
+                        v: Some(UpperBound(*bound)),
                     },
                 );
                 let defs_state = self.reaching_defs.get(addr).unwrap();
@@ -94,13 +93,13 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                 //propagate bound across registers with the same reaching def
                 for idx in X86Regs::iter() {
                     if idx != *regnum {
-                        let reg_def = defs_state.regs.get_reg(idx, ValSize::Size64);
+                        let reg_def = defs_state.regs.get_reg(idx, Size64);
                         if (!reg_def.is_empty()) && (&reg_def == checked_defs) {
                             not_branch_state.regs.set_reg(
                                 idx,
-                                ValSize::Size64,
+                                Size64,
                                 SwitchValueLattice {
-                                    v: Some(SwitchValue::UpperBound(*bound)),
+                                    v: Some(UpperBound(*bound)),
                                 },
                             );
                         }
@@ -110,7 +109,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                 for (stack_offset, stack_slot) in defs_state.stack.map.iter() {
                     if !checked_defs.is_empty() && (&stack_slot.value == checked_defs) {
                         let v = SwitchValueLattice {
-                            v: Some(SwitchValue::UpperBound(*bound)),
+                            v: Some(UpperBound(*bound)),
                         };
                         let vv = VarSlot {
                             size: stack_slot.size,
@@ -120,12 +119,10 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                     }
                 }
             }
-            branch_state
-                .regs
-                .set_reg(Zf, ValSize::Size64, Default::default());
+            branch_state.regs.set_reg(Zf, Size64, Default::default());
             not_branch_state
                 .regs
-                .set_reg(Zf, ValSize::Size64, Default::default());
+                .set_reg(Zf, Size64, Default::default());
             vec![
                 (succ_addrs[0].clone(), not_branch_state),
                 (succ_addrs[1].clone(), branch_state),
@@ -155,12 +152,12 @@ impl SwitchAnalyzer {
             MemArg::Imm(_, _, immval),
         ) = memargs
         {
-            if let (Some(SwitchValue::SwitchBase(base)), Some(SwitchValue::UpperBound(bound)), 4) = (
+            if let (Some(SwitchBase(base)), Some(UpperBound(bound)), 4) = (
                 in_state.regs.get_reg(*regnum1, *size1).v,
                 in_state.regs.get_reg(*regnum2, *size2).v,
                 immval,
             ) {
-                return SwitchValueLattice::new(SwitchValue::JmpOffset(base, bound));
+                return SwitchValueLattice::new(JmpOffset(base, bound));
             }
         }
         Default::default()
@@ -176,9 +173,9 @@ impl SwitchAnalyzer {
             Value::Reg(regnum, size) => in_state.regs.get_reg(*regnum, *size),
             Value::Imm(_, _, immval) => {
                 if *immval == 0 {
-                    SwitchValueLattice::new(SwitchValue::UpperBound(1))
+                    SwitchValueLattice::new(UpperBound(1))
                 } else {
-                    SwitchValueLattice::new(SwitchValue::SwitchBase(*immval as u32))
+                    SwitchValueLattice::new(SwitchBase(*immval as u32))
                 }
             }
             Value::RIPConst => Default::default(),
@@ -199,14 +196,10 @@ impl SwitchAnalyzer {
                     in_state.regs.get_reg(*regnum1, *size1).v,
                     in_state.regs.get_reg(*regnum2, *size2).v,
                 ) {
-                    (
-                        Some(SwitchValue::SwitchBase(base)),
-                        Some(SwitchValue::JmpOffset(_, offset)),
-                    )
-                    | (
-                        Some(SwitchValue::JmpOffset(_, offset)),
-                        Some(SwitchValue::SwitchBase(base)),
-                    ) => return SwitchValueLattice::new(SwitchValue::JmpTarget(base, offset)),
+                    (Some(SwitchBase(base)), Some(JmpOffset(_, offset)))
+                    | (Some(JmpOffset(_, offset)), Some(SwitchBase(base))) => {
+                        return SwitchValueLattice::new(JmpTarget(base, offset))
+                    }
                     _ => return Default::default(),
                 };
             }

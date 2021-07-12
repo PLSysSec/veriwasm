@@ -1,19 +1,17 @@
+use crate::{analyses, ir, lattices, loaders};
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use crate::analyses::AbstractAnalyzer;
-use crate::analyses::AnalysisResult;
-use crate::analyses::CallAnalyzer;
-use crate::ir::types::{Binopcode, IRMap, Stmt, ValSize, Value};
-use crate::ir::types::{FunType, VarIndex, X86Regs};
-use crate::ir::utils::mk_value_i64;
-use crate::lattices::calllattice::CallCheckLattice;
-use crate::lattices::localslattice::*;
-use crate::lattices::mem_to_stack_offset;
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::{Lattice, VarState, VariableState};
-use crate::loaders::types::VwFuncInfo;
-use crate::loaders::utils::to_system_v_ret_ty;
+use analyses::{AbstractAnalyzer, AnalysisResult, CallAnalyzer};
+use ir::types::{Binopcode, FunType, IRMap, Stmt, ValSize, Value, VarIndex, X86Regs};
+use ir::utils::mk_value_i64;
+use lattices::calllattice::CallCheckLattice;
+use lattices::localslattice::*;
+use lattices::mem_to_stack_offset;
+use lattices::reachingdefslattice::LocIdx;
+use lattices::{Lattice, VarState, VariableState};
+use loaders::types::VwFuncInfo;
+use loaders::utils::to_system_v_ret_ty;
 
 use SlotVal::*;
 use ValSize::*;
