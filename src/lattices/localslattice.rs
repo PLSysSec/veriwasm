@@ -1,68 +1,38 @@
+use crate::ir::types::X86Regs;
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::Lattice;
 pub use crate::lattices::{VarState, VariableState};
+use std::cmp::Ordering;
 use std::convert::TryFrom;
 
+use Ordering::*;
+use X86Regs::*;
+
 #[derive(PartialEq, Clone, Eq, Debug, Copy, Hash)]
-pub enum X86Regs {
-    Rax,
-    Rcx,
-    Rdx,
-    Rbx,
-    Rsp,
-    Rbp,
-    Rsi,
-    Rdi,
-    R8,
-    R9,
-    R10,
-    R11,
-    R12,
-    R13,
-    R14,
-    R15,
-    Zf,
-}
-
-use self::X86Regs::*;
-
-impl TryFrom<&u8> for X86Regs {
-    type Error = std::string::String;
-
-    fn try_from(value: &u8) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Rax),
-            1 => Ok(Rcx),
-            2 => Ok(Rdx),
-            3 => Ok(Rbx),
-            4 => Ok(Rsp),
-            5 => Ok(Rbp),
-            6 => Ok(Rsi),
-            7 => Ok(Rdi),
-            8 => Ok(R8),
-            9 => Ok(R9),
-            10 => Ok(R10),
-            11 => Ok(R11),
-            12 => Ok(R12),
-            13 => Ok(R13),
-            14 => Ok(R14),
-            15 => Ok(R15),
-            16 => Ok(Zf),
-            _ => Err(format!("Unknown register: index = {:?}", value)),
-        }
-    }
-}
-
-impl From<X86Regs> for u8 {
-    fn from(value: X86Regs) -> Self {
-        value as u8
-    }
-}
-
-#[derive(PartialEq, PartialOrd, Clone, Eq, Debug, Copy, Hash)]
 pub enum SlotVal {
     Uninit,
     Init,
+    UninitCalleeReg(X86Regs),
+}
+
+impl PartialOrd for SlotVal {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self, other) {
+            (Uninit, Uninit) => Some(Equal),
+            (Uninit, _) => Some(Less),
+            (_, Uninit) => Some(Greater),
+            (Init, Init) => Some(Equal),
+            (Init, _) => Some(Greater),
+            (_, Init) => Some(Less),
+            (UninitCalleeReg(r1), UninitCalleeReg(r2)) => {
+                if r1 == r1 {
+                    Some(Equal)
+                } else {
+                    None
+                }
+            }
+        }
+    }
 }
 
 use self::SlotVal::*;
@@ -79,6 +49,15 @@ impl Lattice for SlotVal {
             (Init, Init) => Init,
             (Uninit, _) => Uninit,
             (_, Uninit) => Uninit,
+            (Init, UninitCalleeReg(_)) => Uninit,
+            (UninitCalleeReg(_), Init) => Uninit,
+            (UninitCalleeReg(r1), UninitCalleeReg(r2)) => {
+                if r1 == r2 {
+                    UninitCalleeReg(*r1)
+                } else {
+                    Uninit
+                }
+            }
         }
     }
 }

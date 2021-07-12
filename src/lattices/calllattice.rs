@@ -1,3 +1,4 @@
+use crate::ir::types::X86Regs;
 use crate::lattices;
 use lattices::davlattice::DAV;
 use lattices::reachingdefslattice::LocIdx;
@@ -9,10 +10,13 @@ pub enum CallCheckValue {
     GuestTableBase,
     LucetTablesBase,
     TableSize,
+    TypeOf(X86Regs), //regnum
     PtrOffset(DAV),
-    FnPtr,
+    TypedPtrOffset(u32),
+    FnPtr(u32), //type
     CheckedVal,
-    CheckFlag(u32, u8),
+    CheckFlag(u32, X86Regs),
+    TypeCheckFlag(X86Regs, u32), //addr, regnum, typeidx
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]

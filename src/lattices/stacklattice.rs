@@ -11,8 +11,18 @@ pub struct StackLattice<T> {
     pub map: HashMap<i64, VarSlot<T>>,
 }
 
+impl<T: std::fmt::Debug + Clone> std::fmt::Display for StackLattice<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut tmp: Vec<(&i64, &VarSlot<T>)> = self.map.iter().collect();
+        let sorted = tmp.as_mut_slice();
+        sorted.sort_by(|a, b| b.0.cmp(&a.0));
+        write!(f, "{}: {:?}", self.offset, sorted)
+    }
+}
+
 impl<T: Lattice + Clone> StackLattice<T> {
     pub fn update(&mut self, offset: i64, value: T, size: u32) -> () {
+        // println!("stack update: {:?} + {:?} = {:?} <- {:?} {:?}", self.offset, offset, self.offset + offset, value, size);
         //Check if 4 aligned
         if (offset & 3) != 0 {
             panic!("Unsafe: Attempt to store value on the stack on not 4-byte aligned address.");
@@ -47,6 +57,7 @@ impl<T: Lattice + Clone> StackLattice<T> {
             panic!("Load wrong size! size = {:?}", size);
         }
 
+        // TODO: is this correct?
         match self.map.get(&(self.offset + offset)) {
             Some(stack_slot) => {
                 if stack_slot.size == size {
@@ -113,6 +124,7 @@ impl<T: Lattice + Clone> Lattice for StackLattice<T> {
         for (k, v1) in self.map.iter() {
             match other.map.get(k) {
                 Some(v2) => {
+                    // TODO: sizes?
                     if v1.size == v2.size {
                         let new_v = v1.value.meet(&v2.value.clone(), loc_idx);
                         if new_v != Default::default() {
@@ -128,6 +140,13 @@ impl<T: Lattice + Clone> Lattice for StackLattice<T> {
             }
         }
 
+        if self.offset != other.offset {
+            panic!(
+                "stack offsets misaligned 0x{:x?}: {:?} {:?}",
+                loc_idx.addr, self.offset, other.offset
+            );
+        }
+
         StackLattice {
             offset: self.offset,
             map: newmap,
@@ -135,7 +154,7 @@ impl<T: Lattice + Clone> Lattice for StackLattice<T> {
     }
 }
 
-impl<T: Lattice + Clone> Default for StackLattice<T> {
+impl<T: Default> Default for StackLattice<T> {
     fn default() -> Self {
         StackLattice {
             offset: 0,

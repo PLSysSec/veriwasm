@@ -1,32 +1,40 @@
-use crate::{analyses, checkers, ir, lattices};
-use analyses::{AbstractAnalyzer, AnalysisResult, HeapAnalyzer};
-use checkers::Checker;
-use ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
-use ir::utils::{is_mem_access, is_stack_access};
-use lattices::heaplattice::{HeapLattice, HeapValue};
-use lattices::reachingdefslattice::LocIdx;
-use lattices::X86Regs::*;
+use crate::analyses::heap_analyzer::HeapAnalyzer;
+use crate::analyses::{AbstractAnalyzer, AnalysisResult};
+use crate::checkers::Checker;
+use crate::ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value, X86Regs};
+use crate::ir::utils::{is_mem_access, is_stack_access};
+use crate::lattices::heaplattice::{HeapLattice, HeapValue};
+use crate::lattices::reachingdefslattice::LocIdx;
+use crate::utils::utils::is_libcall;
+use std::collections::HashMap;
+
+use HeapValue::*;
+use ValSize::*;
+use X86Regs::*;
 
 pub struct HeapChecker<'a> {
     irmap: &'a IRMap,
     analyzer: &'a HeapAnalyzer,
+    name_addr_map: &'a HashMap<u64, String>,
 }
 
 pub fn check_heap(
     result: AnalysisResult<HeapLattice>,
     irmap: &IRMap,
     analyzer: &HeapAnalyzer,
+    name_addr_map: &HashMap<u64, String>,
 ) -> bool {
     HeapChecker {
         irmap: irmap,
         analyzer: analyzer,
+        name_addr_map: name_addr_map,
     }
     .check(result)
 }
 
 fn memarg_is_frame(memarg: &MemArg) -> bool {
-    if let MemArg::Reg(5, size) = memarg {
-        assert_eq!(*size, ValSize::Size64);
+    if let MemArg::Reg(Rbp, size) = memarg {
+        assert_eq!(*size, Size64);
         true
     } else {
         false
@@ -63,44 +71,53 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
         self.analyzer.aexec(state, ir_stmt, loc)
     }
 
-    fn check_statement(&self, state: &HeapLattice, ir_stmt: &Stmt, _loc_idx: &LocIdx) -> bool {
+    fn check_statement(&self, state: &HeapLattice, ir_stmt: &Stmt, loc_idx: &LocIdx) -> bool {
         match ir_stmt {
             //1. Check that at each call rdi = HeapBase
-            Stmt::Call(_) => match state.regs.get_reg(Rdi, ValSize::Size64).v {
-                Some(HeapValue::HeapBase) => (),
+            Stmt::Call(v) => match state.regs.get_reg(Rdi, Size64).v {
+                Some(HeapBase) => (),
                 _ => {
-                    log::debug!("Call failure {:?}", state.stack.get(0, 8));
-                    return false;
+                    if let Value::Imm(_, _, dst) = v {
+                        let target = (*dst + (loc_idx.addr as i64) + 5) as u64;
+                        let name = self.name_addr_map.get(&target).unwrap();
+                        if !is_libcall(name) {
+                            log::debug!("0x{:x}: Call failure", loc_idx.addr);
+                            return false;
+                        }
+                    } else {
+                        log::debug!("0x{:x}: Call failure", loc_idx.addr);
+                        return false;
+                    }
                 }
             },
             //2. Check that all load and store are safe
             Stmt::Unop(_, dst, src) => {
-                if is_mem_access(dst) && !self.check_mem_access(state, dst) {
+                if is_mem_access(dst) && !self.check_mem_access(state, dst, loc_idx) {
                     return false;
                 }
                 //stack read: probestack <= stackgrowth + c < 8K
-                if is_mem_access(src) && !self.check_mem_access(state, src) {
+                if is_mem_access(src) && !self.check_mem_access(state, src, loc_idx) {
                     return false;
                 }
             }
 
             Stmt::Binop(_, dst, src1, src2) => {
-                if is_mem_access(dst) && !self.check_mem_access(state, dst) {
+                if is_mem_access(dst) && !self.check_mem_access(state, dst, loc_idx) {
                     return false;
                 }
-                if is_mem_access(src1) && !self.check_mem_access(state, src1) {
+                if is_mem_access(src1) && !self.check_mem_access(state, src1, loc_idx) {
                     return false;
                 }
-                if is_mem_access(src2) && !self.check_mem_access(state, src2) {
+                if is_mem_access(src2) && !self.check_mem_access(state, src2, loc_idx) {
                     return false;
                 }
             }
             Stmt::Clear(dst, srcs) => {
-                if is_mem_access(dst) && !self.check_mem_access(state, dst) {
+                if is_mem_access(dst) && !self.check_mem_access(state, dst, loc_idx) {
                     return false;
                 }
                 for src in srcs {
-                    if is_mem_access(src) && !self.check_mem_access(state, src) {
+                    if is_mem_access(src) && !self.check_mem_access(state, src, loc_idx) {
                         return false;
                     }
                 }
@@ -115,20 +132,16 @@ impl HeapChecker<'_> {
     fn check_global_access(&self, state: &HeapLattice, access: &Value) -> bool {
         if let Value::Mem(_, memargs) = access {
             match memargs {
-                MemArgs::Mem1Arg(MemArg::Reg(regnum, ValSize::Size64)) => {
-                    if let Some(HeapValue::GlobalsBase) =
-                        state.regs.get_reg_index(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64)) => {
+                    if let Some(GlobalsBase) = state.regs.get_reg(*regnum, Size64).v {
                         return true;
                     }
                 }
                 MemArgs::Mem2Args(
-                    MemArg::Reg(regnum, ValSize::Size64),
+                    MemArg::Reg(regnum, Size64),
                     MemArg::Imm(_, _, globals_offset),
                 ) => {
-                    if let Some(HeapValue::GlobalsBase) =
-                        state.regs.get_reg_index(*regnum, ValSize::Size64).v
-                    {
+                    if let Some(GlobalsBase) = state.regs.get_reg(*regnum, Size64).v {
                         return *globals_offset <= 4096;
                     }
                 }
@@ -156,13 +169,11 @@ impl HeapChecker<'_> {
                 //   relocations, we accept this approximation to the trusted
                 //   base: we trust any memory access based at such a
                 //   constant/global-variable-produced address.
-                MemArgs::Mem1Arg(MemArg::Reg(regnum, ValSize::Size64))
-                | MemArgs::Mem2Args(MemArg::Reg(regnum, ValSize::Size64), _)
-                | MemArgs::Mem3Args(MemArg::Reg(regnum, ValSize::Size64), _, _)
-                | MemArgs::MemScale(MemArg::Reg(regnum, ValSize::Size64), _, _) => {
-                    if let Some(HeapValue::RIPConst) =
-                        state.regs.get_reg_index(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64))
+                | MemArgs::Mem2Args(MemArg::Reg(regnum, Size64), _)
+                | MemArgs::Mem3Args(MemArg::Reg(regnum, Size64), _, _)
+                | MemArgs::MemScale(MemArg::Reg(regnum, Size64), _, _) => {
+                    if let Some(RIPConst) = state.regs.get_reg(*regnum, Size64).v {
                         return true;
                     }
                 }
@@ -176,38 +187,28 @@ impl HeapChecker<'_> {
         if let Value::Mem(_, memargs) = access {
             match memargs {
                 // if only arg is heapbase or heapaddr
-                MemArgs::Mem1Arg(MemArg::Reg(regnum, ValSize::Size64)) => {
-                    if let Some(HeapValue::HeapBase) =
-                        state.regs.get_reg_index(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64)) => {
+                    if let Some(HeapBase) = state.regs.get_reg(*regnum, Size64).v {
                         return true;
                     }
-                    if let Some(HeapValue::HeapAddr) =
-                        state.regs.get_reg_index(*regnum, ValSize::Size64).v
-                    {
+                    if let Some(HeapAddr) = state.regs.get_reg(*regnum, Size64).v {
                         return true;
                     }
                 }
                 // if arg1 is heapbase and arg2 is bounded ||
                 // if arg1 is heapaddr and arg2 is constant offset
-                MemArgs::Mem2Args(MemArg::Reg(regnum, ValSize::Size64), memarg2) => {
-                    if let Some(HeapValue::HeapBase) =
-                        state.regs.get_reg_index(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem2Args(MemArg::Reg(regnum, Size64), memarg2) => {
+                    if let Some(HeapBase) = state.regs.get_reg(*regnum, Size64).v {
                         match memarg2 {
                             MemArg::Reg(regnum2, size2) => {
-                                if let Some(HeapValue::Bounded4GB) =
-                                    state.regs.get_reg_index(*regnum2, *size2).v
-                                {
+                                if let Some(Bounded4GB) = state.regs.get_reg(*regnum2, *size2).v {
                                     return true;
                                 }
                             }
                             MemArg::Imm(_, _, v) => return *v >= -0x1000 && *v <= 0xffffffff,
                         }
                     }
-                    if let Some(HeapValue::HeapAddr) =
-                        state.regs.get_reg_index(*regnum, ValSize::Size64).v
-                    {
+                    if let Some(HeapAddr) = state.regs.get_reg(*regnum, Size64).v {
                         match memarg2 {
                             MemArg::Imm(_, _, v) => return *v >= -0x1000 && *v <= 0xffffffff,
                             _ => {}
@@ -216,24 +217,20 @@ impl HeapChecker<'_> {
                 }
                 // if arg1 is heapbase and arg2 and arg3 are bounded ||
                 // if arg1 is bounded and arg1 and arg3 are bounded
-                MemArgs::Mem3Args(MemArg::Reg(regnum, ValSize::Size64), memarg2, memarg3)
-                | MemArgs::Mem3Args(memarg2, MemArg::Reg(regnum, ValSize::Size64), memarg3) => {
-                    if let Some(HeapValue::HeapBase) =
-                        state.regs.get_reg_index(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem3Args(MemArg::Reg(regnum, Size64), memarg2, memarg3)
+                | MemArgs::Mem3Args(memarg2, MemArg::Reg(regnum, Size64), memarg3) => {
+                    if let Some(HeapBase) = state.regs.get_reg(*regnum, Size64).v {
                         match (memarg2, memarg3) {
                             (MemArg::Reg(regnum2, size2), MemArg::Imm(_, _, v))
                             | (MemArg::Imm(_, _, v), MemArg::Reg(regnum2, size2)) => {
-                                if let Some(HeapValue::Bounded4GB) =
-                                    state.regs.get_reg_index(*regnum2, *size2).v
-                                {
+                                if let Some(Bounded4GB) = state.regs.get_reg(*regnum2, *size2).v {
                                     return *v <= 0xffffffff;
                                 }
                             }
                             (MemArg::Reg(regnum2, size2), MemArg::Reg(regnum3, size3)) => {
-                                if let (Some(HeapValue::Bounded4GB), Some(HeapValue::Bounded4GB)) = (
-                                    state.regs.get_reg_index(*regnum2, *size2).v,
-                                    state.regs.get_reg_index(*regnum3, *size3).v,
+                                if let (Some(Bounded4GB), Some(Bounded4GB)) = (
+                                    state.regs.get_reg(*regnum2, *size2).v,
+                                    state.regs.get_reg(*regnum3, *size3).v,
                                 ) {
                                     return true;
                                 }
@@ -252,47 +249,36 @@ impl HeapChecker<'_> {
         if let Value::Mem(_size, memargs) = access {
             match memargs {
                 //Case 1: mem[globals_base]
-                MemArgs::Mem1Arg(MemArg::Reg(regnum, ValSize::Size64)) => {
-                    if let Some(HeapValue::GlobalsBase) =
-                        state.regs.get_reg_index(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64)) => {
+                    if let Some(GlobalsBase) = state.regs.get_reg(*regnum, Size64).v {
                         return true;
                     }
                 }
                 //Case 2: mem[lucet_tables + 8]
-                MemArgs::Mem2Args(MemArg::Reg(regnum, ValSize::Size64), MemArg::Imm(_, _, 8)) => {
-                    if let Some(HeapValue::LucetTables) =
-                        state.regs.get_reg_index(*regnum, ValSize::Size64).v
-                    {
+                MemArgs::Mem2Args(MemArg::Reg(regnum, Size64), MemArg::Imm(_, _, 8)) => {
+                    if let Some(LucetTables) = state.regs.get_reg(*regnum, Size64).v {
                         return true;
                     }
                 }
-                MemArgs::Mem2Args(
-                    MemArg::Reg(regnum1, ValSize::Size64),
-                    MemArg::Reg(regnum2, ValSize::Size64),
-                ) => {
-                    if let Some(HeapValue::GuestTable0) =
-                        state.regs.get_reg_index(*regnum1, ValSize::Size64).v
-                    {
+                MemArgs::Mem2Args(MemArg::Reg(regnum1, Size64), MemArg::Reg(regnum2, Size64)) => {
+                    if let Some(GuestTable0) = state.regs.get_reg(*regnum1, Size64).v {
                         return true;
                     }
-                    if let Some(HeapValue::GuestTable0) =
-                        state.regs.get_reg_index(*regnum2, ValSize::Size64).v
-                    {
+                    if let Some(GuestTable0) = state.regs.get_reg(*regnum2, Size64).v {
                         return true;
                     }
                 }
                 MemArgs::Mem3Args(
-                    MemArg::Reg(regnum1, ValSize::Size64),
-                    MemArg::Reg(regnum2, ValSize::Size64),
+                    MemArg::Reg(regnum1, Size64),
+                    MemArg::Reg(regnum2, Size64),
                     MemArg::Imm(_, _, 8),
                 ) => {
                     match (
-                        state.regs.get_reg_index(*regnum1, ValSize::Size64).v,
-                        state.regs.get_reg_index(*regnum2, ValSize::Size64).v,
+                        state.regs.get_reg(*regnum1, Size64).v,
+                        state.regs.get_reg(*regnum2, Size64).v,
                     ) {
-                        (Some(HeapValue::GuestTable0), _) => return true,
-                        (_, Some(HeapValue::GuestTable0)) => return true,
+                        (Some(GuestTable0), _) => return true,
+                        (_, Some(GuestTable0)) => return true,
                         _ => (),
                     }
                 }
@@ -312,7 +298,7 @@ impl HeapChecker<'_> {
         false
     }
 
-    fn check_mem_access(&self, state: &HeapLattice, access: &Value) -> bool {
+    fn check_mem_access(&self, state: &HeapLattice, access: &Value, loc_idx: &LocIdx) -> bool {
         // Case 1: its a stack access
         if is_stack_access(access) {
             return true;
@@ -346,7 +332,7 @@ impl HeapChecker<'_> {
             return true;
         };
         // Case 8: its unknown
-        log::debug!("None of the memory accesses!");
+        log::debug!("None of the memory accesses at 0x{:x}", loc_idx.addr);
         print_mem_access(state, access);
         return false;
     }
@@ -354,11 +340,9 @@ impl HeapChecker<'_> {
 
 pub fn memarg_repr(state: &HeapLattice, memarg: &MemArg) -> String {
     match memarg {
-        MemArg::Reg(regnum, size) => format!(
-            "r{:?}: {:?}",
-            regnum,
-            state.regs.get_reg_index(*regnum, *size).v
-        ),
+        MemArg::Reg(regnum, size) => {
+            format!("{:?}: {:?}", regnum, state.regs.get_reg(*regnum, *size).v)
+        }
         MemArg::Imm(_, _, x) => format!("{:?}", x),
     }
 }

@@ -2,11 +2,11 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use crate::ir::types::ValSize;
+use crate::ir::types::{ValSize, X86Regs};
 use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::{Lattice, VarSlot, X86Regs};
+use crate::lattices::{Lattice, VarSlot};
 
-use self::X86Regs::*;
+use X86Regs::*;
 
 #[derive(Default, PartialEq, Eq, Clone, Debug)]
 pub struct X86RegsLattice<T> {
@@ -43,9 +43,16 @@ impl<T: PartialOrd> PartialOrd for X86RegsLattice<T> {
 
 impl<T: Lattice + Clone> X86RegsLattice<T> {
     pub fn get_reg(&self, index: X86Regs, size: ValSize) -> T {
-        if let ValSize::SizeOther = size {
-            return Default::default(); // TODO: what is happening here
-        }
+        // if let ValSize::Size128 = size {
+        //     return Default::default(); // TODO: what is happening here
+        // }
+        // if let ValSize::Size256 = size {
+        //     return Default::default(); // TODO: what is happening here
+        // }
+        // if let ValSize::Size256 = size {
+        //     return Default::default(); // TODO: what is happening here
+        // }
+
         if let Some(slot) = self.map.get(&index) {
             slot.value.clone()
         } else {
@@ -62,9 +69,15 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
     }
 
     pub fn set_reg(&mut self, index: X86Regs, size: ValSize, value: T) {
-        if let ValSize::SizeOther = size {
-            return; // TODO: what is happening here
-        }
+        // if let ValSize::Size128 = size {
+        //     return Default::default(); // TODO: what is happening here
+        // }
+        // if let ValSize::Size256 = size {
+        //     return Default::default(); // TODO: what is happening here
+        // }
+        // if let ValSize::Size256 = size {
+        //     return Default::default(); // TODO: what is happening here
+        // }
         self.map.insert(
             index,
             VarSlot {
@@ -74,12 +87,12 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
         );
     }
 
-    pub fn set_reg_index(&mut self, index: &u8, size: &ValSize, value: T) -> () {
-        let reg_index = match X86Regs::try_from(*index) {
+    pub fn set_reg_index(&mut self, index: u8, size: ValSize, value: T) -> () {
+        let reg_index = match X86Regs::try_from(index) {
             Err(err) => panic!("{}", err),
             Ok(reg) => reg,
         };
-        self.set_reg(reg_index, *size, value)
+        self.set_reg(reg_index, size, value)
     }
 
     pub fn clear_regs(&mut self) -> () {
@@ -105,6 +118,10 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
         self.map.remove(&R10);
         self.map.remove(&R11);
         self.map.remove(&Zf);
+        self.map.remove(&Cf);
+        self.map.remove(&Pf);
+        self.map.remove(&Sf);
+        self.map.remove(&Of);
     }
 
     pub fn show(&self) -> () {
@@ -119,15 +136,12 @@ impl<T: Lattice + Clone> Lattice for X86RegsLattice<T> {
         for (var_index, v1) in self.map.iter() {
             match other.map.get(var_index) {
                 Some(v2) => {
-                    // TODO(matt): what if the sizes are different?
-                    if v1.size == v2.size {
-                        let new_v = v1.value.meet(&v2.value.clone(), loc_idx);
-                        let newslot = VarSlot {
-                            size: v1.size,
-                            value: new_v,
-                        };
-                        newmap.insert(*var_index, newslot);
-                    }
+                    let new_v = v1.value.meet(&v2.value.clone(), loc_idx);
+                    let newslot = VarSlot {
+                        size: std::cmp::min(v1.size, v2.size),
+                        value: new_v,
+                    };
+                    newmap.insert(*var_index, newslot);
                 }
                 None => (), // this means v2 = ⊥ so v1 ∧ v2 = ⊥
             }

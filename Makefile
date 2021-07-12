@@ -17,3 +17,22 @@ compute_stats_all:
 	cargo run --release -- -i veriwasm_data/firefox_libs/libgraphitewasm.so -o stats/libgraphitewasm.stats &
 	cargo run --release -- -i veriwasm_data/shootout/shootout.so -o stats/shootout.stats
 
+compute_stats_zerocost:
+	mkdir -p ./zerocost_stats
+	cargo build --release 
+	target/release/veriwasm -i veriwasm_public_data/zerocost_bins/graphiteogghunspell.so -o zerocost_stats/graphiteogghunspell
+	target/release/veriwasm -i veriwasm_public_data/zerocost_bins/soundtouch.so -o zerocost_stats/soundtouch
+	target/release/veriwasm -i veriwasm_public_data/zerocost_bins/libexpatwasm.so -o zerocost_stats/libexpatwasm
+	target/release/veriwasm -i veriwasm_public_data/zerocost_spec_libraries/astar.so -o zerocost_stats/astar
+	target/release/veriwasm -i veriwasm_public_data/zerocost_spec_libraries/bzip2.so -o zerocost_stats/bzip2
+	target/release/veriwasm -i veriwasm_public_data/zerocost_spec_libraries/gobmk.so -o zerocost_stats/gobmk
+	target/release/veriwasm -i veriwasm_public_data/zerocost_spec_libraries/h264ref.so -o zerocost_stats/h264ref
+	target/release/veriwasm -i veriwasm_public_data/zerocost_spec_libraries/lbm.so -o zerocost_stats/lbm
+	target/release/veriwasm -i veriwasm_public_data/zerocost_spec_libraries/libquantum.so -o zerocost_stats/libquantum
+	target/release/veriwasm -i veriwasm_public_data/zerocost_spec_libraries/mcf.so -o zerocost_stats/mcf
+	target/release/veriwasm -i veriwasm_public_data/zerocost_spec_libraries/milc.so -o zerocost_stats/milc
+	target/release/veriwasm -i veriwasm_public_data/zerocost_spec_libraries/namd.so -o zerocost_stats/namd
+	target/release/veriwasm -i veriwasm_public_data/zerocost_spec_libraries/sjeng.so -o zerocost_stats/sjeng
+
+
+

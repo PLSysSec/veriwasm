@@ -12,9 +12,10 @@ keywords = ["verification", "WebAssembly", "security", "static-analysis", "binar
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-yaxpeax-core = { version = "0.0.2-vw-tweaks" }
+# This commit (`f9dc5c2...`) is the `vw-tweaks` branch.
+yaxpeax-core = { git = "https://github.com/mkolosick/yaxpeax-core/", branch = "veriwasm" }
 yaxpeax-arch = { version = "0.0.4", features = ["use-serde"] }
-yaxpeax-x86 = "0.2.0"
+yaxpeax-x86 = { git = "https://github.com/mkolosick/yaxpeax-x86/", branch = "veriwasm" }
 "petgraph" = "0.4.13"
 clap = "2.33.3"
 object = "0.21.0"
@@ -35,3 +36,11 @@ lucet-module = "0.5.1"
 #capstone = { version = "0.8.0" }
 
 
+# log = "*"
+# env_logger = "*"
+# goblin = "*"
+# wasmtime = { path = "../wasmtime/crates/wasmtime" }
+# wasmtime-jit = { path = "../wasmtime/crates/jit" }
+# lucet-module = { path = "../lucet_sandbox_compiler/lucet-module", version = "0.1.1", package="lucet-module-wasmsbx" }
+# # lucet-module = { git = "https://github.com/bytecodealliance/lucet.git" }
+elfkit = "0.0.4"

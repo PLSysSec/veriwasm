@@ -1,10 +1,11 @@
+use crate::ir::types::X86Regs;
 use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use crate::lattices::{ConstLattice, VariableState};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum SwitchValue {
     SwitchBase(u32),
-    ZF(u32, u8, ReachingDefnLattice),
+    ZF(u32, X86Regs, ReachingDefnLattice),
     UpperBound(u32),
     JmpOffset(u32, u32), // base + bound
     JmpTarget(u32, u32), //base + bound

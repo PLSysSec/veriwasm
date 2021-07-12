@@ -7,6 +7,8 @@ use lattices::X86Regs::*;
 use loaders::types::VwMetadata;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
 
+use X86Regs::*;
+
 //Top level function
 pub fn analyze_reaching_defs(
     cfg: &VW_CFG,

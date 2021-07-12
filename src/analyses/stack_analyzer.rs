@@ -12,7 +12,7 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
         StackGrowthLattice::new((0, 4096, 0))
     }
 
-    fn aexec(&self, in_state: &mut StackGrowthLattice, ir_instr: &Stmt, _loc_idx: &LocIdx) -> () {
+    fn aexec(&self, in_state: &mut StackGrowthLattice, ir_instr: &Stmt, loc_idx: &LocIdx) -> () {
         match ir_instr {
             Stmt::Clear(dst, _) => {
                 if is_rsp(dst) {
@@ -43,6 +43,11 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
             Stmt::Binop(opcode, dst, src1, src2) => {
                 if is_rsp(dst) {
                     if is_rsp(src1) {
+                        log::debug!(
+                            "Processing stack instruction: 0x{:x} {:?}",
+                            loc_idx.addr,
+                            ir_instr
+                        );
                         let offset = get_imm_offset(src2);
                         if let Some((x, probestack, rbp)) = in_state.v {
                             match opcode {

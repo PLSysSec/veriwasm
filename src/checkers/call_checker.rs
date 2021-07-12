@@ -74,10 +74,10 @@ impl CallChecker<'_> {
     ) -> bool {
         match target {
             Value::Reg(regnum, size) => {
-                if let Some(CallCheckValue::FnPtr) = state.regs.get_reg_index(*regnum, *size).v {
+                if let Some(CallCheckValue::FnPtr(c)) = state.regs.get_reg(*regnum, *size).v {
                     return true;
                 } else {
-                    log::debug!("{:?}", state.regs.get_reg_index(*regnum, *size).v)
+                    log::debug!("{:?}", state.regs.get_reg(*regnum, *size).v)
                 }
             }
             Value::Mem(_, _) => return false,
@@ -102,8 +102,8 @@ impl CallChecker<'_> {
                 MemArg::Reg(regnum2, ValSize::Size64),
                 MemArg::Imm(_, _, 8),
             ) => match (
-                state.regs.get_reg_index(*regnum1, ValSize::Size64).v,
-                state.regs.get_reg_index(*regnum2, ValSize::Size64).v,
+                state.regs.get_reg(*regnum1, ValSize::Size64).v,
+                state.regs.get_reg(*regnum2, ValSize::Size64).v,
             ) {
                 (
                     Some(CallCheckValue::GuestTableBase),
@@ -113,6 +113,12 @@ impl CallChecker<'_> {
                     Some(CallCheckValue::PtrOffset(DAV::Checked)),
                     Some(CallCheckValue::GuestTableBase),
                 ) => return true,
+                (Some(CallCheckValue::TypedPtrOffset(_)), Some(CallCheckValue::GuestTableBase)) => {
+                    return true
+                }
+                (Some(CallCheckValue::GuestTableBase), Some(CallCheckValue::TypedPtrOffset(_))) => {
+                    return true
+                }
                 (_x, Some(CallCheckValue::GuestTableBase))
                 | (Some(CallCheckValue::GuestTableBase), _x) => return false,
                 (_x, _y) => return true, // not a calltable lookup
@@ -124,11 +130,9 @@ impl CallChecker<'_> {
 
 pub fn memarg_repr(state: &CallCheckLattice, memarg: &MemArg) -> String {
     match memarg {
-        MemArg::Reg(regnum, size) => format!(
-            "r{:?}: {:?}",
-            regnum,
-            state.regs.get_reg_index(*regnum, *size).v
-        ),
+        MemArg::Reg(regnum, size) => {
+            format!("r{:?}: {:?}", regnum, state.regs.get_reg(*regnum, *size).v)
+        }
         MemArg::Imm(_, _, x) => format!("{:?}", x),
     }
 }

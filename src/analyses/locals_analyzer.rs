@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use crate::analyses::AbstractAnalyzer;
 use crate::ir::types::{Binopcode, IRMap, Stmt, ValSize, Value};
@@ -9,20 +10,29 @@ use crate::lattices::{Lattice, VarIndex, VarState, VariableState};
 use crate::loaders::types::VwFuncInfo;
 
 use SlotVal::*;
+use ValSize::*;
+use X86Regs::*;
 
 pub struct LocalsAnalyzer<'a> {
-    pub fun_type: Vec<(VarIndex, ValSize)>,
+    pub fun_type: FunType,
     pub symbol_table: &'a VwFuncInfo,
     pub name_addr_map: &'a HashMap<u64, String>,
+    pub plt_bounds: (u64, u64),
+    pub call_analysis: AnalysisResult<CallCheckLattice>,
+    pub call_analyzer: CallAnalyzer,
 }
 
 impl<'a> LocalsAnalyzer<'a> {
-    fn aeval_val(&self, state: &LocalsLattice, value: &Value) -> SlotVal {
+    pub fn aeval_val(&self, state: &LocalsLattice, value: &Value, loc_idx: &LocIdx) -> SlotVal {
         match value {
             Value::Mem(memsize, memargs) => {
                 if let Some(offset) = mem_to_stack_offset(memargs) {
+                    // println!("reading from stack 0x{:x?}: {:?} + {:?}\n\t{:?}", loc_idx.addr, state.stack.offset, offset, value);
+                    // println!("{}", state.stack);
+                    // println!("{:?}", self.fun_type);
                     state.stack.get(offset, memsize.into_bytes())
                 } else {
+                    // println!("reading from mem 0x{:x?}: {:?}", loc_idx.addr, value);
                     Init
                 }
             }
@@ -33,9 +43,14 @@ impl<'a> LocalsAnalyzer<'a> {
     }
 
     // if all values are initialized then the value is initialized
-    fn aeval_vals(&self, state: &LocalsLattice, values: &Vec<Value>) -> SlotVal {
+    pub fn aeval_vals(
+        &self,
+        state: &LocalsLattice,
+        values: &Vec<Value>,
+        loc_idx: &LocIdx,
+    ) -> SlotVal {
         values.iter().fold(Init, |acc, value| -> SlotVal {
-            if (acc == Init) && (self.aeval_val(state, value) == Init) {
+            if (acc == Init) && (self.aeval_val(state, value, loc_idx) == Init) {
                 Init
             } else {
                 Uninit
@@ -47,7 +62,7 @@ impl<'a> LocalsAnalyzer<'a> {
 impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
     fn init_state(&self) -> LocalsLattice {
         let mut lattice: LocalsLattice = Default::default();
-        for arg in self.fun_type.iter() {
+        for arg in self.fun_type.args.iter() {
             match arg {
                 (VarIndex::Stack(offset), size) => {
                     lattice
@@ -57,26 +72,88 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
                 (VarIndex::Reg(reg_num), size) => lattice.regs.set_reg(*reg_num, *size, Init),
             }
         }
+        // rbp, rbx, and r12-r15 are the callee-saved registers
+        lattice.regs.set_reg(Rbp, Size64, UninitCalleeReg(Rbp));
+        lattice.regs.set_reg(Rbx, Size64, UninitCalleeReg(Rbx));
+        lattice.regs.set_reg(R12, Size64, UninitCalleeReg(R12));
+        lattice.regs.set_reg(R13, Size64, UninitCalleeReg(R13));
+        lattice.regs.set_reg(R14, Size64, UninitCalleeReg(R14));
+        lattice.regs.set_reg(R15, Size64, UninitCalleeReg(R15));
         lattice
     }
 
     fn aexec(&self, in_state: &mut LocalsLattice, ir_instr: &Stmt, loc_idx: &LocIdx) -> () {
+        let debug_addrs: HashSet<u64> = vec![].into_iter().collect();
+        if debug_addrs.contains(&loc_idx.addr) {
+            println!("========================================");
+            println!("{}", in_state);
+            println!("aexec debug 0x{:x?}: {:?}", loc_idx.addr, ir_instr);
+        }
         match ir_instr {
-            Stmt::Clear(dst, srcs) => in_state.set(dst, self.aeval_vals(in_state, srcs)),
-            Stmt::Unop(_, dst, src) => in_state.set(dst, self.aeval_val(in_state, src)),
-            Stmt::Binop(_, dst, src1, src2) => {
+            Stmt::Clear(dst, srcs) => in_state.set(dst, self.aeval_vals(in_state, srcs, loc_idx)),
+            Stmt::Unop(_, dst, src) => in_state.set(dst, self.aeval_val(in_state, src, loc_idx)),
+            Stmt::Binop(opcode, dst, src1, src2) => {
                 let dst_val = self
-                    .aeval_val(in_state, src1)
-                    .meet(&self.aeval_val(in_state, src2), loc_idx);
-                in_state.set(dst, dst_val)
+                    .aeval_val(in_state, src1, loc_idx)
+                    .meet(&self.aeval_val(in_state, src2, loc_idx), loc_idx);
+                in_state.set(dst, dst_val);
+                let prev_offset = in_state.stack.offset;
+                in_state.adjust_stack_offset(opcode, dst, src1, src2);
+                // if prev_offset != in_state.stack.offset {
+                //     println!("adjusting offset 0x{:x?}: {:?}\n\t{:?} -> {:?}",
+                //              loc_idx.addr,
+                //              ir_instr,
+                //              prev_offset,
+                //              in_state.stack.offset,
+                //     );
+                // }
             }
+            // TODO: wasi calls (no requirements on initialization, always return in rax)
+            // TODO: wasi calls are things in plt_bounds?
             Stmt::Call(Value::Imm(_, _, dst)) => {
                 let target = (*dst + (loc_idx.addr as i64) + 5) as u64;
-                println!("{:?}: {:?}", loc_idx, dst);
-                println!("name: {:?}", self.name_addr_map.get(&target));
-                todo!();
+                let name = self.name_addr_map.get(&target);
+                let signature = name
+                    .and_then(|name| self.symbol_table.indexes.get(name))
+                    .and_then(|sig_index| self.symbol_table.signatures.get(*sig_index as usize));
+                in_state.on_call();
+                if let Some((ret_reg, reg_size)) = signature.and_then(|sig| to_system_v_ret_ty(sig))
+                {
+                    in_state.regs.set_reg(ret_reg, reg_size, Init);
+                }
             }
-            _ => todo!(),
+            Stmt::Call(val @ Value::Reg(_, _)) => {
+                let fn_ptr_type = self
+                    .call_analyzer
+                    .get_fn_ptr_type(&self.call_analysis, loc_idx, val)
+                    .and_then(|fn_ptr_index| {
+                        self.symbol_table.signatures.get(fn_ptr_index as usize)
+                    });
+                in_state.on_call();
+                if let Some((ret_reg, reg_size)) =
+                    fn_ptr_type.and_then(|sig| to_system_v_ret_ty(sig))
+                {
+                    in_state.regs.set_reg(ret_reg, reg_size, Init);
+                }
+            }
+            Stmt::Branch(br_type, val) => {
+                // println!("unhandled branch 0x{:x?}: {:?} {:?}", loc_idx.addr, br_type, val);
+            }
+            Stmt::ProbeStack(x) => {
+                in_state.adjust_stack_offset(
+                    &Binopcode::Sub,
+                    &Value::Reg(Rsp, Size64),
+                    &Value::Reg(Rsp, Size64),
+                    &mk_value_i64(*x as i64),
+                );
+            }
+            stmt => {
+                // println!("unhandled instruction 0x{:x?}: {:?}", loc_idx.addr, stmt);
+            }
+        }
+        if debug_addrs.contains(&loc_idx.addr) {
+            println!("{}", in_state);
+            println!("========================================");
         }
     }
 

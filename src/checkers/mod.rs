@@ -7,6 +7,7 @@ use lattices::Lattice;
 mod call_checker;
 mod heap_checker;
 mod jump_resolver;
+pub mod locals_checker;
 mod stack_checker;
 
 /*      Public API for checker submodule      */

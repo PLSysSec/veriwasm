@@ -43,7 +43,7 @@ def get_aggregate_data(dataset):
     #print(len(dataset.keys()))
     for name,data in dataset.items():
         name = name.split('/')[-1].split(".")[0]
-        times = [x[2] + x[3] + x[4] + x[5] for x in data]
+        times = [x[2] + x[3] + x[4] + x[5] + x[6] for x in data]
         average_t = sum(times) / len(times)
         median_t = median(times)
         max_t = max(times)
@@ -52,16 +52,17 @@ def get_aggregate_data(dataset):
         num_funcs = len(times)
         N = len(times) // 100
         print("top 1% = ", N, " functions out of", len(times))
-        top_n = sorted(data, key=lambda x: (x[2] + x[3] + x[4] + x[5]), reverse = True)[:N] 
-        top_percent = sum([x[2] + x[3] + x[4] + x[5] for x in top_n]) / total_t
+        top_n = sorted(data, key=lambda x: (x[2] + x[3] + x[4] + x[5] + x[6]), reverse = True)[:N] 
+        top_percent = sum([x[2] + x[3] + x[4] + x[5] + x[6] for x in top_n]) / total_t
         top_percent_medians = median([x[1] for x in top_n])
         cfg_percent = sum([x[2] for x in data]) / total_t
         stack_percent = sum([x[3] for x in data]) / total_t
         heap_percent = sum([x[4] for x in data]) / total_t
         call_percent = sum([x[5] for x in data]) / total_t
+        locals_percent = sum([x[6] for x in data]) / total_t
         print(top_n, top_percent)
         median_blocks = median([x[1] for x in data])
-        aggregate_data.append( (name,average_t,median_t,max_t,min_t,num_funcs,total_t,top_percent, cfg_percent, stack_percent, heap_percent, call_percent, median_blocks, top_percent_medians))
+        aggregate_data.append( (name,average_t,median_t,max_t,min_t,num_funcs,total_t,top_percent, cfg_percent, stack_percent, heap_percent, call_percent, locals_percent, median_blocks, top_percent_medians))
     return aggregate_data
     
 
@@ -95,8 +96,9 @@ def summarise_data(aggregate_data):
     stack_percent = [d[9] for d in aggregate_data]
     heap_percent = [d[10] for d in aggregate_data]
     call_percent = [d[11] for d in aggregate_data]
-    median_blocks = [d[12] for d in aggregate_data]
-    top_percent_median_blocks = [d[13] for d in aggregate_data]
+    locals_percent = [d[12] for d in aggregate_data]
+    median_blocks = [d[13] for d in aggregate_data]
+    top_percent_median_blocks = [d[14] for d in aggregate_data]
     #print(averages)
     #medians = [round(d[2],2) for d in aggregate_data]
     #print(medians)
@@ -109,6 +111,8 @@ def summarise_data(aggregate_data):
     print(f"{sum(stack_percent) / len(stack_percent) * 100}% of verification time spent checking stack")
     print(f"{sum(heap_percent) / len(heap_percent) * 100}% of verification time spent checking heap")
     print(f"{sum(call_percent) / len(call_percent) * 100}% of verification time spent checking calls")
+    print(f"{sum(locals_percent) / len(locals_percent) * 100}% of verification time spent checking locals")
+
 
     print(f"Average Time = {sum(times) / len(times)}")
     #print(f"Average Max function Time = {sum(maxes) / len(maxes)}")
@@ -135,8 +139,8 @@ def run(filenames):
     #graph_funcs_vs_time(dataset)
     aggregate_data = get_aggregate_data(dataset)
     summarise_data(aggregate_data)
-    #table = generate_summary_table(aggregate_data)
-    #print(table)
+    table = generate_summary_table(aggregate_data)
+    print(table)
 
 def main():
     filename = sys.argv[1]
