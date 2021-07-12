@@ -8,8 +8,8 @@ use crate::ir::types::{FunType, IRMap, MemArgs, Stmt, ValSize, Value, VarIndex, 
 use crate::ir::utils::is_stack_access;
 use crate::lattices::localslattice::{LocalsLattice, SlotVal};
 use crate::lattices::reachingdefslattice::LocIdx;
+use crate::loaders::utils::is_libcall;
 use crate::loaders::utils::to_system_v;
-use crate::utils::utils::is_libcall;
 use yaxpeax_x86::long_mode::Opcode;
 
 use SlotVal::*;

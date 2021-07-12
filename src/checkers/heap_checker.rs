@@ -1,11 +1,10 @@
-use crate::analyses::heap_analyzer::HeapAnalyzer;
-use crate::analyses::{AbstractAnalyzer, AnalysisResult};
+use crate::analyses::{AbstractAnalyzer, AnalysisResult, HeapAnalyzer};
 use crate::checkers::Checker;
 use crate::ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value, X86Regs};
 use crate::ir::utils::{is_mem_access, is_stack_access};
 use crate::lattices::heaplattice::{HeapLattice, HeapValue};
 use crate::lattices::reachingdefslattice::LocIdx;
-use crate::utils::utils::is_libcall;
+use crate::loaders::utils::is_libcall;
 use std::collections::HashMap;
 
 use HeapValue::*;

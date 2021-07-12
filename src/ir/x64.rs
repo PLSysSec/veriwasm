@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 use std::mem::discriminant;
 
 use crate::ir::types::*;
+use crate::ir::utils::{mk_value_i64, valsize};
 use crate::loaders::types::{VwMetadata, VwModule};
 use yaxpeax_arch::{AddressBase, Arch, LengthedInstruction};
 use yaxpeax_core::analyses::control_flow::VW_CFG;
@@ -14,14 +15,6 @@ use yaxpeax_x86::long_mode::{
 };
 use ValSize::{Size128, Size16, Size256, Size32, Size512, Size64, Size8};
 use X86Regs::*;
-
-pub fn valsize(num: u32) -> ValSize {
-    ValSize::try_from_bits(num).unwrap()
-}
-
-pub fn mk_value_i64(num: i64) -> Value {
-    Value::Imm(ImmType::Signed, Size64, num)
-}
 
 fn get_reg_size(reg: yaxpeax_x86::long_mode::RegSpec) -> ValSize {
     let size = match reg.class() {
@@ -298,7 +291,7 @@ fn branch(instr: &X64Instruction) -> Stmt {
     Stmt::Branch(instr.opcode(), convert_operand(instr.operand(0), Size64))
 }
 
-fn call(instr: &X64Instruction, _metadata: &VW_Metadata) -> Stmt {
+fn call(instr: &X64Instruction, _metadata: &VwMetadata) -> Stmt {
     let dst = convert_operand(instr.operand(0), Size64);
     Stmt::Call(dst)
 }
@@ -798,9 +791,10 @@ pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VwMetadata, strict: 
 
 fn parse_probestack_arg<'a>(
     instrs: BlockInstrs<'a>,
-    metadata: &VW_Metadata,
+    metadata: &VwMetadata,
+    strict: bool,
 ) -> IResult<'a, (u64, StmtResult)> {
-    let (rest, (addr, move_instr)) = parse_single_instr(instrs, metadata)?;
+    let (rest, (addr, move_instr)) = parse_single_instr(instrs, metadata, strict)?;
     if move_instr.len() != 1 {
         return Err(ParseErr::Error(instrs));
     }
@@ -812,9 +806,10 @@ fn parse_probestack_arg<'a>(
 
 fn parse_probestack_call<'a>(
     instrs: BlockInstrs<'a>,
-    metadata: &VW_Metadata,
+    metadata: &VwMetadata,
+    strict: bool,
 ) -> IResult<'a, StmtResult> {
-    let (rest, (addr, call_instr)) = parse_single_instr(instrs, metadata)?;
+    let (rest, (addr, call_instr)) = parse_single_instr(instrs, metadata, strict)?;
     if call_instr.len() != 1 {
         return Err(ParseErr::Error(instrs));
     }
@@ -828,9 +823,10 @@ fn parse_probestack_call<'a>(
 
 fn parse_probestack_suffix<'a>(
     instrs: BlockInstrs<'a>,
-    metadata: &VW_Metadata,
+    metadata: &VwMetadata,
+    strict: bool,
 ) -> IResult<'a, StmtResult> {
-    let (rest, (addr, sub_instr)) = parse_single_instr(instrs, metadata)?;
+    let (rest, (addr, sub_instr)) = parse_single_instr(instrs, metadata, strict)?;
     log::info!(
         "Found potential probestack suffix: {:x} {:?}",
         addr,
@@ -850,13 +846,15 @@ fn parse_probestack_suffix<'a>(
 
 fn parse_probestack<'a>(
     instrs: BlockInstrs<'a>,
-    metadata: &VW_Metadata,
+    metadata: &VwMetadata,
+    strict: bool,
 ) -> IResult<'a, StmtResult> {
-    let (rest, (probestack_arg, (addr, mov_instr))) = parse_probestack_arg(instrs, metadata)?;
+    let (rest, (probestack_arg, (addr, mov_instr))) =
+        parse_probestack_arg(instrs, metadata, strict)?;
     log::info!("Found potential probestack: 0x{:x}", addr);
-    let (rest, (_, call_instr)) = parse_probestack_call(rest, metadata)?;
+    let (rest, (_, call_instr)) = parse_probestack_call(rest, metadata, strict)?;
     log::info!("Found probestack call: 0x{:x}", addr);
-    let (rest, (_, suffix_instr)) = parse_probestack_suffix(rest, metadata)?;
+    let (rest, (_, suffix_instr)) = parse_probestack_suffix(rest, metadata, strict)?;
     log::info!("Completed probestack: 0x{:x}", addr);
     let mut stmts = Vec::new();
     stmts.extend(mov_instr);
@@ -938,7 +936,7 @@ fn parse_cmovez<'a>(instrs: BlockInstrs<'a>, bsf_dst: &Value) -> IResult<'a, (Ad
     Err(ParseErr::Error(instrs))
 }
 
-fn parse_bsf_cmove<'a>(instrs: BlockInstrs<'a>, metadata: &VW_Metadata) -> IResult<'a, StmtResult> {
+fn parse_bsf_cmove<'a>(instrs: BlockInstrs<'a>, metadata: &VwMetadata) -> IResult<'a, StmtResult> {
     let (rest, (addr, bsf_dst, bsf_src)) = parse_bsf(instrs)?;
     let (rest, (_addr, mov_src)) = parse_cmovez(rest, &bsf_dst)?;
     let mut stmts = Vec::new();
@@ -947,7 +945,7 @@ fn parse_bsf_cmove<'a>(instrs: BlockInstrs<'a>, metadata: &VW_Metadata) -> IResu
     Ok((rest, (addr, stmts)))
 }
 
-fn parse_bsr_cmove<'a>(instrs: BlockInstrs<'a>, metadata: &VW_Metadata) -> IResult<'a, StmtResult> {
+fn parse_bsr_cmove<'a>(instrs: BlockInstrs<'a>, metadata: &VwMetadata) -> IResult<'a, StmtResult> {
     let (rest, (addr, bsr_dst, bsr_src)) = parse_bsr(instrs)?;
     let (rest, (_addr, mov_src)) = parse_cmovez(rest, &bsr_dst)?;
     let mut stmts = Vec::new();
@@ -958,31 +956,40 @@ fn parse_bsr_cmove<'a>(instrs: BlockInstrs<'a>, metadata: &VW_Metadata) -> IResu
 
 fn parse_single_instr<'a>(
     instrs: BlockInstrs<'a>,
-    metadata: &VW_Metadata,
+    metadata: &VwMetadata,
+    strict: bool,
 ) -> IResult<'a, StmtResult> {
     if let Some(((addr, instr), rest)) = instrs.split_first() {
-        Ok((rest, (*addr, lift(instr, addr, metadata))))
+        Ok((rest, (*addr, lift(instr, addr, metadata, strict))))
     } else {
         Err(ParseErr::Incomplete)
     }
 }
 
-fn parse_instr<'a>(instrs: BlockInstrs<'a>, metadata: &VW_Metadata) -> IResult<'a, StmtResult> {
+fn parse_instr<'a>(
+    instrs: BlockInstrs<'a>,
+    metadata: &VwMetadata,
+    strict: bool,
+) -> IResult<'a, StmtResult> {
     if let Ok((rest, stmt)) = parse_bsf_cmove(instrs, metadata) {
         Ok((rest, stmt))
     } else if let Ok((rest, stmt)) = parse_bsr_cmove(instrs, metadata) {
         Ok((rest, stmt))
-    } else if let Ok((rest, stmt)) = parse_probestack(instrs, metadata) {
+    } else if let Ok((rest, stmt)) = parse_probestack(instrs, metadata, strict) {
         Ok((rest, stmt))
     } else {
-        parse_single_instr(instrs, metadata)
+        parse_single_instr(instrs, metadata, strict)
     }
 }
 
-fn parse_instrs<'a>(instrs: BlockInstrs, metadata: &VW_Metadata) -> Vec<(Addr, Vec<Stmt>)> {
+fn parse_instrs<'a>(
+    instrs: BlockInstrs,
+    metadata: &VwMetadata,
+    strict: bool,
+) -> Vec<(Addr, Vec<Stmt>)> {
     let mut block_ir: Vec<(Addr, Vec<Stmt>)> = Vec::new();
     let mut rest = instrs;
-    while let Ok((more, (addr, stmts))) = parse_instr(rest, metadata) {
+    while let Ok((more, (addr, stmts))) = parse_instr(rest, metadata, strict) {
         rest = more;
         if stmts.len() == 1 {
             if let Stmt::Branch(Opcode::JMP, _) = stmts[0] {
@@ -999,17 +1006,18 @@ fn parse_instrs<'a>(instrs: BlockInstrs, metadata: &VW_Metadata) -> Vec<(Addr, V
     block_ir
 }
 
-pub fn lift_cfg(program: &ModuleData, cfg: &VW_CFG, metadata: &VW_Metadata) -> IRMap {
+pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap {
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
     for block_addr in g.nodes() {
         let block = cfg.get_block(block_addr);
 
-        let instrs_vec: Vec<(u64, X64Instruction)> = program
+        let instrs_vec: Vec<(u64, X64Instruction)> = module
+            .program
             .instructions_spanning(<AMD64 as Arch>::Decoder::default(), block.start, block.end)
             .collect();
         let instrs = instrs_vec.as_slice();
-        let block_ir = parse_instrs(instrs, &metadata);
+        let block_ir = parse_instrs(instrs, &module.metadata, strict);
 
         irmap.insert(block_addr, block_ir);
     }

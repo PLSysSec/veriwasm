@@ -1,27 +1,28 @@
-use crate::{analyses, checkers, ir, lattices, loaders, utils};
+use crate::{analyses, checkers, ir, lattices, loaders};
 
 use crate::lattices::calllattice::CallCheckLattice;
 use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use crate::lattices::VariableState;
-use crate::{IRMap, VW_Metadata, VW_CFG};
+use crate::{IRMap, VwMetadata, VW_CFG};
 use analyses::locals_analyzer::LocalsAnalyzer;
 use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
 use analyses::{run_worklist, AnalysisResult};
+
+use analyses::{CallAnalyzer, HeapAnalyzer, StackAnalyzer};
 use checkers::locals_checker::check_locals;
+use checkers::{check_calls, check_heap, check_stack};
 use ir::fully_resolved_cfg;
 use ir::types::FunType;
 use ir::utils::has_indirect_calls;
-use ir::utils::has_indirect_calls;
-use ir::VwArch;
 use loaders::load_program;
 use loaders::types::{ExecutableType, VwArch, VwFuncInfo};
 use loaders::utils::get_data;
-use loaders::utils::{to_system_v, VwFuncInfo};
+use loaders::utils::to_system_v;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::iter::FromIterator;
 
-use loaders::lucet::get_plt_funcs;
+// use loaders::get_plt_funcs;
 use loaders::Loadable;
 use serde_json;
 use std::fs;
@@ -57,7 +58,7 @@ pub fn run_locals(
     func_name: &String,
     cfg: &VW_CFG,
     irmap: &IRMap,
-    metadata: &VW_Metadata,
+    metadata: &VwMetadata,
     valid_funcs: &Vec<u64>,
 ) -> bool {
     let fun_type = func_signatures
@@ -107,7 +108,7 @@ fn run_stack(cfg: &VW_CFG, irmap: &IRMap) -> bool {
 fn run_heap(
     cfg: &VW_CFG,
     irmap: &IRMap,
-    metadata: &VW_Metadata,
+    metadata: &VwMetadata,
     all_addrs_map: &HashMap<u64, String>,
 ) -> bool {
     let heap_analyzer = HeapAnalyzer {
@@ -156,12 +157,13 @@ pub fn run(config: Config) {
     let module = load_program(&config);
     let (x86_64_data, func_addrs, plt, mut all_addrs) =
         get_data(&module.program, &config.executable_type);
-    let plt_funcs = get_plt_funcs(&config.module_path);
+    let plt_funcs = config.executable_type.get_plt_funcs(&config.module_path);
     all_addrs.extend(plt_funcs);
 
     let mut func_counter = 0;
     let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64, f64)> = vec![];
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
+    let func_signatures = config.executable_type.get_func_signatures(&module.program);
     let all_addrs_map = HashMap::from_iter(all_addrs.clone());
     for (addr, func_name) in func_addrs {
         if config.only_func.is_some() && func_name != config.only_func.as_ref().unwrap().as_str() {
@@ -195,9 +197,8 @@ pub fn run(config: Config) {
         let call_start = Instant::now();
         // if config.active_passes.linear_mem {
         println!("Checking Call Safety");
-        // TODO: call analysis should check direct calls too, no?
         let (call_safe, indirect_calls_result, reaching_defs) =
-            run_calls(&cfg, &irmap, &metadata, &valid_funcs, plt);
+            run_calls(&cfg, &irmap, &module.metadata, &valid_funcs, plt);
         if !call_safe {
             panic!("Not Call Safe");
         }
@@ -213,7 +214,7 @@ pub fn run(config: Config) {
             &func_name,
             &cfg,
             &irmap,
-            &metadata,
+            &module.metadata,
             &valid_funcs,
         );
         if !locals_safe {

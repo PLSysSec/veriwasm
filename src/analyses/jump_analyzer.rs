@@ -1,14 +1,16 @@
 use crate::{analyses, ir, lattices, loaders};
 use analyses::reaching_defs::ReachingDefnAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
+use ir::types::X86Regs;
 use ir::types::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value};
 use ir::utils::get_rsp_offset;
 use lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
-use lattices::X86Regs::*;
 use lattices::{VarSlot, VarState};
 use loaders::types::VwMetadata;
 use std::default::Default;
+
+use X86Regs::*;
 
 pub struct SwitchAnalyzer {
     pub metadata: VwMetadata,

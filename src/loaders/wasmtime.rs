@@ -100,3 +100,7 @@ pub fn is_valid_wasmtime_func_name(name: &String) -> bool {
 pub fn get_wasmtime_func_signatures(program: &ModuleData) -> VwFuncInfo {
     unimplemented!();
 }
+
+pub fn wasmtime_get_plt_funcs(binpath: &str) -> Vec<(u64, String)> {
+    unimplemented!();
+}

@@ -1,10 +1,11 @@
-use crate::loaders;
+use crate::{loaders, runner};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use elfkit::relocation::RelocationType;
 use elfkit::{symbol, types, DynamicContent, Elf, SectionContent};
 use goblin::Object;
 use loaders::types::{VwFuncInfo, VwMetadata, VwModule};
 use loaders::utils::*;
+use loaders::utils::{deconstruct_elf, get_symbol_addr};
 use lucet_module;
 use std::collections::HashMap;
 use std::fs::File;
@@ -14,11 +15,10 @@ use std::io::{Read, Seek, SeekFrom};
 use std::mem;
 use std::path::Path;
 use std::string::String;
-use utils::utils::{deconstruct_elf, get_symbol_addr};
 use yaxpeax_core::memory::repr::process::{ModuleData, Segment};
 use yaxpeax_core::memory::repr::FileRepr;
 
-pub fn get_plt_funcs(binpath: &str) -> Vec<(u64, String)> {
+pub fn lucet_get_plt_funcs(binpath: &str) -> Vec<(u64, String)> {
     //Extract relocation symbols
     let mut in_file = OpenOptions::new().read(true).open(binpath).unwrap();
     let mut elf = Elf::from_reader(&mut in_file).unwrap();
@@ -96,16 +96,32 @@ pub fn get_plt_funcs(binpath: &str) -> Vec<(u64, String)> {
     plt_funcs
 }
 
-pub fn load_lucet_program(binpath: &str) -> ModuleData {
-    let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
-    if let FileRepr::Executable(program) = program {
-        program
-    } else {
-        panic!("function:{} is not a valid path", binpath)
-    }
-}
+// pub fn load_lucet_program(binpath: &str) -> ModuleData {
+//     let program = yaxpeax_core::memory::reader::load_from_path(Path::new(binpath)).unwrap();
+//     if let FileRepr::Executable(program) = program {
+//         program
+//     } else {
+//         panic!("function:{} is not a valid path", binpath)
+//     }
+// }
 
-pub fn load_lucet_metadata(program: &ModuleData) -> VW_Metadata {
+// pub fn load_lucet_program(config: &runner::Config) -> VwModule {
+//     let program =
+//         yaxpeax_core::memory::reader::load_from_path(Path::new(&config.module_path)).unwrap();
+//     if let FileRepr::Executable(program) = program {
+//         let metadata = load_lucet_metadata(&program);
+//         VwModule {
+//             program,
+//             metadata,
+//             format: config.executable_type,
+//             arch: config.arch,
+//         }
+//     } else {
+//         panic!("function:{} is not a valid path", config.module_path)
+//     }
+// }
+
+pub fn load_lucet_metadata(program: &ModuleData) -> VwMetadata {
     let (_, sections, entrypoint, imports, exports, symbols) = deconstruct_elf(program);
 
     let guest_table_0 = get_symbol_addr(symbols, "guest_table_0").unwrap();

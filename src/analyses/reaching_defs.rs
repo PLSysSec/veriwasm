@@ -1,13 +1,11 @@
 use crate::{analyses, ir, lattices, loaders};
 use analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
+use ir::types::X86Regs::*;
 use ir::types::{Binopcode, IRMap, Stmt, Unopcode, ValSize};
 use lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
 use lattices::VarState;
-use lattices::X86Regs::*;
 use loaders::types::VwMetadata;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
-
-use X86Regs::*;
 
 //Top level function
 pub fn analyze_reaching_defs(

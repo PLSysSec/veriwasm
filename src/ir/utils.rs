@@ -1,23 +1,24 @@
-use crate::ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value, X86Regs};
+use crate::ir::types::*;
 
+use ValSize::*;
 use X86Regs::*;
 
 pub fn is_rsp(v: &Value) -> bool {
     match v {
-        Value::Reg(Rsp, ValSize::Size64) => return true,
-        Value::Reg(Rsp, ValSize::Size32)
-        | Value::Reg(Rsp, ValSize::Size16)
-        | Value::Reg(Rsp, ValSize::Size8) => panic!("Illegal RSP access"),
+        Value::Reg(Rsp, Size64) => return true,
+        Value::Reg(Rsp, Size32) | Value::Reg(Rsp, Size16) | Value::Reg(Rsp, Size8) => {
+            panic!("Illegal RSP access")
+        }
         _ => return false,
     }
 }
 
 pub fn is_rbp(v: &Value) -> bool {
     match v {
-        Value::Reg(Rbp, ValSize::Size64) => return true,
-        Value::Reg(Rbp, ValSize::Size32)
-        | Value::Reg(Rbp, ValSize::Size16)
-        | Value::Reg(Rbp, ValSize::Size8) => panic!("Illegal RBP access"),
+        Value::Reg(Rbp, Size64) => return true,
+        Value::Reg(Rbp, Size32) | Value::Reg(Rbp, Size16) | Value::Reg(Rbp, Size8) => {
+            panic!("Illegal RBP access")
+        }
         _ => return false,
     }
 }
@@ -29,16 +30,9 @@ pub fn is_zf(v: &Value) -> bool {
     }
 }
 
-// pub fn is_irrelevant_reg(v: &Value) -> bool {
-//     if let Value::Reg(_, ValSize::SizeOther) = v {
-//         return true;
-//     }
-//     false
-// }
-
 pub fn memarg_is_stack(memarg: &MemArg) -> bool {
     if let MemArg::Reg(Rsp, regsize) = memarg {
-        if let ValSize::Size64 = regsize {
+        if let Size64 = regsize {
             return true;
         } else {
             panic!("Non 64 bit version of rsp being used")
@@ -71,7 +65,7 @@ pub fn is_stack_access(v: &Value) -> bool {
 
 pub fn memarg_is_bp(memarg: &MemArg) -> bool {
     if let MemArg::Reg(Rbp, regsize) = memarg {
-        if let ValSize::Size64 = regsize {
+        if let Size64 = regsize {
             return true;
         } else {
             panic!("Non 64 bit version of rbp being used")
@@ -183,4 +177,12 @@ pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
         }
         _ => None,
     }
+}
+
+pub fn valsize(num: u32) -> ValSize {
+    ValSize::try_from_bits(num).unwrap()
+}
+
+pub fn mk_value_i64(num: i64) -> Value {
+    Value::Imm(ImmType::Signed, Size64, num)
 }
