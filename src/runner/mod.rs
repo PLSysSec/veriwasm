@@ -195,32 +195,33 @@ pub fn run(config: Config) {
         }
 
         let call_start = Instant::now();
-        // if config.active_passes.linear_mem {
-        println!("Checking Call Safety");
-        let (call_safe, indirect_calls_result, reaching_defs) =
-            run_calls(&cfg, &irmap, &module.metadata, &valid_funcs, plt);
-        if !call_safe {
-            panic!("Not Call Safe");
-        }
+        if config.active_passes.call {
+            // if config.active_passes.linear_mem {
+            println!("Checking Call Safety");
+            let (call_safe, indirect_calls_result, reaching_defs) =
+                run_calls(&cfg, &irmap, &module.metadata, &valid_funcs, plt);
+            if !call_safe {
+                panic!("Not Call Safe");
+            }
 
-        let locals_start = Instant::now();
-        println!("Checking Locals Safety");
-        let locals_safe = run_locals(
-            reaching_defs,
-            indirect_calls_result,
-            plt,
-            &all_addrs_map,
-            &func_signatures,
-            &func_name,
-            &cfg,
-            &irmap,
-            &module.metadata,
-            &valid_funcs,
-        );
-        if !locals_safe {
-            panic!("Not Locals Safe");
+            println!("Checking Locals Safety");
+            let locals_safe = run_locals(
+                reaching_defs,
+                indirect_calls_result,
+                plt,
+                &all_addrs_map,
+                &func_signatures,
+                &func_name,
+                &cfg,
+                &irmap,
+                &module.metadata,
+                &valid_funcs,
+            );
+            if !locals_safe {
+                panic!("Not Locals Safe");
+            }
         }
-        // }
+        let locals_start = Instant::now(); //alwyas 0 right now, locals time grouped with calls
 
         let end = Instant::now();
         info.push((

@@ -7,10 +7,14 @@ use analyses::{CallAnalyzer, HeapAnalyzer, StackAnalyzer};
 use checkers::{check_calls, check_heap, check_stack};
 use ir::fully_resolved_cfg;
 use ir::utils::has_indirect_calls;
+use loaders::types::VwFuncInfo;
 use loaders::types::{ExecutableType, VwArch};
 use loaders::utils::get_data;
 use loaders::Loadable;
+use lucet_module::{Signature, ValueType};
+use std::collections::HashMap;
 use std::panic;
+use veriwasm::runner::run_locals;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
 
 fn full_test_helper(path: &str, format: ExecutableType, arch: VwArch) {
@@ -202,8 +206,6 @@ fn negative_test_12() {
         "guest_func_12_testfail",
         ExecutableType::Lucet,
         VwArch::X64,
-        ExecutableType::Lucet,
-        VwArch::X64,
     );
 }
 
@@ -274,220 +276,220 @@ fn negative_test_misfit_1() {
     );
 }
 
-#[test]
-#[should_panic(expected = "assertion failed: stack_safe")]
-fn negative_test_zerocost_1() {
-    negative_test_with_locals(
-        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
-        "func1",
-        ExecutableType::Lucet,
-        VwArch::X64,
-    );
-}
+// fn get_proxy_func_signatures() -> VwFuncInfo {
+//     let mut signatures: Vec<Signature> = Vec::new();
+//     // sig0 :: i32 -> ()
+//     let sig0 = Signature {
+//         params: vec![ValueType::I32],
+//         ret_ty: None,
+//     };
+//     // sig1 :: i32 -> i32 -> ()
+//     let sig1 = Signature {
+//         params: vec![ValueType::I32, ValueType::I32],
+//         ret_ty: None,
+//     };
+//     // sig2 :: i32 -> i32
+//     let sig2 = Signature {
+//         params: vec![ValueType::I32],
+//         ret_ty: Some(ValueType::I32),
+//     };
+//     signatures.push(sig0);
+//     signatures.push(sig1);
+//     signatures.push(sig2);
 
-#[test]
-#[should_panic(expected = "assertion failed: stack_safe")]
-fn negative_test_zerocost_2() {
-    negative_test_with_locals(
-        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
-        "func2",
-        ExecutableType::Lucet,
-        VwArch::X64,
-    );
-}
+//     let mut indexes: HashMap<String, u32> = HashMap::new();
+//     indexes.insert("func1".to_string(), 0);
+//     indexes.insert("func2".to_string(), 0);
+//     indexes.insert("func3".to_string(), 1);
+//     indexes.insert("func4".to_string(), 0);
+//     indexes.insert("func5".to_string(), 0);
+//     indexes.insert("subfunc5".to_string(), 1);
+//     indexes.insert("func6".to_string(), 0);
+//     indexes.insert("func7".to_string(), 2);
+//     indexes.insert("func8".to_string(), 0);
+//     indexes.insert("func9".to_string(), 0);
 
-#[test]
-#[should_panic(expected = "Not Stack Safe")]
-fn negative_test_nacl_323_4() {
-    negative_test_helper(
-        "veriwasm_public_data/negative_tests/negative_tests.so",
-        "guest_func_nacl_323_4",
-        ExecutableType::Lucet,
-        VwArch::X64,
-    );
-}
+//     VwFuncInfo {
+//         signatures,
+//         indexes,
+//     }
+// }
 
-#[should_panic(expected = "assertion failed: stack_safe")]
-fn negative_test_zerocost_3() {
-    negative_test_with_locals(
-        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
-        "func3",
-        ExecutableType::Lucet,
-        VwArch::X64,
-    );
-}
+// fn negative_test_with_locals(path: &str, func_name: &str, format: ExecutableType, arch: VwArch) {
+//     let _ = env_logger::builder().is_test(true).try_init();
+//     let program = format.load_program(&path);
+//     let (x86_64_data, func_addrs, plt, all_addrs) = get_data(&program, &format);
+//     let all_addrs_map = HashMap::from_iter(all_addrs.clone());
+//     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
+//     println!("Loading Metadata");
+//     let metadata = format.load_metadata(&program);
+//     let ((cfg, irmap), x86_64_data) = get_one_resolved_cfg(path, func_name, &program, &format);
+//     println!("Analyzing: {:?}", func_name);
+//     check_cfg_integrity(&cfg.blocks, &cfg.graph);
+//     println!("Checking Stack Safety");
+//     let stack_analyzer = StackAnalyzer {};
+//     let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
+//     let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
+//     assert!(stack_safe);
+//     println!("Checking Heap Safety");
+//     let heap_analyzer = HeapAnalyzer {
+//         metadata: metadata.clone(),
+//     };
+//     let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
+//     let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer, &all_addrs_map);
+//     assert!(heap_safe);
+//     println!("Checking Call Safety");
+//     let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
+//     let call_analyzer = CallAnalyzer {
+//         metadata: metadata.clone(),
+//         reaching_defs: reaching_defs.clone(),
+//         reaching_analyzer: ReachingDefnAnalyzer {
+//             cfg: cfg.clone(),
+//             irmap: irmap.clone(),
+//         },
+//         funcs: vec![],
+//         cfg: cfg.clone(),
+//         irmap: irmap.clone(),
+//     };
+//     let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
+//     let call_safe = check_calls(
+//         call_result.clone(),
+//         &irmap,
+//         &call_analyzer,
+//         &valid_funcs,
+//         &plt,
+//     );
+//     assert!(call_safe);
 
-#[test]
-#[should_panic(expected = "assertion failed: locals_safe")]
-fn negative_test_zerocost_4() {
-    negative_test_with_locals(
-        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
-        "func4",
-        ExecutableType::Lucet,
-        VwArch::X64,
-    );
-}
+//     // Not actually used by locals checker
+//     let plt = (0, 0);
+//     // Fairly confident this will break
+//     //let func_signatures = format.get_func_signatures(&program);
+//     let func_signatures = get_proxy_func_signatures();
+//     println!("Checking Locals safety");
+//     let locals_safe = run_locals(
+//         reaching_defs,
+//         call_result,
+//         plt,
+//         &all_addrs_map,
+//         &func_signatures,
+//         &func_name.to_string(),
+//         &cfg,
+//         &irmap,
+//         &metadata,
+//         &valid_funcs,
+//     );
+//     assert!(locals_safe);
+//     println!("Done! ");
+// }
 
-#[test]
-#[should_panic(expected = "assertion failed: locals_safe")]
-fn negative_test_zerocost_5() {
-    negative_test_with_locals(
-        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
-        "func5",
-        ExecutableType::Lucet,
-        VwArch::X64,
-    );
-}
+// #[test]
+// #[should_panic(expected = "assertion failed: stack_safe")]
+// fn negative_test_zerocost_1() {
+//     negative_test_with_locals(
+//         "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+//         "func1",
+//         ExecutableType::Lucet,
+//         VwArch::X64,
+//     );
+// }
 
-#[test]
-#[should_panic(expected = "assertion failed: locals_safe")]
-fn negative_test_zerocost_6() {
-    negative_test_with_locals(
-        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
-        "func6",
-        ExecutableType::Lucet,
-        VwArch::X64,
-    );
-}
+// #[test]
+// #[should_panic(expected = "assertion failed: stack_safe")]
+// fn negative_test_zerocost_2() {
+//     negative_test_with_locals(
+//         "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+//         "func2",
+//         ExecutableType::Lucet,
+//         VwArch::X64,
+//     );
+// }
 
-#[test]
-#[should_panic(expected = "assertion failed: locals_safe")]
-fn negative_test_zerocost_7() {
-    negative_test_with_locals(
-        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
-        "func7",
-        ExecutableType::Lucet,
-        VwArch::X64,
-    );
-}
+// #[test]
+// #[should_panic(expected = "Not Stack Safe")]
+// fn negative_test_nacl_323_4() {
+//     negative_test_helper(
+//         "veriwasm_public_data/negative_tests/negative_tests.so",
+//         "guest_func_nacl_323_4",
+//         ExecutableType::Lucet,
+//         VwArch::X64,
+//     );
+// }
 
-fn get_proxy_func_signatures() -> VwFuncInfo {
-    let mut signatures: Vec<Signature> = Vec::new();
-    // sig0 :: i32 -> ()
-    let sig0 = Signature {
-        params: vec![ValueType::I32],
-        ret_ty: None,
-    };
-    // sig1 :: i32 -> i32 -> ()
-    let sig1 = Signature {
-        params: vec![ValueType::I32, ValueType::I32],
-        ret_ty: None,
-    };
-    // sig2 :: i32 -> i32
-    let sig2 = Signature {
-        params: vec![ValueType::I32],
-        ret_ty: Some(ValueType::I32),
-    };
-    signatures.push(sig0);
-    signatures.push(sig1);
-    signatures.push(sig2);
+// #[should_panic(expected = "assertion failed: stack_safe")]
+// fn negative_test_zerocost_3() {
+//     negative_test_with_locals(
+//         "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+//         "func3",
+//         ExecutableType::Lucet,
+//         VwArch::X64,
+//     );
+// }
 
-    let mut indexes: HashMap<String, u32> = HashMap::new();
-    indexes.insert("func1".to_string(), 0);
-    indexes.insert("func2".to_string(), 0);
-    indexes.insert("func3".to_string(), 1);
-    indexes.insert("func4".to_string(), 0);
-    indexes.insert("func5".to_string(), 0);
-    indexes.insert("subfunc5".to_string(), 1);
-    indexes.insert("func6".to_string(), 0);
-    indexes.insert("func7".to_string(), 2);
-    indexes.insert("func8".to_string(), 0);
-    indexes.insert("func9".to_string(), 0);
+// #[test]
+// #[should_panic(expected = "assertion failed: locals_safe")]
+// fn negative_test_zerocost_4() {
+//     negative_test_with_locals(
+//         "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+//         "func4",
+//         ExecutableType::Lucet,
+//         VwArch::X64,
+//     );
+// }
 
-    VwFuncInfo {
-        signatures,
-        indexes,
-    }
-}
+// #[test]
+// #[should_panic(expected = "assertion failed: locals_safe")]
+// fn negative_test_zerocost_5() {
+//     negative_test_with_locals(
+//         "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+//         "func5",
+//         ExecutableType::Lucet,
+//         VwArch::X64,
+//     );
+// }
 
-fn negative_test_with_locals(path: &str, func_name: &str, format: ExecutableType) {
-    let _ = env_logger::builder().is_test(true).try_init();
-    let program = format.load_program(&path);
-    let (x86_64_data, func_addrs, plt, all_addrs) = get_data(&program, &format);
-    let all_addrs_map = HashMap::from_iter(all_addrs.clone());
-    let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
-    println!("Loading Metadata");
-    let metadata = format.load_metadata(&program);
-    let ((cfg, irmap), x86_64_data) = get_one_resolved_cfg(path, func_name, &program, &format);
-    println!("Analyzing: {:?}", func_name);
-    check_cfg_integrity(&cfg.blocks, &cfg.graph);
-    println!("Checking Stack Safety");
-    let stack_analyzer = StackAnalyzer {};
-    let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
-    let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
-    assert!(stack_safe);
-    println!("Checking Heap Safety");
-    let heap_analyzer = HeapAnalyzer {
-        metadata: metadata.clone(),
-    };
-    let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
-    let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer, &all_addrs_map);
-    assert!(heap_safe);
-    println!("Checking Call Safety");
-    let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
-    let call_analyzer = CallAnalyzer {
-        metadata: metadata.clone(),
-        reaching_defs: reaching_defs.clone(),
-        reaching_analyzer: ReachingDefnAnalyzer {
-            cfg: cfg.clone(),
-            irmap: irmap.clone(),
-        },
-        funcs: vec![],
-        cfg: cfg.clone(),
-        irmap: irmap.clone(),
-    };
-    let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
-    let call_safe = check_calls(
-        call_result.clone(),
-        &irmap,
-        &call_analyzer,
-        &valid_funcs,
-        &plt,
-    );
-    assert!(call_safe);
+// #[test]
+// #[should_panic(expected = "assertion failed: locals_safe")]
+// fn negative_test_zerocost_6() {
+//     negative_test_with_locals(
+//         "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+//         "func6",
+//         ExecutableType::Lucet,
+//         VwArch::X64,
+//     );
+// }
 
-    // Not actually used by locals checker
-    let plt = (0, 0);
-    // Fairly confident this will break
-    //let func_signatures = format.get_func_signatures(&program);
-    let func_signatures = get_proxy_func_signatures();
-    println!("Checking Locals safety");
-    let locals_safe = run_locals(
-        reaching_defs,
-        call_result,
-        plt,
-        &all_addrs_map,
-        &func_signatures,
-        &func_name.to_string(),
-        &cfg,
-        &irmap,
-        &metadata,
-        &valid_funcs,
-    );
-    assert!(locals_safe);
-    println!("Done! ");
-}
+// #[test]
+// #[should_panic(expected = "assertion failed: locals_safe")]
+// fn negative_test_zerocost_7() {
+//     negative_test_with_locals(
+//         "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+//         "func7",
+//         ExecutableType::Lucet,
+//         VwArch::X64,
+//     );
+// }
 
-#[should_panic]
-fn negative_test_zerocost_8() {
-    negative_test_with_locals(
-        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
-        "func8",
-        ExecutableType::Lucet,
-        VwArch::X64,
-    );
-}
+// #[should_panic]
+// fn negative_test_zerocost_8() {
+//     negative_test_with_locals(
+//         "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+//         "func8",
+//         ExecutableType::Lucet,
+//         VwArch::X64,
+//     );
+// }
 
-#[test]
-#[should_panic(expected = "assertion failed: call_safe")]
-fn negative_test_zerocost_9() {
-    negative_test_with_locals(
-        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
-        "func9",
-        ExecutableType::Lucet,
-        VwArch::X64,
-    );
-}
+// #[test]
+// #[should_panic(expected = "assertion failed: call_safe")]
+// fn negative_test_zerocost_9() {
+//     negative_test_with_locals(
+//         "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+//         "func9",
+//         ExecutableType::Lucet,
+//         VwArch::X64,
+//     );
+// }
 
 // #[test]
 // fn wasmtime_wasm_callback() {
