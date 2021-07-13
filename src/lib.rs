@@ -214,3 +214,8 @@ pub fn validate_heap(
 
     Ok(())
 }
+
+
+pub fn wasmtime_test_hook(){
+    println!("Wasmtime has called into VeriWasm!");
+}
