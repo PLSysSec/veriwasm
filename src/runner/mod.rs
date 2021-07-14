@@ -155,7 +155,7 @@ fn run_calls(
 
 pub fn run(config: Config) {
     let module = load_program(&config);
-    let (x86_64_data, func_addrs, plt, mut all_addrs) =
+    let (x86_64_data, func_addrs, plt, all_addrs) =
         get_data(&module.program, &config.executable_type);
     // let plt_funcs = config.executable_type.get_plt_funcs(&config.module_path);
     // all_addrs.extend(plt_funcs);

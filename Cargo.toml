@@ -27,7 +27,7 @@ env_logger = "0.8.4"
 goblin = "0.4.1"
 
 # This should be an optional compile target
-wasmtime = { path = "../wasmtime" }
+#wasmtime = { path = "../wasmtime" }
 #wasmtime = {path = "../wasmtime/crates/wasmtime"}
 #wasmtime-jit = { path = "../wasmtime/crates/jit"}
 #wasmtime-jit = "0.28.0"

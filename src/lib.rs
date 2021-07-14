@@ -219,3 +219,13 @@ pub fn validate_heap(
 pub fn wasmtime_test_hook(){
     println!("Wasmtime has called into VeriWasm!");
 }
+
+
+pub fn validate_wasmtime_func(
+    code: &[u8],
+    basic_blocks: &[usize],
+    cfg_edges: &[(usize, usize)],
+) -> Result<(), ValidationError> {
+    println!("VeriWasm is verifying the Wasmtime aot compilation!");
+    Ok(())
+}

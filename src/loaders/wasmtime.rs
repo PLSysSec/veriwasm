@@ -4,7 +4,7 @@ use loaders::types::{VwFuncInfo, VwMetadata, VwModule};
 use loaders::utils::deconstruct_elf;
 use loaders::utils::*;
 use std::fs;
-use wasmtime::*;
+//use wasmtime::*;
 use yaxpeax_core::goblin::Object;
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_core::memory::repr::process::Segment;
@@ -67,10 +67,10 @@ fn load_wasmtime_metadata(program: &ModuleData) -> VwMetadata {
 
 pub fn load_wasmtime_program(config: &runner::Config) -> VwModule {
     let path = &config.module_path;
-    let buffer = fs::read(path).expect("Something went wrong reading the file");
-    let store: Store = Store::default();
-    // Deserialize wasmtime module
-    let module = unsafe { Module::deserialize(store.engine(), &buffer).unwrap() }; 
+    // let buffer = fs::read(path).expect("Something went wrong reading the file");
+    // let store: Store = Store::default();
+    // // Deserialize wasmtime module
+    // let module = unsafe { Module::deserialize(store.engine(), &buffer).unwrap() }; 
     unimplemented!();
     // let obj = module.obj();
 
