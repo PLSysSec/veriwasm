@@ -56,11 +56,11 @@ pub enum HeapStrategy {
     VMCtxFirstArgWithGuards { vmctx_heap_base_ptr_offset: usize },
 }
 
-fn func_body_and_bbs_to_cfg(
+fn get_cfg_from_compiler_info(
     code: &[u8],
     basic_blocks: &[usize],
     cfg_edges: &[(usize, usize)],
-) -> (VW_CFG, IRMap, VwModule) {
+) -> VW_CFG {
     // We build the VW_CFG manually; we skip the CFG-recovery
     // algorithm that has to analyze the machine code and compute
     // reaching-defs in a fixpoint loop.
@@ -87,6 +87,10 @@ fn func_body_and_bbs_to_cfg(
         cfg.graph.add_edge(from as u64, to as u64, ());
     }
 
+    cfg
+}
+
+fn create_dummy_module(code: &[u8], format: ExecutableType, arch: VwArch) -> VwModule{
     let seg = Segment {
         start: 0,
         data: code.iter().cloned().collect(),
@@ -136,19 +140,16 @@ fn func_body_and_bbs_to_cfg(
     let module = VwModule {
         program: data,
         metadata: lucet,
-        format: ExecutableType::Lucet,
-        arch: VwArch::X64,
+        format: format,
+        arch: arch,
     };
 
-    let irmap = lift_cfg(&module, &cfg, false);
+    module
+}
 
-    (cfg, irmap, module)
 
-    // TODO: regalloc checker from Lucet too.
-    // TODO: audit opcodes. Fallback to just clear dest(s) on unknown?
-    // TODO: how hard would this be to adapt to Wasmtime? Extra level of indirection:
-    //       heap-base loaded from vmctx (rdi) instead. Take a mode argument?
-    //       "Heap-access style"
+fn create_dummy_lucet_module(code: &[u8]) -> VwModule{
+    create_dummy_module(code, ExecutableType::Lucet, VwArch::X64)
 }
 
 pub fn validate_heap(
@@ -174,7 +175,16 @@ pub fn validate_heap(
         }
     }
 
-    let (cfg, irmap, module) = func_body_and_bbs_to_cfg(code, basic_blocks, cfg_edges);
+
+    let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
+    let module = create_dummy_lucet_module(&code);
+    let irmap = lift_cfg(&module, &cfg, false);
+
+
+    // TODO: regalloc checker from Lucet too.
+    // TODO: how hard would this be to adapt to Wasmtime? Extra level of indirection:
+    //       heap-base loaded from vmctx (rdi) instead. Take a mode argument?
+    //       "Heap-access style"
 
     // This entry point is designed to allow checking of a single
     // function body, just after it has been generated in memory,
@@ -227,5 +237,9 @@ pub fn validate_wasmtime_func(
     cfg_edges: &[(usize, usize)],
 ) -> Result<(), ValidationError> {
     println!("VeriWasm is verifying the Wasmtime aot compilation!");
+    let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
+    let module = create_dummy_module(code, ExecutableType::Wasmtime, VwArch::X64);
+    let irmap = lift_cfg(&module, &cfg, false);
+    println!("Done!");
     Ok(())
 }
