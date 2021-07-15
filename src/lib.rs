@@ -19,10 +19,12 @@ use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;
 use yaxpeax_core::analyses::control_flow::{VW_Block, VW_CFG};
 use yaxpeax_core::memory::repr::process::{ModuleData, ModuleInfo, Segment};
+use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ValidationError {
     HeapUnsafe,
+    Other(&'static str),
 }
 impl std::fmt::Display for ValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -235,10 +237,13 @@ pub fn validate_wasmtime_func(
     code: &[u8],
     basic_blocks: &[usize],
     cfg_edges: &[(usize, usize)],
+    arch_str: &str, 
 ) -> Result<(), ValidationError> {
     println!("VeriWasm is verifying the Wasmtime aot compilation!");
+    let arch = VwArch::from_str(arch_str).map_err(|err| ValidationError::Other(err))?;
+    println!("Arch = {:?}", arch);
     let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
-    let module = create_dummy_module(code, ExecutableType::Wasmtime, VwArch::X64);
+    let module = create_dummy_module(code, ExecutableType::Wasmtime, arch);
     let irmap = lift_cfg(&module, &cfg, false);
     println!("Done!");
     Ok(())
