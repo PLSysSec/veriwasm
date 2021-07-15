@@ -1030,10 +1030,6 @@ type IResult<'a, O> = Result<(BlockInstrs<'a>, O), ParseErr<BlockInstrs<'a>>>;
 type StmtResult = (Addr, Vec<Stmt>);
 type Addr = u64;
 
-enum ParseErr<E> {
-    Incomplete, // input too short
-    Error(E),   // recoverable
-    Failure(E), // unrecoverable
-}
+
 
 type BlockInstrs<'a> = &'a [(Addr, X64Instruction)];

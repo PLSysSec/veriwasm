@@ -425,3 +425,9 @@ impl From<X86Regs> for u8 {
         value as u8
     }
 }
+
+pub enum ParseErr<E> {
+    Incomplete, // input too short
+    Error(E),   // recoverable
+    Failure(E), // unrecoverable
+}
