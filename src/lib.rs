@@ -12,7 +12,8 @@ pub mod runner;
 use analyses::run_worklist;
 use analyses::HeapAnalyzer;
 use checkers::check_heap;
-use ir::lift_cfg;
+// use ir::lift_cfg;
+use ir::Liftable;
 use ir::types::IRMap;
 use loaders::types::{ExecutableType, VwArch, VwMetadata, VwModule};
 use petgraph::graphmap::GraphMap;
@@ -180,7 +181,7 @@ pub fn validate_heap(
 
     let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
     let module = create_dummy_lucet_module(&code);
-    let irmap = lift_cfg(&module, &cfg, false);
+    let irmap = module.arch.lift_cfg(&module, &cfg, false);
 
 
     // TODO: regalloc checker from Lucet too.
@@ -242,9 +243,10 @@ pub fn validate_wasmtime_func(
     println!("VeriWasm is verifying the Wasmtime aot compilation!");
     let arch = VwArch::from_str(arch_str).map_err(|err| ValidationError::Other(err))?;
     println!("Arch = {:?}", arch);
+    println!("{:?} {:?} {:?}", code.len(), basic_blocks, cfg_edges);
     let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
     let module = create_dummy_module(code, ExecutableType::Wasmtime, arch);
-    let irmap = lift_cfg(&module, &cfg, false);
+    let irmap = module.arch.lift_cfg(&module, &cfg, false);
     println!("Done!");
     Ok(())
 }
