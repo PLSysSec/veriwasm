@@ -34,7 +34,7 @@ goblin = "0.4.1"
 #lucet-module = { path = "../lucet_sandbox_compiler/lucet-module", version = "0.1.1", package="lucet-module-wasmsbx" }
 lucet-module = "0.5.1"
 #capstone_vw = { path = "./capstone_rs/capstone_rs" }
-capstone = { version = "0.9.0" }
+capstone = { path = "../capstone-rs/capstone-rs" }
 
 # log = "*"
 # env_logger = "*"
