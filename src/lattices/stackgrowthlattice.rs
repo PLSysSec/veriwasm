@@ -10,6 +10,7 @@ use crate::lattices::{ConstLattice, VarState};
 /// from `rbp` in the epilogue, it is copied back.
 pub type StackGrowthLattice = ConstLattice<(i64, i64, i64)>;
 
+
 impl VarState for StackGrowthLattice {
     type Var = i64;
     fn get(&self, _index: &Value) -> Option<Self::Var> {
