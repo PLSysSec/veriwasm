@@ -4,7 +4,7 @@ mod jump_analyzer;
 pub mod locals_analyzer;
 pub mod reaching_defs;
 mod stack_analyzer;
-use crate::ir::types::{Binopcode, IRBlock, IRMap, Stmt, Unopcode, Value};
+use crate::ir::types::{Binopcode, IRBlock, IRMap, Stmt, Unopcode, Value, RegT};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarState};
 use std::collections::{HashMap, VecDeque};
@@ -18,13 +18,13 @@ pub use self::stack_analyzer::StackAnalyzer;
 
 pub type AnalysisResult<T> = HashMap<u64, T>;
 
-pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
+pub trait AbstractAnalyzer<Ar: RegT, State: Lattice + VarState + Clone> {
     fn init_state(&self) -> State {
         Default::default()
     }
     fn process_branch(
         &self,
-        _irmap: &IRMap,
+        _irmap: &IRMap<Ar>,
         in_state: &State,
         succ_addrs: &Vec<u64>,
         _addr: &u64,
@@ -38,8 +38,8 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
         &self,
         in_state: &mut State,
         _opcode: &Unopcode,
-        dst: &Value,
-        _src: &Value,
+        dst: &Value<Ar>,
+        _src: &Value<Ar>,
         _loc_idx: &LocIdx,
     ) -> () {
         in_state.set_to_bot(dst)
@@ -48,9 +48,9 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
         &self,
         in_state: &mut State,
         opcode: &Binopcode,
-        dst: &Value,
-        _src1: &Value,
-        _src2: &Value,
+        dst: &Value<Ar>,
+        _src1: &Value<Ar>,
+        _src2: &Value<Ar>,
         _loc_idx: &LocIdx,
     ) -> () {
         match opcode {
@@ -60,7 +60,7 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
         }
     }
 
-    fn aexec(&self, in_state: &mut State, ir_instr: &Stmt, loc_idx: &LocIdx) -> () {
+    fn aexec(&self, in_state: &mut State, ir_instr: &Stmt<Ar>, loc_idx: &LocIdx) -> () {
         match ir_instr {
             Stmt::Clear(dst, _srcs) => in_state.set_to_bot(dst),
             Stmt::Unop(opcode, dst, src) => self.aexec_unop(in_state, opcode, &dst, &src, loc_idx),
@@ -73,7 +73,7 @@ pub trait AbstractAnalyzer<State: Lattice + VarState + Clone> {
         }
     }
 
-    fn analyze_block(&self, state: &State, irblock: &IRBlock) -> State {
+    fn analyze_block(&self, state: &State, irblock: &IRBlock<Ar>) -> State {
         let mut new_state = state.clone();
         for (addr, instruction) in irblock.iter() {
             for (idx, ir_insn) in instruction.iter().enumerate() {
@@ -118,9 +118,9 @@ fn align_succ_addrs(addr: u64, succ_addrs: Vec<u64>) -> Vec<u64> {
     panic!("Unreachable");
 }
 
-pub fn run_worklist<T: AbstractAnalyzer<State>, State: VarState + Lattice + Clone>(
+pub fn run_worklist<T: AbstractAnalyzer<Ar, State>, State: VarState + Lattice + Clone, Ar: RegT>(
     cfg: &VW_CFG,
-    irmap: &IRMap,
+    irmap: &IRMap<Ar>,
     analyzer: &T,
 ) -> AnalysisResult<State> {
     let mut statemap: HashMap<u64, State> = HashMap::new();

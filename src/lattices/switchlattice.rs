@@ -13,7 +13,7 @@ pub enum SwitchValue {
 
 pub type SwitchValueLattice = ConstLattice<SwitchValue>;
 
-pub type SwitchLattice = VariableState<SwitchValueLattice>;
+pub type SwitchLattice<Ar> = VariableState<Ar, SwitchValueLattice>;
 
 #[test]
 fn switch_lattice_test() {

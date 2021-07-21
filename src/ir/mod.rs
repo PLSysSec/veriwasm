@@ -14,7 +14,8 @@ use crate::IRMap;
 use crate::{VwModule, VW_CFG};
 
 pub trait Liftable {
-    fn lift_cfg( &self, module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap;
+    type Ar;
+    fn lift_cfg( &self, module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Self::Ar>;
 }
 // TODO: make static dispatch
 impl Liftable for VwArch {
@@ -31,7 +32,7 @@ impl Liftable for VwArch {
     //     }
     // }
 
-    fn lift_cfg( &self, module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap {
+    fn lift_cfg( &self, module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Self::Ar> {
         match self {
             VwArch::X64 => x64::lift_cfg(module, cfg, strict),
             VwArch::Aarch64 => aarch64::lift_cfg(module, cfg, strict),

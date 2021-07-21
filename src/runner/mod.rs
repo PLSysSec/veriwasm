@@ -12,7 +12,7 @@ use analyses::{CallAnalyzer, HeapAnalyzer, StackAnalyzer};
 use checkers::locals_checker::check_locals;
 use checkers::{check_calls, check_heap, check_stack};
 use ir::fully_resolved_cfg;
-use ir::types::FunType;
+use ir::types::{FunType, RegT};
 use ir::utils::has_indirect_calls;
 use loaders::load_program;
 use loaders::types::{ExecutableType, VwArch, VwFuncInfo};
@@ -49,15 +49,15 @@ pub struct Config {
     pub arch: VwArch,
 }
 
-pub fn run_locals(
-    reaching_defs: AnalysisResult<VariableState<ReachingDefnLattice>>,
-    call_analysis: AnalysisResult<CallCheckLattice>,
+pub fn run_locals<Ar: RegT>(
+    reaching_defs: AnalysisResult<VariableState<Ar, ReachingDefnLattice>>,
+    call_analysis: AnalysisResult<CallCheckLattice<Ar>>,
     plt_bounds: (u64, u64),
     all_addrs_map: &HashMap<u64, String>, // index into func_signatures.signatures
     func_signatures: &VwFuncInfo,
     func_name: &String,
     cfg: &VW_CFG,
-    irmap: &IRMap,
+    irmap: &IRMap<Ar>,
     metadata: &VwMetadata,
     valid_funcs: &Vec<u64>,
 ) -> bool {
@@ -98,16 +98,16 @@ pub fn run_locals(
     locals_safe
 }
 
-fn run_stack(cfg: &VW_CFG, irmap: &IRMap) -> bool {
+fn run_stack<Ar: RegT>(cfg: &VW_CFG, irmap: &IRMap<Ar>) -> bool {
     let stack_analyzer = StackAnalyzer {};
     let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
     let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
     stack_safe
 }
 
-fn run_heap(
+fn run_heap<Ar: RegT>(
     cfg: &VW_CFG,
-    irmap: &IRMap,
+    irmap: &IRMap<Ar>,
     metadata: &VwMetadata,
     all_addrs_map: &HashMap<u64, String>,
 ) -> bool {
@@ -119,16 +119,16 @@ fn run_heap(
     heap_safe
 }
 
-fn run_calls(
+fn run_calls<Ar: RegT>(
     cfg: &VW_CFG,
-    irmap: &IRMap,
+    irmap: &IRMap<Ar>,
     metadata: &VwMetadata,
     valid_funcs: &Vec<u64>,
     plt: (u64, u64),
 ) -> (
     bool,
-    AnalysisResult<CallCheckLattice>,
-    AnalysisResult<VariableState<ReachingDefnLattice>>,
+    AnalysisResult<CallCheckLattice<Ar>>,
+    AnalysisResult<VariableState<Ar, ReachingDefnLattice>>,
 ) {
     let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
     let call_analyzer = CallAnalyzer {

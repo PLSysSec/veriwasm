@@ -11,13 +11,13 @@ use yaxpeax_core::analyses::control_flow::{get_cfg, VW_CFG};
 use yaxpeax_core::arch::x86_64::MergedContextTable;
 use crate::ir::Liftable;
 
-fn try_resolve_jumps(
+fn try_resolve_jumps<Ar>(
     module: &VwModule,
     contexts: &MergedContextTable,
     cfg: &VW_CFG,
-    irmap: &IRMap,
+    irmap: &IRMap<Ar>,
     _addr: u64,
-) -> (VW_CFG, IRMap, i32, u32) {
+) -> (VW_CFG, IRMap<Ar>, i32, u32) {
     println!("Performing a reaching defs pass");
     let reaching_defs = analyze_reaching_defs(cfg, &irmap, module.metadata.clone());
     println!("Performing a jump resolution pass");
@@ -43,13 +43,13 @@ fn try_resolve_jumps(
     return (new_cfg, irmap, num_targets as i32, still_unresolved);
 }
 
-fn resolve_cfg(
+fn resolve_cfg<Ar>(
     module: &VwModule,
     contexts: &MergedContextTable,
     cfg: &VW_CFG,
-    orig_irmap: &IRMap,
+    orig_irmap: &IRMap<Ar>,
     addr: u64,
-) -> (VW_CFG, IRMap) {
+) -> (VW_CFG, IRMap<Ar>) {
     let (mut cfg, mut irmap, mut resolved_switches, mut still_unresolved) =
         try_resolve_jumps(module, contexts, cfg, orig_irmap, addr);
     while still_unresolved != 0 {
@@ -68,11 +68,11 @@ fn resolve_cfg(
     (cfg, irmap)
 }
 
-pub fn fully_resolved_cfg(
+pub fn fully_resolved_cfg<Ar>(
     module: &VwModule,
     contexts: &MergedContextTable,
     addr: u64,
-) -> (VW_CFG, IRMap) {
+) -> (VW_CFG, IRMap<Ar>) {
     let (cfg, _) = get_cfg(&module.program, contexts, addr, None);
     let irmap = module.arch.lift_cfg(module, &cfg, true);
     if !has_indirect_jumps(&irmap) {

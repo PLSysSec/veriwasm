@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 use analyses::locals_analyzer::LocalsAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
 use checkers::Checker;
-use ir::types::{FunType, IRMap, MemArgs, Stmt, ValSize, Value, VarIndex, X86Regs};
+use ir::types::{FunType, IRMap, MemArgs, Stmt, ValSize, Value, VarIndex, X86Regs, RegT};
 use ir::utils::is_stack_access;
 use lattices::localslattice::{LocalsLattice, SlotVal};
 use lattices::reachingdefslattice::LocIdx;
@@ -17,20 +17,20 @@ use SlotVal::*;
 use ValSize::*;
 use X86Regs::*;
 
-pub struct LocalsChecker<'a> {
-    irmap: &'a IRMap,
-    analyzer: &'a LocalsAnalyzer<'a>,
+pub struct LocalsChecker<'a, Ar> {
+    irmap: &'a IRMap<Ar>,
+    analyzer: &'a LocalsAnalyzer<'a, Ar>,
 }
 
-pub fn check_locals(
-    result: AnalysisResult<LocalsLattice>,
-    irmap: &IRMap,
-    analyzer: &LocalsAnalyzer,
+pub fn check_locals<Ar>(
+    result: AnalysisResult<LocalsLattice<Ar>>,
+    irmap: &IRMap<Ar>,
+    analyzer: &LocalsAnalyzer<Ar>,
 ) -> bool {
     LocalsChecker { irmap, analyzer }.check(result)
 }
 
-fn is_noninit_illegal(v: &Value) -> bool {
+fn is_noninit_illegal<Ar>(v: &Value<Ar>) -> bool {
     match v {
         Value::Mem(memsize, memargs) => !is_stack_access(v),
         Value::Reg(reg_num, _) => false,
@@ -43,8 +43,8 @@ fn is_noninit_illegal(v: &Value) -> bool {
     }
 }
 
-impl LocalsChecker<'_> {
-    fn all_args_are_init(&self, state: &LocalsLattice, sig: FunType) -> bool {
+impl<Ar> LocalsChecker<'_, Ar> {
+    fn all_args_are_init(&self, state: &LocalsLattice<Ar>, sig: FunType) -> bool {
         for arg in sig.args.iter() {
             match arg {
                 (VarIndex::Stack(offset), size) => {
@@ -75,7 +75,7 @@ impl LocalsChecker<'_> {
         true
     }
 
-    fn ret_is_uninitialized(&self, state: &LocalsLattice) -> bool {
+    fn ret_is_uninitialized(&self, state: &LocalsLattice<Ar>) -> bool {
         let ret_ty = self.analyzer.fun_type.ret;
         if ret_ty.is_none() {
             false
@@ -87,7 +87,7 @@ impl LocalsChecker<'_> {
 
     // Check if callee-saved registers have been restored properly
     // RSP and RBP are handled by stack analysis
-    fn regs_not_restored(&self, state: &LocalsLattice) -> bool {
+    fn regs_not_restored(&self, state: &LocalsLattice<Ar>) -> bool {
         for reg in vec![Rbx, R12, R13, R14, R15].iter() {
             let v = state.regs.get_reg(*reg, Size64);
             if v != UninitCalleeReg(*reg) {
@@ -98,20 +98,20 @@ impl LocalsChecker<'_> {
     }
 }
 
-impl Checker<LocalsLattice> for LocalsChecker<'_> {
-    fn check(&self, result: AnalysisResult<LocalsLattice>) -> bool {
+impl<Ar: RegT> Checker<Ar, LocalsLattice<Ar>> for LocalsChecker<'_, Ar> {
+    fn check(&self, result: AnalysisResult<LocalsLattice<Ar>>) -> bool {
         self.check_state_at_statements(result)
     }
 
-    fn irmap(&self) -> &IRMap {
+    fn irmap(&self) -> &IRMap<Ar> {
         self.irmap
     }
 
-    fn aexec(&self, state: &mut LocalsLattice, ir_stmt: &Stmt, loc: &LocIdx) {
+    fn aexec(&self, state: &mut LocalsLattice<Ar>, ir_stmt: &Stmt<Ar>, loc: &LocIdx) {
         self.analyzer.aexec(state, ir_stmt, loc)
     }
 
-    fn check_statement(&self, state: &LocalsLattice, stmt: &Stmt, loc_idx: &LocIdx) -> bool {
+    fn check_statement(&self, state: &LocalsLattice<Ar>, stmt: &Stmt<Ar>, loc_idx: &LocIdx) -> bool {
         let debug_addrs: HashSet<u64> = vec![].into_iter().collect();
         if debug_addrs.contains(&loc_idx.addr) {
             println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");

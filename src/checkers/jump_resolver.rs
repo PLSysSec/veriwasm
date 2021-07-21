@@ -6,6 +6,7 @@ use lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
 use std::collections::HashMap;
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_core::memory::MemoryRepr;
+use crate::ir::types::X86Regs;
 
 fn load_target(program: &ModuleData, addr: u64) -> i64 {
     let b0 = program.read(addr).unwrap() as u32;
@@ -32,11 +33,11 @@ fn extract_jmp_targets(program: &ModuleData, aval: &SwitchValueLattice) -> Vec<i
 }
 
 // addr -> vec of targets
-pub fn resolve_jumps(
+pub fn resolve_jumps<Ar>(
     program: &ModuleData,
-    result: AnalysisResult<SwitchLattice>,
-    irmap: &IRMap,
-    analyzer: &SwitchAnalyzer,
+    result: AnalysisResult<SwitchLattice<Ar>>,
+    irmap: &IRMap<Ar>,
+    analyzer: &SwitchAnalyzer<Ar>,
 ) -> HashMap<u64, Vec<i64>> {
     let mut switch_targets: HashMap<u64, Vec<i64>> = HashMap::new();
 

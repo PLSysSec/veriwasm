@@ -1,6 +1,6 @@
 use crate::{analyses, ir, lattices, loaders};
 use analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
-use ir::types::{Binopcode, IRMap, Stmt, Unopcode, ValSize, X86Regs};
+use ir::types::{Binopcode, IRMap, Stmt, Unopcode, ValSize, X86Regs, RegT};
 use lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
 use lattices::VarState;
 use loaders::types::VwMetadata;
@@ -10,11 +10,11 @@ use ValSize::*;
 use X86Regs::*;
 
 //Top level function
-pub fn analyze_reaching_defs(
+pub fn analyze_reaching_defs<Ar>(
     cfg: &VW_CFG,
-    irmap: &IRMap,
+    irmap: &IRMap<X86Regs>,
     _metadata: VwMetadata,
-) -> AnalysisResult<ReachLattice> {
+) -> AnalysisResult<ReachLattice<Ar>> {
     run_worklist(
         cfg,
         irmap,
@@ -25,20 +25,20 @@ pub fn analyze_reaching_defs(
     )
 }
 
-pub struct ReachingDefnAnalyzer {
+pub struct ReachingDefnAnalyzer<Ar> {
     pub cfg: VW_CFG,
-    pub irmap: IRMap,
+    pub irmap: IRMap<Ar>,
 }
 
-impl ReachingDefnAnalyzer {
+impl<Ar: RegT> ReachingDefnAnalyzer<Ar> {
     //1. get enclosing block addr
     //2. get result for that block start
     //3. run reaching def up to that point
     pub fn fetch_def(
         &self,
-        result: &AnalysisResult<ReachLattice>,
+        result: &AnalysisResult<ReachLattice<Ar>>,
         loc_idx: &LocIdx,
-    ) -> ReachLattice {
+    ) -> ReachLattice<Ar> {
         if self.cfg.blocks.contains_key(&loc_idx.addr) {
             return result.get(&loc_idx.addr).unwrap().clone();
         }
@@ -64,25 +64,28 @@ impl ReachingDefnAnalyzer {
     }
 }
 
-impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
-    fn init_state(&self) -> ReachLattice {
+impl<Ar: RegT> AbstractAnalyzer<Ar, ReachLattice<Ar>> for ReachingDefnAnalyzer<Ar> {
+    fn init_state(&self) -> ReachLattice<Ar> {
         let mut s: ReachLattice = Default::default();
 
-        s.regs.set_reg(Rax, Size64, loc(0xdeadbeef, 0));
-        s.regs.set_reg(Rcx, Size64, loc(0xdeadbeef, 1));
-        s.regs.set_reg(Rdx, Size64, loc(0xdeadbeef, 2));
-        s.regs.set_reg(Rbx, Size64, loc(0xdeadbeef, 3));
-        s.regs.set_reg(Rbp, Size64, loc(0xdeadbeef, 4));
-        s.regs.set_reg(Rsi, Size64, loc(0xdeadbeef, 5));
-        s.regs.set_reg(Rdi, Size64, loc(0xdeadbeef, 6));
-        s.regs.set_reg(R8, Size64, loc(0xdeadbeef, 7));
-        s.regs.set_reg(R9, Size64, loc(0xdeadbeef, 8));
-        s.regs.set_reg(R10, Size64, loc(0xdeadbeef, 9));
-        s.regs.set_reg(R11, Size64, loc(0xdeadbeef, 10));
-        s.regs.set_reg(R12, Size64, loc(0xdeadbeef, 11));
-        s.regs.set_reg(R13, Size64, loc(0xdeadbeef, 12));
-        s.regs.set_reg(R14, Size64, loc(0xdeadbeef, 13));
-        s.regs.set_reg(R15, Size64, loc(0xdeadbeef, 14));
+        // s.regs.set_reg(Rax, Size64, loc(0xdeadbeef, 0));
+        // s.regs.set_reg(Rcx, Size64, loc(0xdeadbeef, 1));
+        // s.regs.set_reg(Rdx, Size64, loc(0xdeadbeef, 2));
+        // s.regs.set_reg(Rbx, Size64, loc(0xdeadbeef, 3));
+        // s.regs.set_reg(Rbp, Size64, loc(0xdeadbeef, 4));
+        // s.regs.set_reg(Rsi, Size64, loc(0xdeadbeef, 5));
+        // s.regs.set_reg(Rdi, Size64, loc(0xdeadbeef, 6));
+        // s.regs.set_reg(R8, Size64, loc(0xdeadbeef, 7));
+        // s.regs.set_reg(R9, Size64, loc(0xdeadbeef, 8));
+        // s.regs.set_reg(R10, Size64, loc(0xdeadbeef, 9));
+        // s.regs.set_reg(R11, Size64, loc(0xdeadbeef, 10));
+        // s.regs.set_reg(R12, Size64, loc(0xdeadbeef, 11));
+        // s.regs.set_reg(R13, Size64, loc(0xdeadbeef, 12));
+        // s.regs.set_reg(R14, Size64, loc(0xdeadbeef, 13));
+        // s.regs.set_reg(R15, Size64, loc(0xdeadbeef, 14));
+        for r in Ar::iter(){
+            s.regs.set_reg(r, Size64, loc(0xdeadbeef, r as u8));
+        }
 
         s.stack.update(0x8, loc(0xdeadbeef, 15), 4);
         s.stack.update(0x10, loc(0xdeadbeef, 16), 4);
@@ -93,7 +96,7 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
         s
     }
 
-    fn aexec(&self, in_state: &mut ReachLattice, ir_instr: &Stmt, loc_idx: &LocIdx) -> () {
+    fn aexec(&self, in_state: &mut ReachLattice<Ar>, ir_instr: &Stmt<Ar>, loc_idx: &LocIdx) -> () {
         match ir_instr {
             Stmt::Clear(dst, _) => in_state.set(dst, singleton(loc_idx.clone())),
             Stmt::Unop(Unopcode::Mov, dst, src) | Stmt::Unop(Unopcode::Movsx, dst, src) => {
@@ -119,21 +122,24 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
                 in_state.set(dst, singleton(loc_idx.clone()))
             }
             Stmt::Call(_) => {
-                in_state.regs.set_reg(Rax, Size64, loc(loc_idx.addr, 0));
-                in_state.regs.set_reg(Rcx, Size64, loc(loc_idx.addr, 1));
-                in_state.regs.set_reg(Rdx, Size64, loc(loc_idx.addr, 2));
-                in_state.regs.set_reg(Rbx, Size64, loc(loc_idx.addr, 3));
-                in_state.regs.set_reg(Rbp, Size64, loc(loc_idx.addr, 4));
-                in_state.regs.set_reg(Rsi, Size64, loc(loc_idx.addr, 5));
-                in_state.regs.set_reg(Rdi, Size64, loc(loc_idx.addr, 6));
-                in_state.regs.set_reg(R8, Size64, loc(loc_idx.addr, 7));
-                in_state.regs.set_reg(R9, Size64, loc(loc_idx.addr, 8));
-                in_state.regs.set_reg(R10, Size64, loc(loc_idx.addr, 9));
-                in_state.regs.set_reg(R11, Size64, loc(loc_idx.addr, 10));
-                in_state.regs.set_reg(R12, Size64, loc(loc_idx.addr, 11));
-                in_state.regs.set_reg(R13, Size64, loc(loc_idx.addr, 12));
-                in_state.regs.set_reg(R14, Size64, loc(loc_idx.addr, 13));
-                in_state.regs.set_reg(R15, Size64, loc(loc_idx.addr, 14));
+                for r in Ar::iter(){
+                    in_state.regs.set_reg(r, Size64, loc(0xdeadbeef, r as u8));
+                }
+                // in_state.regs.set_reg(Rax, Size64, loc(loc_idx.addr, 0));
+                // in_state.regs.set_reg(Rcx, Size64, loc(loc_idx.addr, 1));
+                // in_state.regs.set_reg(Rdx, Size64, loc(loc_idx.addr, 2));
+                // in_state.regs.set_reg(Rbx, Size64, loc(loc_idx.addr, 3));
+                // in_state.regs.set_reg(Rbp, Size64, loc(loc_idx.addr, 4));
+                // in_state.regs.set_reg(Rsi, Size64, loc(loc_idx.addr, 5));
+                // in_state.regs.set_reg(Rdi, Size64, loc(loc_idx.addr, 6));
+                // in_state.regs.set_reg(R8, Size64, loc(loc_idx.addr, 7));
+                // in_state.regs.set_reg(R9, Size64, loc(loc_idx.addr, 8));
+                // in_state.regs.set_reg(R10, Size64, loc(loc_idx.addr, 9));
+                // in_state.regs.set_reg(R11, Size64, loc(loc_idx.addr, 10));
+                // in_state.regs.set_reg(R12, Size64, loc(loc_idx.addr, 11));
+                // in_state.regs.set_reg(R13, Size64, loc(loc_idx.addr, 12));
+                // in_state.regs.set_reg(R14, Size64, loc(loc_idx.addr, 13));
+                // in_state.regs.set_reg(R15, Size64, loc(loc_idx.addr, 14));
             }
             _ => (),
         }

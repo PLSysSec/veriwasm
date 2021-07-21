@@ -12,14 +12,15 @@ pub type StackGrowthLattice = ConstLattice<(i64, i64, i64)>;
 
 
 impl VarState for StackGrowthLattice {
-    type Var = i64;
-    fn get(&self, _index: &Value) -> Option<Self::Var> {
+    type Var = Self;
+    type Ar = (); // Dummy value
+    fn get(&self, index: &Value<Self::Ar>) -> Option<Self::Var> {
         unimplemented!()
     }
-    fn set(&mut self, _index: &Value, _v: Self::Var) -> () {
+    fn set(&mut self, _index: &Value<Self::Ar>, _v: Self::Var) -> () {
         unimplemented!()
     }
-    fn set_to_bot(&mut self, _index: &Value) -> () {
+    fn set_to_bot(&mut self, _index: &Value<Self::Ar>) -> () {
         unimplemented!()
     }
     fn on_call(&mut self) -> () {
@@ -28,9 +29,9 @@ impl VarState for StackGrowthLattice {
     fn adjust_stack_offset(
         &mut self,
         _opcode: &Binopcode,
-        _dst: &Value,
-        _src1: &Value,
-        _src2: &Value,
+        _dst: &Value<Self::Ar>,
+        _src1: &Value<Self::Ar>,
+        _src2: &Value<Self::Ar>,
     ) {
         unimplemented!()
     }

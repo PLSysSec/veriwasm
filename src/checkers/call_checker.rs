@@ -1,25 +1,26 @@
 use crate::{analyses, checkers, ir, lattices};
 use analyses::{AbstractAnalyzer, AnalysisResult, CallAnalyzer};
 use checkers::Checker;
-use ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
+use ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value, RegT};
 use lattices::calllattice::{CallCheckLattice, CallCheckValue};
 use lattices::davlattice::DAV;
 use lattices::reachingdefslattice::LocIdx;
+use crate::ir::types::X86Regs;
 
 use CallCheckValue::*;
 use ValSize::*;
 
-pub struct CallChecker<'a> {
-    irmap: &'a IRMap,
-    analyzer: &'a CallAnalyzer,
+pub struct CallChecker<'a, Ar> {
+    irmap: &'a IRMap<Ar>,
+    analyzer: &'a CallAnalyzer<Ar>,
     funcs: &'a Vec<u64>,
     plt: &'a (u64, u64),
 }
 
-pub fn check_calls(
-    result: AnalysisResult<CallCheckLattice>,
-    irmap: &IRMap,
-    analyzer: &CallAnalyzer,
+pub fn check_calls<Ar>(
+    result: AnalysisResult<CallCheckLattice<Ar>>,
+    irmap: &IRMap<Ar>,
+    analyzer: &CallAnalyzer<Ar>,
     funcs: &Vec<u64>,
     plt: &(u64, u64),
 ) -> bool {
@@ -32,19 +33,19 @@ pub fn check_calls(
     .check(result)
 }
 
-impl Checker<CallCheckLattice> for CallChecker<'_> {
-    fn check(&self, result: AnalysisResult<CallCheckLattice>) -> bool {
+impl<Ar: RegT> Checker<Ar, CallCheckLattice<Ar>> for CallChecker<'_, Ar> {
+    fn check(&self, result: AnalysisResult<CallCheckLattice<Ar>>) -> bool {
         self.check_state_at_statements(result)
     }
 
-    fn irmap(&self) -> &IRMap {
+    fn irmap(&self) -> &IRMap<Ar> {
         self.irmap
     }
-    fn aexec(&self, state: &mut CallCheckLattice, ir_stmt: &Stmt, loc: &LocIdx) {
+    fn aexec(&self, state: &mut CallCheckLattice<Ar>, ir_stmt: &Stmt<Ar>, loc: &LocIdx) {
         self.analyzer.aexec(state, ir_stmt, loc)
     }
 
-    fn check_statement(&self, state: &CallCheckLattice, ir_stmt: &Stmt, loc_idx: &LocIdx) -> bool {
+    fn check_statement(&self, state: &CallCheckLattice<Ar>, ir_stmt: &Stmt<Ar>, loc_idx: &LocIdx) -> bool {
         //1. Check that all indirect calls use resolved function pointer
         if let Stmt::Call(v) = ir_stmt {
             if !self.check_indirect_call(state, v, loc_idx) {
@@ -68,11 +69,11 @@ impl Checker<CallCheckLattice> for CallChecker<'_> {
     }
 }
 
-impl CallChecker<'_> {
+impl<Ar: RegT> CallChecker<'_, Ar> {
     fn check_indirect_call(
         &self,
-        state: &CallCheckLattice,
-        target: &Value,
+        state: &CallCheckLattice<Ar>,
+        target: &Value<Ar>,
         loc_idx: &LocIdx,
     ) -> bool {
         match target {
@@ -97,7 +98,7 @@ impl CallChecker<'_> {
         false
     }
 
-    fn check_calltable_lookup(&self, state: &CallCheckLattice, memargs: &MemArgs) -> bool {
+    fn check_calltable_lookup(&self, state: &CallCheckLattice<Ar>, memargs: &MemArgs<Ar>) -> bool {
         log::debug!("Call Table Lookup: {:?}", memargs);
         match memargs {
             MemArgs::Mem3Args(
@@ -120,7 +121,7 @@ impl CallChecker<'_> {
     }
 }
 
-pub fn memarg_repr(state: &CallCheckLattice, memarg: &MemArg) -> String {
+pub fn memarg_repr<Ar>(state: &CallCheckLattice<Ar>, memarg: &MemArg<Ar>) -> String {
     match memarg {
         MemArg::Reg(regnum, size) => {
             format!("r{:?}: {:?}", regnum, state.regs.get_reg(*regnum, *size).v)
@@ -129,7 +130,7 @@ pub fn memarg_repr(state: &CallCheckLattice, memarg: &MemArg) -> String {
     }
 }
 
-pub fn print_mem_access(state: &CallCheckLattice, memargs: &MemArgs) {
+pub fn print_mem_access<Ar>(state: &CallCheckLattice<Ar>, memargs: &MemArgs<Ar>) {
     match memargs {
         MemArgs::Mem1Arg(x) => log::debug!("mem[{:?}]", memarg_repr(state, x)),
         MemArgs::Mem2Args(x, y) => log::debug!(

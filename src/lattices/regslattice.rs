@@ -2,18 +2,18 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use crate::ir::types::{ValSize, X86Regs};
+use crate::ir::types::{ValSize, X86Regs, RegT};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarSlot};
 
-use X86Regs::*;
+// use X86Regs::*;
 
-#[derive(Default, PartialEq, Eq, Clone, Debug)]
-pub struct X86RegsLattice<T> {
-    pub map: HashMap<X86Regs, VarSlot<T>>,
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct ArchRegsLattice<Ar, T> {
+    pub map: HashMap<Ar, VarSlot<T>>,
 }
 
-fn hashmap_le<T: PartialOrd>(s1: &X86RegsLattice<T>, s2: &X86RegsLattice<T>) -> bool {
+fn hashmap_le<Ar: RegT, T: PartialOrd>(s1: &ArchRegsLattice<Ar, T>, s2: &ArchRegsLattice<Ar, T>) -> bool {
     for (k1, v1) in s1.map.iter() {
         if !s2.map.contains_key(k1) {
             return false;
@@ -27,7 +27,7 @@ fn hashmap_le<T: PartialOrd>(s1: &X86RegsLattice<T>, s2: &X86RegsLattice<T>) -> 
     true
 }
 
-impl<T: PartialOrd> PartialOrd for X86RegsLattice<T> {
+impl<Ar: RegT, T: PartialOrd> PartialOrd for ArchRegsLattice<Ar, T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if hashmap_le(self, other) {
             Some(Ordering::Less)
@@ -41,8 +41,8 @@ impl<T: PartialOrd> PartialOrd for X86RegsLattice<T> {
     }
 }
 
-impl<T: Lattice + Clone> X86RegsLattice<T> {
-    pub fn get_reg(&self, index: X86Regs, size: ValSize) -> T {
+impl<Ar: RegT, T: Lattice + Clone> ArchRegsLattice<Ar, T> {
+    pub fn get_reg(&self, index: Ar, size: ValSize) -> T {
         if let Some(slot) = self.map.get(&index) {
             slot.value.clone()
         } else {
@@ -51,14 +51,14 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
     }
 
     pub fn get_reg_index(&self, index: u8, size: ValSize) -> T {
-        let reg_index = match X86Regs::try_from(index) {
+        let reg_index = match Ar::try_from(index) {
             Err(err) => panic!("{}", err),
             Ok(reg) => reg,
         };
         self.get_reg(reg_index, size)
     }
 
-    pub fn set_reg(&mut self, index: X86Regs, size: ValSize, value: T) {
+    pub fn set_reg(&mut self, index: Ar, size: ValSize, value: T) {
         self.map.insert(
             index,
             VarSlot {
@@ -69,7 +69,7 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
     }
 
     pub fn set_reg_index(&mut self, index: u8, size: ValSize, value: T) -> () {
-        let reg_index = match X86Regs::try_from(index) {
+        let reg_index = match Ar::try_from(index) {
             Err(err) => panic!("{}", err),
             Ok(reg) => reg,
         };
@@ -81,29 +81,29 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
     }
 
     // TODO: should this do the inverse?
-    pub fn clear_caller_save_regs(&mut self) {
-        // x86-64 calling convention: rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 must be saved by
-        // the caller (are clobbered by the callee), so their states become unknown after calls.
-        //
-        // TODO: get calling convention from program's target ABI; on Windows, rsi and rdi are
-        // callee-save. The below is thus sound but conservative (and possibly
-        // false-positive-producing) on Windows.
-        self.map.remove(&Rax);
-        self.map.remove(&Rcx);
-        self.map.remove(&Rdx);
-        self.map.remove(&Rsi);
-        self.map.remove(&Rdi);
+    // pub fn clear_caller_save_regs(&mut self) {
+    //     // x86-64 calling convention: rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 must be saved by
+    //     // the caller (are clobbered by the callee), so their states become unknown after calls.
+    //     //
+    //     // TODO: get calling convention from program's target ABI; on Windows, rsi and rdi are
+    //     // callee-save. The below is thus sound but conservative (and possibly
+    //     // false-positive-producing) on Windows.
+    //     self.map.remove(&X86Regs::Rax);
+    //     self.map.remove(&X86Regs::Rcx);
+    //     self.map.remove(&X86Regs::Rdx);
+    //     self.map.remove(&X86Regs::Rsi);
+    //     self.map.remove(&X86Regs::Rdi);
 
-        self.map.remove(&R8);
-        self.map.remove(&R9);
-        self.map.remove(&R10);
-        self.map.remove(&R11);
-        self.map.remove(&Zf);
-        self.map.remove(&Cf);
-        self.map.remove(&Pf);
-        self.map.remove(&Sf);
-        self.map.remove(&Of);
-    }
+    //     self.map.remove(&X86Regs::R8);
+    //     self.map.remove(&X86Regs::R9);
+    //     self.map.remove(&X86Regs::R10);
+    //     self.map.remove(&X86Regs::R11);
+    //     self.map.remove(&X86Regs::Zf);
+    //     self.map.remove(&X86Regs::Cf);
+    //     self.map.remove(&X86Regs::Pf);
+    //     self.map.remove(&X86Regs::Sf);
+    //     self.map.remove(&X86Regs::Of);
+    // }
 
     pub fn show(&self) -> () {
         println!("State = ");
@@ -111,9 +111,19 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
     }
 }
 
-impl<T: Lattice + Clone> Lattice for X86RegsLattice<T> {
+// Don't derive default because it requires regs to have a default as well
+// https://github.com/rust-lang/rust/issues/26925
+impl<Ar, T> Default for ArchRegsLattice<Ar, T> {
+    fn default() -> Self {
+        ArchRegsLattice {
+            map: Default::default(),
+        }
+    }
+}
+
+impl<Ar: RegT, T: Lattice + Clone> Lattice for ArchRegsLattice<Ar, T> {
     fn meet(&self, other: &Self, loc_idx: &LocIdx) -> Self {
-        let mut newmap: HashMap<X86Regs, VarSlot<T>> = HashMap::new();
+        let mut newmap: HashMap<Ar, VarSlot<T>> = HashMap::new();
         for (var_index, v1) in self.map.iter() {
             match other.map.get(var_index) {
                 Some(v2) => {
@@ -127,7 +137,7 @@ impl<T: Lattice + Clone> Lattice for X86RegsLattice<T> {
                 None => (), // this means v2 = ⊥ so v1 ∧ v2 = ⊥
             }
         }
-        X86RegsLattice { map: newmap }
+        ArchRegsLattice { map: newmap }
     }
 }
 

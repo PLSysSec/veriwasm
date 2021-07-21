@@ -13,7 +13,7 @@ pub struct ReachingDefnLattice {
     pub defs: BTreeSet<LocIdx>,
 }
 
-pub type ReachLattice = VariableState<ReachingDefnLattice>;
+pub type ReachLattice<Ar> = VariableState<Ar, ReachingDefnLattice>;
 
 impl ReachingDefnLattice {
     pub fn is_empty(&self) -> bool {

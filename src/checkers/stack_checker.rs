@@ -6,15 +6,16 @@ use ir::types::{IRMap, MemArgs, Stmt, Value};
 use ir::utils::{get_imm_mem_offset, is_bp_access, is_stack_access};
 use lattices::reachingdefslattice::LocIdx;
 use lattices::stackgrowthlattice::StackGrowthLattice;
+use crate::ir::types::X86Regs;
 
-pub struct StackChecker<'a> {
-    irmap: &'a IRMap,
+pub struct StackChecker<'a, Ar> {
+    irmap: &'a IRMap<Ar>,
     analyzer: &'a StackAnalyzer,
 }
 
-pub fn check_stack(
+pub fn check_stack<Ar>(
     result: AnalysisResult<StackGrowthLattice>,
-    irmap: &IRMap,
+    irmap: &IRMap<Ar>,
     analyzer: &StackAnalyzer,
 ) -> bool {
     StackChecker {
@@ -24,22 +25,22 @@ pub fn check_stack(
     .check(result)
 }
 
-impl Checker<StackGrowthLattice> for StackChecker<'_> {
+impl<Ar> Checker<Ar, StackGrowthLattice> for StackChecker<'_, Ar> {
     fn check(&self, result: AnalysisResult<StackGrowthLattice>) -> bool {
         self.check_state_at_statements(result)
     }
 
-    fn irmap(&self) -> &IRMap {
+    fn irmap(&self) -> &IRMap<Ar> {
         self.irmap
     }
-    fn aexec(&self, state: &mut StackGrowthLattice, ir_stmt: &Stmt, loc: &LocIdx) {
+    fn aexec(&self, state: &mut StackGrowthLattice, ir_stmt: &Stmt<Ar>, loc: &LocIdx) {
         self.analyzer.aexec(state, ir_stmt, loc)
     }
 
     fn check_statement(
         &self,
         state: &StackGrowthLattice,
-        ir_stmt: &Stmt,
+        ir_stmt: &Stmt<Ar>,
         _loc_idx: &LocIdx,
     ) -> bool {
         //1, stackgrowth is never Bottom or >= 0
@@ -119,8 +120,8 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
     }
 }
 
-impl StackChecker<'_> {
-    fn check_stack_read(&self, state: &StackGrowthLattice, src: &Value) -> bool {
+impl<Ar> StackChecker<'_, Ar> {
+    fn check_stack_read(&self, state: &StackGrowthLattice, src: &Value<Ar>) -> bool {
         if let Value::Mem(_, memargs) = src {
             match memargs {
                 MemArgs::Mem1Arg(_memarg) => {
@@ -139,7 +140,7 @@ impl StackChecker<'_> {
         panic!("Unreachable")
     }
 
-    fn check_bp_read(&self, state: &StackGrowthLattice, src: &Value) -> bool {
+    fn check_bp_read(&self, state: &StackGrowthLattice, src: &Value<Ar>) -> bool {
         if let Value::Mem(_, memargs) = src {
             match memargs {
                 MemArgs::Mem1Arg(_memarg) => {
@@ -157,7 +158,7 @@ impl StackChecker<'_> {
         panic!("Unreachable")
     }
 
-    fn check_stack_write(&self, state: &StackGrowthLattice, dst: &Value) -> bool {
+    fn check_stack_write(&self, state: &StackGrowthLattice, dst: &Value<Ar>) -> bool {
         if let Value::Mem(_, memargs) = dst {
             match memargs {
                 MemArgs::Mem1Arg(_memarg) => {
@@ -176,7 +177,7 @@ impl StackChecker<'_> {
         panic!("Unreachable")
     }
 
-    fn check_bp_write(&self, state: &StackGrowthLattice, dst: &Value) -> bool {
+    fn check_bp_write(&self, state: &StackGrowthLattice, dst: &Value<Ar>) -> bool {
         if let Value::Mem(_, memargs) = dst {
             match memargs {
                 MemArgs::Mem1Arg(_memarg) => {

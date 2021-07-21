@@ -8,10 +8,10 @@ pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod switchlattice;
 use crate::{ir, lattices};
-use ir::types::{Binopcode, MemArg, MemArgs, ValSize, Value, X86Regs};
-use ir::utils::{get_imm_offset, is_rsp};
+use ir::types::{Binopcode, MemArg, MemArgs, ValSize, Value, X86Regs, RegT};
+use ir::utils::{get_imm_offset};
 use lattices::reachingdefslattice::LocIdx;
-use lattices::regslattice::X86RegsLattice;
+use lattices::regslattice::ArchRegsLattice;
 use lattices::stacklattice::StackLattice;
 use std::cmp::Ordering;
 use std::fmt::Debug;
@@ -40,11 +40,12 @@ pub trait Lattice: PartialOrd + Eq + Default + Debug {
 
 pub trait VarState {
     type Var;
-    fn get(&self, index: &Value) -> Option<Self::Var>;
-    fn set(&mut self, index: &Value, v: Self::Var) -> ();
-    fn set_to_bot(&mut self, index: &Value) -> ();
+    type Ar;
+    fn get(&self, index: &Value<Self::Ar>) -> Option<Self::Var>;
+    fn set(&mut self, index: &Value<Self::Ar>, v: Self::Var) -> ();
+    fn set_to_bot(&mut self, index: &Value<Self::Ar>) -> ();
     fn on_call(&mut self) -> ();
-    fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value, src1: &Value, src2: &Value);
+    fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value<Self::Ar>, src1: &Value<Self::Ar>, src2: &Value<Self::Ar>);
 }
 
 #[derive(Eq, Clone, Copy, Debug)]
@@ -130,13 +131,24 @@ impl<T: Eq + Clone + Debug> ConstLattice<T> {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Default, Clone, Debug)]
-pub struct VariableState<T> {
-    pub regs: X86RegsLattice<T>,
+#[derive(PartialEq, Eq, PartialOrd, Clone, Debug)]
+pub struct VariableState<Ar, T> {
+    pub regs: ArchRegsLattice<Ar, T>,
     pub stack: StackLattice<T>,
 }
 
-impl<T: std::fmt::Debug + Clone> std::fmt::Display for VariableState<T> {
+// Don't derive default because it requires regs to have a default as well
+// https://github.com/rust-lang/rust/issues/26925
+impl<Ar, T> Default for VariableState<Ar, T> {
+    fn default() -> Self {
+        VariableState {
+            regs: Default::default(),
+            stack: Default::default(),
+        }
+    }
+}
+
+impl<Ar: RegT, T: std::fmt::Debug + Clone> std::fmt::Display for VariableState<Ar, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{\n\t{:?}\n\n\t{}\n}}", self.regs, self.stack)
     }
@@ -144,18 +156,18 @@ impl<T: std::fmt::Debug + Clone> std::fmt::Display for VariableState<T> {
 
 // offset from current stack pointer
 // returns None if points to heap
-pub fn mem_to_stack_offset(memargs: &MemArgs) -> Option<i64> {
+pub fn mem_to_stack_offset<Ar: RegT>(memargs: &MemArgs<Ar>) -> Option<i64> {
     match memargs {
         MemArgs::Mem1Arg(arg) => {
             if let MemArg::Reg(regnum, _) = arg {
-                if *regnum == Rsp {
+                if regnum.is_rsp() {
                     return Some(0);
                 }
             }
         }
         MemArgs::Mem2Args(arg1, arg2) => {
             if let MemArg::Reg(regnum, _) = arg1 {
-                if *regnum == Rsp {
+                if regnum.is_rsp() {
                     if let MemArg::Imm(_, _, offset) = arg2 {
                         return Some(*offset);
                     }
@@ -167,7 +179,7 @@ pub fn mem_to_stack_offset(memargs: &MemArgs) -> Option<i64> {
     return None;
 }
 
-impl<T: Lattice + Clone> Lattice for VariableState<T> {
+impl<Ar: RegT, T: Lattice + Clone> Lattice for VariableState<Ar, T> {
     fn meet(&self, other: &Self, loc_idx: &LocIdx) -> Self {
         VariableState {
             regs: self.regs.meet(&other.regs, loc_idx),
@@ -176,9 +188,10 @@ impl<T: Lattice + Clone> Lattice for VariableState<T> {
     }
 }
 
-impl<T: Lattice + Clone> VarState for VariableState<T> {
+impl<Ar: RegT, T: Lattice + Clone> VarState for VariableState<Ar, T> {
+    type Ar = Ar;
     type Var = T;
-    fn set(&mut self, index: &Value, value: T) -> () {
+    fn set(&mut self, index: &Value<Ar>, value: T) -> () {
         match index {
             Value::Mem(memsize, memargs) => {
                 if let Some(offset) = mem_to_stack_offset(memargs) {
@@ -191,7 +204,7 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
         }
     }
 
-    fn get(&self, index: &Value) -> Option<T> {
+    fn get(&self, index: &Value<Ar>) -> Option<T> {
         match index {
             Value::Mem(memsize, memargs) => mem_to_stack_offset(memargs)
                 .map(|offset| self.stack.get(offset, memsize.into_bytes())),
@@ -201,7 +214,7 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
         }
     }
 
-    fn set_to_bot(&mut self, index: &Value) {
+    fn set_to_bot(&mut self, index: &Value<Ar>) {
         self.set(index, Default::default())
     }
 
@@ -209,9 +222,9 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
         self.regs.clear_caller_save_regs();
     }
 
-    fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value, src1: &Value, src2: &Value) {
-        if is_rsp(dst) {
-            if is_rsp(src1) {
+    fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value<Ar>, src1: &Value<Ar>, src2: &Value<Ar>) {
+        if dst.is_rsp() {
+            if src1.is_rsp() {
                 let adjustment = get_imm_offset(src2);
                 match opcode {
                     Binopcode::Add => self.stack.update_stack_offset(adjustment),

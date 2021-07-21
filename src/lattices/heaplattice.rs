@@ -13,7 +13,7 @@ pub enum HeapValue {
 
 pub type HeapValueLattice = ConstLattice<HeapValue>;
 
-pub type HeapLattice = VariableState<HeapValueLattice>;
+pub type HeapLattice<Ar> = VariableState<Ar, HeapValueLattice>;
 
 #[test]
 fn heap_lattice_test() {

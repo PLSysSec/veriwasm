@@ -16,10 +16,10 @@ pub use self::heap_checker::check_heap;
 pub use self::jump_resolver::resolve_jumps;
 pub use self::stack_checker::check_stack;
 
-pub trait Checker<State: Lattice + Clone> {
+pub trait Checker<Ar, State: Lattice + Clone> {
     fn check(&self, result: AnalysisResult<State>) -> bool;
-    fn irmap(&self) -> &IRMap;
-    fn aexec(&self, state: &mut State, ir_stmt: &Stmt, loc: &LocIdx);
+    fn irmap(&self) -> &IRMap<Ar>;
+    fn aexec(&self, state: &mut State, ir_stmt: &Stmt<Ar>, loc: &LocIdx);
 
     fn check_state_at_statements(&self, result: AnalysisResult<State>) -> bool {
         for (block_addr, mut state) in result {
@@ -49,5 +49,5 @@ pub trait Checker<State: Lattice + Clone> {
         }
         true
     }
-    fn check_statement(&self, state: &State, ir_stmt: &Stmt, loc_idx: &LocIdx) -> bool;
+    fn check_statement(&self, state: &State, ir_stmt: &Stmt<Ar>, loc_idx: &LocIdx) -> bool;
 }

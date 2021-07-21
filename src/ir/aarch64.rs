@@ -11,6 +11,8 @@ use capstone::arch::ArchOperand;
 use core::convert::TryFrom;
 use ValSize::{Size128, Size16, Size256, Size32, Size512, Size64, Size8}; 
 
+use crate::ir::types::RegT;
+
 // TODO: this should not implement PartialOrd
 // TODO: add flags iter
 #[derive(PartialEq, PartialOrd, Clone, Eq, Debug, Copy, Hash)]
@@ -64,33 +66,33 @@ impl Aarch64Regs {
     }
 }
 
-pub struct Aarch64RegsIterator {
-    current_reg: u16,
-}
+// pub struct Aarch64RegsIterator {
+//     current_reg: u16,
+// }
 
-impl Aarch64Regs {
-    pub fn iter() -> Aarch64RegsIterator {
-        Aarch64RegsIterator {
-            current_reg: 0,
-        }
-    }
-}
+// impl Aarch64Regs {
+//     pub fn iter() -> Aarch64RegsIterator {
+//         Aarch64RegsIterator {
+//             current_reg: 0,
+//         }
+//     }
+// }
 
-impl Iterator for Aarch64RegsIterator {
-    type Item = Aarch64Regs;
+// impl Iterator for Aarch64RegsIterator {
+//     type Item = Aarch64Regs;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        let next_reg = self.current_reg + 1;
-        match Aarch64Regs::try_from(next_reg) {
-            Ok(r) => {
-                let current = self.current_reg; 
-                self.current_reg = next_reg;
-                Some(r)
-            }
-            Err(_) => None
-        }
-    }
-}
+//     fn next(&mut self) -> Option<Self::Item> {
+//         let next_reg = self.current_reg + 1;
+//         match Aarch64Regs::try_from(next_reg) {
+//             Ok(r) => {
+//                 let current = self.current_reg; 
+//                 self.current_reg = next_reg;
+//                 Some(r)
+//             }
+//             Err(_) => None
+//         }
+//     }
+// }
 
 impl TryFrom<u16> for Aarch64Regs {
     type Error = std::string::String;
@@ -138,12 +140,26 @@ impl TryFrom<u16> for Aarch64Regs {
     }
 }
 
+
+impl TryFrom<u8> for Aarch64Regs {
+    type Error = std::string::String;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Self::try_from(value as u16)
+    }
+}
+
 impl From<Aarch64Regs> for u16 {
     fn from(value: Aarch64Regs) -> Self {
         value as u16
     }
 }
 
+impl From<Aarch64Regs> for u8 {
+    fn from(value: Aarch64Regs) -> Self {
+        value as u8
+    }
+}
 
 
 fn reg_names<T, I>(cs: &Capstone, regs: T) -> String 
@@ -200,21 +216,21 @@ I: Into<RegId>
 //     // return sources;
 // }
 
-fn convert_reg(op: capstone::RegId) -> Value{
+fn convert_reg(op: capstone::RegId) -> Value<Aarch64Regs>{
     Value::Reg(Aarch64Regs::try_from(op.0).unwrap(), Size64)
 } 
 
-fn generic_clear(cs: &Capstone, instr: &Aarch64Insn) -> Vec<Stmt> {
-    let mut stmts: Vec<Stmt> = vec![];
+fn generic_clear(cs: &Capstone, instr: &Aarch64Insn) -> Vec<Stmt<Aarch64Regs>> {
+    let mut stmts: Vec<Stmt<Aarch64Regs>> = vec![];
     let detail = cs.insn_detail(instr).expect("Unable to get detail");
     // let sources = get_sources(cs, instr, &detail);
     let regs_read = detail.regs_read();
     println!("capstone reg sources: {:?}", regs_read);
-    let reg_sources: Vec<Value> = regs_read.map(|reg| convert_reg(reg)).collect();
+    let reg_sources: Vec<Value<Aarch64Regs>> = regs_read.map(|reg| convert_reg(reg)).collect();
     println!("VW reg sources: {:?}", reg_sources);
     let regs_write = detail.regs_write();
     println!("capstone reg sources: {:?}", regs_write);
-    let reg_dsts: Vec<Value> = regs_write.map(|reg| convert_reg(reg)).collect();
+    let reg_dsts: Vec<Value<Aarch64Regs>> = regs_write.map(|reg| convert_reg(reg)).collect();
     println!("VW reg sources: {:?}", reg_dsts);
     unimplemented!();
     // let dsts = get_destinations(&instr);
@@ -230,7 +246,7 @@ pub fn lift(
     addr: &u64,
     metadata: &VwMetadata,
     strict: bool,
-) -> Vec<Stmt> {
+) -> Vec<Stmt<Aarch64Regs>> {
     let mut instrs = Vec::new();
     match instr.mnemonic(){
         other_insn => {
@@ -264,8 +280,8 @@ fn parse_instrs<'a>(
     instrs: BlockInstrs,
     metadata: &VwMetadata,
     strict: bool,
-) -> Vec<(Addr, Vec<Stmt>)> {
-    let mut block_ir: Vec<(Addr, Vec<Stmt>)> = Vec::new();
+) -> Vec<(Addr, Vec<Stmt<Aarch64Regs>>)> {
+    let mut block_ir: Vec<(Addr, Vec<Stmt<Aarch64Regs>>)> = Vec::new();
     let mut rest = instrs;
     while let Ok((more, (addr, stmts))) = parse_instr(cs, rest, metadata, strict) {
         rest = more;
@@ -295,7 +311,7 @@ fn disas_aarch64<'a>(cs: &'a Capstone, buf: &[u8], addr: u64) -> capstone::Instr
     }
 }
 
-pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap {
+pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Aarch64Regs> {
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
     let mut cs = Capstone::new()
@@ -319,5 +335,20 @@ pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap {
 type IResult<'a, O> = Result<(BlockInstrs<'a>, O), ParseErr<BlockInstrs<'a>>>;
 type BlockInstrs<'a> = &'a [Aarch64Insn<'a>];
 type Addr = u64;
-type StmtResult = (Addr, Vec<Stmt>);
+type StmtResult = (Addr, Vec<Stmt<Aarch64Regs>>);
 type Aarch64Insn<'a> = capstone::Insn<'a>;
+
+
+impl RegT for Aarch64Regs {
+    fn is_rsp(&self) -> bool {
+        self == &W31
+    }
+    
+    fn is_rbp(&self) -> bool {
+        self == &W29
+    }
+    
+    fn is_zf(&self) -> bool {
+        self == &Zf
+    }
+}

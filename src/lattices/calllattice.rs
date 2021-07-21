@@ -26,7 +26,7 @@ pub struct CallCheckValueLattice {
     pub v: Option<CallCheckValue>,
 }
 
-pub type CallCheckLattice = VariableState<CallCheckValueLattice>;
+pub type CallCheckLattice<Ar> = VariableState<Ar, CallCheckValueLattice>;
 
 impl Default for CallCheckValueLattice {
     fn default() -> Self {

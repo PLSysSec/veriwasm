@@ -1,7 +1,7 @@
 use crate::{analyses, ir, lattices, loaders};
 use analyses::reaching_defs::ReachingDefnAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
-use ir::types::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value, X86Regs};
+use ir::types::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value, X86Regs, RegT};
 use ir::utils::get_rsp_offset;
 use lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
@@ -13,19 +13,19 @@ use SwitchValue::{JmpOffset, JmpTarget, SwitchBase, UpperBound};
 use ValSize::*;
 use X86Regs::*;
 
-pub struct SwitchAnalyzer {
+pub struct SwitchAnalyzer<Ar> {
     pub metadata: VwMetadata,
-    pub reaching_defs: AnalysisResult<ReachLattice>,
-    pub reaching_analyzer: ReachingDefnAnalyzer,
+    pub reaching_defs: AnalysisResult<ReachLattice<Ar>>,
+    pub reaching_analyzer: ReachingDefnAnalyzer<Ar>,
 }
 
-impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
+impl<Ar: RegT> AbstractAnalyzer<Ar, SwitchLattice<Ar>> for SwitchAnalyzer<Ar> {
     fn aexec_unop(
         &self,
-        in_state: &mut SwitchLattice,
+        in_state: &mut SwitchLattice<Ar>,
         _opcode: &Unopcode,
-        dst: &Value,
-        src: &Value,
+        dst: &Value<Ar>,
+        src: &Value<Ar>,
         _loc_idx: &LocIdx,
     ) -> () {
         in_state.set(dst, self.aeval_unop(in_state, src))
@@ -33,11 +33,11 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
 
     fn aexec_binop(
         &self,
-        in_state: &mut SwitchLattice,
+        in_state: &mut SwitchLattice<Ar>,
         opcode: &Binopcode,
-        dst: &Value,
-        src1: &Value,
-        src2: &Value,
+        dst: &Value<Ar>,
+        src1: &Value<Ar>,
+        src2: &Value<Ar>,
         loc_idx: &LocIdx,
     ) -> () {
         if let Binopcode::Cmp = opcode {
@@ -69,11 +69,11 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
 
     fn process_branch(
         &self,
-        irmap: &IRMap,
-        in_state: &SwitchLattice,
+        irmap: &IRMap<Ar>,
+        in_state: &SwitchLattice<Ar>,
         succ_addrs: &Vec<u64>,
         addr: &u64,
-    ) -> Vec<(u64, SwitchLattice)> {
+    ) -> Vec<(u64, SwitchLattice<Ar>)> {
         if succ_addrs.len() == 2 {
             let mut not_branch_state = in_state.clone();
             let mut branch_state = in_state.clone();
@@ -136,11 +136,11 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
     }
 }
 
-impl SwitchAnalyzer {
+impl<Ar: RegT> SwitchAnalyzer<Ar> {
     fn aeval_unop_mem(
         &self,
-        in_state: &SwitchLattice,
-        memargs: &MemArgs,
+        in_state: &SwitchLattice<Ar>,
+        memargs: &MemArgs<Ar>,
         memsize: &ValSize,
     ) -> SwitchValueLattice {
         if let Some(offset) = get_rsp_offset(memargs) {
@@ -167,7 +167,7 @@ impl SwitchAnalyzer {
     // 2. if reg, return reg -- done
     // 3. if stack access, return stack access -- done
     // 4. x = mem[switch_base + offset * 4]
-    pub fn aeval_unop(&self, in_state: &SwitchLattice, src: &Value) -> SwitchValueLattice {
+    pub fn aeval_unop(&self, in_state: &SwitchLattice<Ar>, src: &Value<Ar>) -> SwitchValueLattice {
         match src {
             Value::Mem(memsize, memargs) => self.aeval_unop_mem(in_state, memargs, memsize),
             Value::Reg(regnum, size) => in_state.regs.get_reg(*regnum, *size),
@@ -185,10 +185,10 @@ impl SwitchAnalyzer {
     // 1. x = switch_base + offset
     pub fn aeval_binop(
         &self,
-        in_state: &SwitchLattice,
+        in_state: &SwitchLattice<Ar>,
         opcode: &Binopcode,
-        src1: &Value,
-        src2: &Value,
+        src1: &Value<Ar>,
+        src2: &Value<Ar>,
     ) -> SwitchValueLattice {
         if let Binopcode::Add = opcode {
             if let (Value::Reg(regnum1, size1), Value::Reg(regnum2, size2)) = (src1, src2) {

@@ -3,96 +3,47 @@ use crate::ir::types::*;
 use ValSize::*;
 use X86Regs::*;
 
-pub fn is_rsp(v: &Value) -> bool {
-    match v {
-        Value::Reg(Rsp, Size64) => return true,
-        Value::Reg(Rsp, Size32) | Value::Reg(Rsp, Size16) | Value::Reg(Rsp, Size8) => {
-            panic!("Illegal RSP access")
-        }
-        _ => return false,
-    }
-}
-
-pub fn is_rbp(v: &Value) -> bool {
-    match v {
-        Value::Reg(Rbp, Size64) => return true,
-        Value::Reg(Rbp, Size32) | Value::Reg(Rbp, Size16) | Value::Reg(Rbp, Size8) => {
-            panic!("Illegal RBP access")
-        }
-        _ => return false,
-    }
-}
-
-pub fn is_zf(v: &Value) -> bool {
-    match v {
-        Value::Reg(Zf, _) => return true,
-        _ => return false,
-    }
-}
-
-pub fn memarg_is_stack(memarg: &MemArg) -> bool {
-    if let MemArg::Reg(Rsp, regsize) = memarg {
-        if let Size64 = regsize {
-            return true;
-        } else {
-            panic!("Non 64 bit version of rsp being used")
-        };
-    }
-    return false;
-}
-
-pub fn is_stack_access(v: &Value) -> bool {
+pub fn is_stack_access<Ar:RegT>(v: &Value<Ar>) -> bool {
     if let Value::Mem(_size, memargs) = v {
         match memargs {
-            MemArgs::Mem1Arg(memarg) => return memarg_is_stack(memarg),
+            MemArgs::Mem1Arg(memarg) => return memarg.is_rsp(),
             MemArgs::Mem2Args(memarg1, memarg2) => {
-                return memarg_is_stack(memarg1) || memarg_is_stack(memarg2)
+                return memarg1.is_rsp() || memarg2.is_rsp()
             }
             MemArgs::Mem3Args(memarg1, memarg2, memarg3) => {
-                return memarg_is_stack(memarg1)
-                    || memarg_is_stack(memarg2)
-                    || memarg_is_stack(memarg3)
+                return memarg1.is_rsp()
+                    || memarg2.is_rsp()
+                    || memarg3.is_rsp()
             }
             MemArgs::MemScale(memarg1, memarg2, memarg3) => {
-                return memarg_is_stack(memarg1)
-                    || memarg_is_stack(memarg2)
-                    || memarg_is_stack(memarg3)
+                return memarg1.is_rsp()
+                    || memarg2.is_rsp()
+                    || memarg3.is_rsp()
             }
         }
     }
     false
 }
 
-pub fn memarg_is_bp(memarg: &MemArg) -> bool {
-    if let MemArg::Reg(Rbp, regsize) = memarg {
-        if let Size64 = regsize {
-            return true;
-        } else {
-            panic!("Non 64 bit version of rbp being used")
-        };
-    }
-    return false;
-}
-
-pub fn is_bp_access(v: &Value) -> bool {
+pub fn is_bp_access<Ar: RegT>(v: &Value<Ar>) -> bool {
     if let Value::Mem(_size, memargs) = v {
         match memargs {
-            MemArgs::Mem1Arg(memarg) => return memarg_is_bp(memarg),
+            MemArgs::Mem1Arg(memarg) => return memarg.is_rbp(),
             MemArgs::Mem2Args(memarg1, memarg2) => {
-                return memarg_is_bp(memarg1) || memarg_is_bp(memarg2)
+                return memarg1.is_rbp() || memarg2.is_rbp()
             }
             MemArgs::Mem3Args(memarg1, memarg2, memarg3) => {
-                return memarg_is_bp(memarg1) || memarg_is_bp(memarg2) || memarg_is_bp(memarg3)
+                return memarg1.is_rbp() || memarg2.is_rbp() || memarg3.is_rbp()
             }
             MemArgs::MemScale(memarg1, memarg2, memarg3) => {
-                return memarg_is_bp(memarg1) || memarg_is_bp(memarg2) || memarg_is_bp(memarg3)
+                return memarg1.is_rbp() || memarg2.is_rbp() || memarg3.is_rbp()
             }
         }
     }
     false
 }
 
-pub fn extract_stack_offset(memargs: &MemArgs) -> i64 {
+pub fn extract_stack_offset<Ar>(memargs: &MemArgs<Ar>) -> i64 {
     match memargs {
         MemArgs::Mem1Arg(_memarg) => 0,
         MemArgs::Mem2Args(_memarg1, memarg2) => get_imm_mem_offset(memarg2),
@@ -101,7 +52,7 @@ pub fn extract_stack_offset(memargs: &MemArgs) -> i64 {
     }
 }
 
-pub fn is_mem_access(v: &Value) -> bool {
+pub fn is_mem_access<Ar>(v: &Value<Ar>) -> bool {
     if let Value::Mem(_, _) = v {
         true
     } else {
@@ -109,7 +60,7 @@ pub fn is_mem_access(v: &Value) -> bool {
     }
 }
 
-pub fn get_imm_offset(v: &Value) -> i64 {
+pub fn get_imm_offset<Ar>(v: &Value<Ar>) -> i64 {
     if let Value::Imm(_, _, v) = v {
         *v
     } else {
@@ -117,7 +68,7 @@ pub fn get_imm_offset(v: &Value) -> i64 {
     }
 }
 
-pub fn get_imm_mem_offset(v: &MemArg) -> i64 {
+pub fn get_imm_mem_offset<Ar>(v: &MemArg<Ar>) -> i64 {
     if let MemArg::Imm(_, _, v) = v {
         *v
     } else {
@@ -125,7 +76,7 @@ pub fn get_imm_mem_offset(v: &MemArg) -> i64 {
     }
 }
 
-pub fn has_indirect_calls(irmap: &IRMap) -> bool {
+pub fn has_indirect_calls<Ar>(irmap: &IRMap<Ar>) -> bool {
     for (_block_addr, ir_block) in irmap {
         for (_addr, ir_stmts) in ir_block {
             for (_idx, ir_stmt) in ir_stmts.iter().enumerate() {
@@ -139,7 +90,7 @@ pub fn has_indirect_calls(irmap: &IRMap) -> bool {
     false
 }
 
-pub fn has_indirect_jumps(irmap: &IRMap) -> bool {
+pub fn has_indirect_jumps<Ar>(irmap: &IRMap<Ar>) -> bool {
     for (_block_addr, ir_block) in irmap {
         for (_addr, ir_stmts) in ir_block {
             for (_idx, ir_stmt) in ir_stmts.iter().enumerate() {
@@ -155,7 +106,7 @@ pub fn has_indirect_jumps(irmap: &IRMap) -> bool {
     false
 }
 
-pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
+pub fn get_rsp_offset(memargs: &MemArgs<X86Regs>) -> Option<i64> {
     match memargs {
         MemArgs::Mem1Arg(arg) => {
             if let MemArg::Reg(regnum, _) = arg {
@@ -183,6 +134,6 @@ pub fn valsize(num: u32) -> ValSize {
     ValSize::try_from_bits(num).unwrap()
 }
 
-pub fn mk_value_i64(num: i64) -> Value {
+pub fn mk_value_i64<Ar>(num: i64) -> Value<Ar> {
     Value::Imm(ImmType::Signed, Size64, num)
 }

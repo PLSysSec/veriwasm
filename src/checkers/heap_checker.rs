@@ -1,6 +1,6 @@
 use crate::analyses::{AbstractAnalyzer, AnalysisResult, HeapAnalyzer};
 use crate::checkers::Checker;
-use crate::ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value, X86Regs};
+use crate::ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value, X86Regs, RegT};
 use crate::ir::utils::{is_mem_access, is_stack_access};
 use crate::lattices::heaplattice::{HeapLattice, HeapValue};
 use crate::lattices::reachingdefslattice::LocIdx;
@@ -11,15 +11,15 @@ use HeapValue::*;
 use ValSize::*;
 use X86Regs::*;
 
-pub struct HeapChecker<'a> {
-    irmap: &'a IRMap,
+pub struct HeapChecker<'a, Ar> {
+    irmap: &'a IRMap<Ar>,
     analyzer: &'a HeapAnalyzer,
     name_addr_map: &'a HashMap<u64, String>,
 }
 
-pub fn check_heap(
-    result: AnalysisResult<HeapLattice>,
-    irmap: &IRMap,
+pub fn check_heap<Ar>(
+    result: AnalysisResult<HeapLattice<Ar>>,
+    irmap: &IRMap<Ar>,
     analyzer: &HeapAnalyzer,
     name_addr_map: &HashMap<u64, String>,
 ) -> bool {
@@ -31,7 +31,7 @@ pub fn check_heap(
     .check(result)
 }
 
-fn memarg_is_frame(memarg: &MemArg) -> bool {
+fn memarg_is_frame<Ar>(memarg: &MemArg<Ar>) -> bool {
     if let MemArg::Reg(Rbp, size) = memarg {
         assert_eq!(*size, Size64);
         true
@@ -40,7 +40,7 @@ fn memarg_is_frame(memarg: &MemArg) -> bool {
     }
 }
 
-fn is_frame_access(v: &Value) -> bool {
+fn is_frame_access<Ar>(v: &Value<Ar>) -> bool {
     if let Value::Mem(_, memargs) = v {
         // Accept only operands of the form `[rbp + OFFSET]` where `OFFSET` is an integer. In
         // Cranelift-generated code from Wasm, there are never arrays or variable-length data in
@@ -58,19 +58,19 @@ fn is_frame_access(v: &Value) -> bool {
     }
 }
 
-impl Checker<HeapLattice> for HeapChecker<'_> {
-    fn check(&self, result: AnalysisResult<HeapLattice>) -> bool {
+impl<Ar: RegT> Checker<Ar, HeapLattice<Ar>> for HeapChecker<'_, Ar> {
+    fn check(&self, result: AnalysisResult<HeapLattice<Ar>>) -> bool {
         self.check_state_at_statements(result)
     }
 
-    fn irmap(&self) -> &IRMap {
+    fn irmap(&self) -> &IRMap<Ar> {
         self.irmap
     }
-    fn aexec(&self, state: &mut HeapLattice, ir_stmt: &Stmt, loc: &LocIdx) {
+    fn aexec(&self, state: &mut HeapLattice<Ar>, ir_stmt: &Stmt<Ar>, loc: &LocIdx) {
         self.analyzer.aexec(state, ir_stmt, loc)
     }
 
-    fn check_statement(&self, state: &HeapLattice, ir_stmt: &Stmt, loc_idx: &LocIdx) -> bool {
+    fn check_statement(&self, state: &HeapLattice<Ar>, ir_stmt: &Stmt<Ar>, loc_idx: &LocIdx) -> bool {
         match ir_stmt {
             //1. Check that at each call rdi = HeapBase
             Stmt::Call(v) => match state.regs.get_reg(Rdi, Size64).v {
@@ -127,8 +127,8 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
     }
 }
 
-impl HeapChecker<'_> {
-    fn check_global_access(&self, state: &HeapLattice, access: &Value) -> bool {
+impl<Ar> HeapChecker<'_, Ar> {
+    fn check_global_access(&self, state: &HeapLattice<Ar>, access: &Value<Ar>) -> bool {
         if let Value::Mem(_, memargs) = access {
             match memargs {
                 MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64)) => {
@@ -150,7 +150,7 @@ impl HeapChecker<'_> {
         false
     }
 
-    fn check_ripconst_access(&self, state: &HeapLattice, access: &Value) -> bool {
+    fn check_ripconst_access(&self, state: &HeapLattice<Ar>, access: &Value<Ar>) -> bool {
         if let Value::Mem(_, memargs) = access {
             match memargs {
                 // `RIPConst` represents a trusted value laoded from .rodata or .data; any access involving
@@ -182,7 +182,7 @@ impl HeapChecker<'_> {
         false
     }
 
-    fn check_heap_access(&self, state: &HeapLattice, access: &Value) -> bool {
+    fn check_heap_access(&self, state: &HeapLattice<Ar>, access: &Value<Ar>) -> bool {
         if let Value::Mem(_, memargs) = access {
             match memargs {
                 // if only arg is heapbase or heapaddr
@@ -244,7 +244,7 @@ impl HeapChecker<'_> {
         false
     }
 
-    fn check_metadata_access(&self, state: &HeapLattice, access: &Value) -> bool {
+    fn check_metadata_access(&self, state: &HeapLattice<Ar>, access: &Value<Ar>) -> bool {
         if let Value::Mem(_size, memargs) = access {
             match memargs {
                 //Case 1: mem[globals_base]
@@ -287,7 +287,7 @@ impl HeapChecker<'_> {
         false
     }
 
-    fn check_jump_table_access(&self, _state: &HeapLattice, access: &Value) -> bool {
+    fn check_jump_table_access(&self, _state: &HeapLattice<Ar>, access: &Value<Ar>) -> bool {
         if let Value::Mem(_size, memargs) = access {
             match memargs {
                 MemArgs::MemScale(_, _, MemArg::Imm(_, _, 4)) => return true,
@@ -297,7 +297,7 @@ impl HeapChecker<'_> {
         false
     }
 
-    fn check_mem_access(&self, state: &HeapLattice, access: &Value, loc_idx: &LocIdx) -> bool {
+    fn check_mem_access(&self, state: &HeapLattice<Ar>, access: &Value<Ar>, loc_idx: &LocIdx) -> bool {
         // Case 1: its a stack access
         if is_stack_access(access) {
             return true;
@@ -337,7 +337,7 @@ impl HeapChecker<'_> {
     }
 }
 
-pub fn memarg_repr(state: &HeapLattice, memarg: &MemArg) -> String {
+pub fn memarg_repr<Ar>(state: &HeapLattice<Ar>, memarg: &MemArg<Ar>) -> String {
     match memarg {
         MemArg::Reg(regnum, size) => {
             format!("{:?}: {:?}", regnum, state.regs.get_reg(*regnum, *size).v)
@@ -346,7 +346,7 @@ pub fn memarg_repr(state: &HeapLattice, memarg: &MemArg) -> String {
     }
 }
 
-pub fn print_mem_access(state: &HeapLattice, access: &Value) {
+pub fn print_mem_access<Ar>(state: &HeapLattice<Ar>, access: &Value<Ar>) {
     if let Value::Mem(_, memargs) = access {
         match memargs {
             MemArgs::Mem1Arg(x) => log::debug!("mem[{:?}]", memarg_repr(state, x)),

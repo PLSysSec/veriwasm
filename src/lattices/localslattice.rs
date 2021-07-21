@@ -62,4 +62,4 @@ impl Lattice for SlotVal {
     }
 }
 
-pub type LocalsLattice = VariableState<SlotVal>;
+pub type LocalsLattice<Ar> = VariableState<Ar, SlotVal>;

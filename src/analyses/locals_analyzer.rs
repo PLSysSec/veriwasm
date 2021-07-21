@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use analyses::{AbstractAnalyzer, AnalysisResult, CallAnalyzer};
-use ir::types::{Binopcode, FunType, IRMap, Stmt, ValSize, Value, VarIndex, X86Regs};
+use ir::types::{Binopcode, FunType, IRMap, Stmt, ValSize, Value, VarIndex, X86Regs, RegT};
 use ir::utils::mk_value_i64;
 use lattices::calllattice::CallCheckLattice;
 use lattices::localslattice::*;
@@ -17,17 +17,17 @@ use SlotVal::*;
 use ValSize::*;
 use X86Regs::*;
 
-pub struct LocalsAnalyzer<'a> {
+pub struct LocalsAnalyzer<'a, Ar> {
     pub fun_type: FunType,
     pub symbol_table: &'a VwFuncInfo,
     pub name_addr_map: &'a HashMap<u64, String>,
     pub plt_bounds: (u64, u64),
-    pub call_analysis: AnalysisResult<CallCheckLattice>,
-    pub call_analyzer: CallAnalyzer,
+    pub call_analysis: AnalysisResult<CallCheckLattice<Ar>>,
+    pub call_analyzer: CallAnalyzer<Ar>,
 }
 
-impl<'a> LocalsAnalyzer<'a> {
-    pub fn aeval_val(&self, state: &LocalsLattice, value: &Value, loc_idx: &LocIdx) -> SlotVal {
+impl<'a, Ar: RegT> LocalsAnalyzer<'a, Ar> {
+    pub fn aeval_val(&self, state: &LocalsLattice<Ar>, value: &Value<Ar>, loc_idx: &LocIdx) -> SlotVal {
         match value {
             Value::Mem(memsize, memargs) => {
                 if let Some(offset) = mem_to_stack_offset(memargs) {
@@ -49,8 +49,8 @@ impl<'a> LocalsAnalyzer<'a> {
     // if all values are initialized then the value is initialized
     pub fn aeval_vals(
         &self,
-        state: &LocalsLattice,
-        values: &Vec<Value>,
+        state: &LocalsLattice<Ar>,
+        values: &Vec<Value<Ar>>,
         loc_idx: &LocIdx,
     ) -> SlotVal {
         values.iter().fold(Init, |acc, value| -> SlotVal {
@@ -63,9 +63,9 @@ impl<'a> LocalsAnalyzer<'a> {
     }
 }
 
-impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
-    fn init_state(&self) -> LocalsLattice {
-        let mut lattice: LocalsLattice = Default::default();
+impl<'a, Ar: RegT> AbstractAnalyzer<Ar, LocalsLattice<Ar>> for LocalsAnalyzer<'a, Ar> {
+    fn init_state(&self) -> LocalsLattice<Ar> {
+        let mut lattice: LocalsLattice<Ar> = Default::default();
         for arg in self.fun_type.args.iter() {
             match arg {
                 (VarIndex::Stack(offset), size) => {
@@ -86,7 +86,7 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
         lattice
     }
 
-    fn aexec(&self, in_state: &mut LocalsLattice, ir_instr: &Stmt, loc_idx: &LocIdx) -> () {
+    fn aexec(&self, in_state: &mut LocalsLattice<Ar>, ir_instr: &Stmt<Ar>, loc_idx: &LocIdx) -> () {
         let debug_addrs: HashSet<u64> = vec![].into_iter().collect();
         if debug_addrs.contains(&loc_idx.addr) {
             println!("========================================");
@@ -163,11 +163,11 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
 
     fn process_branch(
         &self,
-        _irmap: &IRMap,
-        in_state: &LocalsLattice,
+        _irmap: &IRMap<Ar>,
+        in_state: &LocalsLattice<Ar>,
         succ_addrs: &Vec<u64>,
         _addr: &u64,
-    ) -> Vec<(u64, LocalsLattice)> {
+    ) -> Vec<(u64, LocalsLattice<Ar>)> {
         succ_addrs
             .into_iter()
             .map(|addr| (addr.clone(), in_state.clone()))

@@ -33,7 +33,7 @@ fn get_reg_size(reg: yaxpeax_x86::long_mode::RegSpec) -> ValSize {
     return size;
 }
 
-fn convert_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> Value {
+fn convert_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> Value<X86Regs> {
     let (num, size) = match (reg.num(), reg.class()) {
         (n, register_class::Q) => (n, Size64),
         (n, register_class::D) => (n, Size32),
@@ -50,7 +50,7 @@ fn convert_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> Value {
     Value::Reg(X86Regs::try_from(num).unwrap(), size)
 }
 
-fn convert_memarg_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> MemArg {
+fn convert_memarg_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> MemArg<X86Regs> {
     let size = match reg.class() {
         register_class::Q => Size64,
         register_class::D => Size32,
@@ -61,7 +61,7 @@ fn convert_memarg_reg(reg: yaxpeax_x86::long_mode::RegSpec) -> MemArg {
     MemArg::Reg(X86Regs::try_from(reg.num()).unwrap(), size)
 }
 
-fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Value {
+fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Value<X86Regs> {
     match op {
         Operand::ImmediateI8(imm) => Value::Imm(ImmType::Signed, Size8, imm as i64),
         Operand::ImmediateU8(imm) => Value::Imm(ImmType::Unsigned, Size8, imm as i64),
@@ -144,7 +144,7 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
 
 // Captures all register and flag sources
 // TODO: Memory?
-fn get_sources(instr: &X64Instruction) -> Vec<Value> {
+fn get_sources(instr: &X64Instruction) -> Vec<Value<X86Regs>> {
     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
     let mut sources = Vec::new();
     for (loc, dir) in uses_vec {
@@ -169,7 +169,7 @@ fn get_sources(instr: &X64Instruction) -> Vec<Value> {
 
 // Captures all register and flag destinations
 // TODO: Memory?
-fn get_destinations(instr: &X64Instruction) -> Vec<Value> {
+fn get_destinations(instr: &X64Instruction) -> Vec<Value<X86Regs>> {
     let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
     let mut destinations = Vec::new();
     for (loc, dir) in uses_vec {
@@ -192,7 +192,7 @@ fn get_destinations(instr: &X64Instruction) -> Vec<Value> {
     return destinations;
 }
 
-fn generic_clear(instr: &X64Instruction) -> Vec<Stmt> {
+fn generic_clear(instr: &X64Instruction) -> Vec<Stmt<X86Regs>> {
     let mut stmts = vec![];
     let sources = get_sources(&instr);
     let dsts = get_destinations(&instr);
@@ -227,14 +227,14 @@ fn get_operand_size(op: &yaxpeax_x86::long_mode::Operand) -> Option<ValSize> {
     }
 }
 
-fn set_from_flags(operand: Operand, flags: Vec<X86Regs>) -> Stmt {
+fn set_from_flags(operand: Operand, flags: Vec<X86Regs>) -> Stmt<X86Regs> {
     Stmt::Clear(
         convert_operand(operand, Size8),
         flags.iter().map(|flag| Value::Reg(*flag, Size8)).collect(),
     )
 }
 
-fn unop(opcode: Unopcode, instr: &X64Instruction) -> Stmt {
+fn unop(opcode: Unopcode, instr: &X64Instruction) -> Stmt<X86Regs> {
     let memsize = match (
         get_operand_size(&instr.operand(0)),
         get_operand_size(&instr.operand(1)),
@@ -251,7 +251,7 @@ fn unop(opcode: Unopcode, instr: &X64Instruction) -> Stmt {
     )
 }
 
-fn unop_w_memsize(opcode: Unopcode, instr: &X64Instruction, memsize: ValSize) -> Stmt {
+fn unop_w_memsize(opcode: Unopcode, instr: &X64Instruction, memsize: ValSize) -> Stmt<X86Regs> {
     Stmt::Unop(
         opcode,
         convert_operand(instr.operand(0), memsize),
@@ -259,7 +259,7 @@ fn unop_w_memsize(opcode: Unopcode, instr: &X64Instruction, memsize: ValSize) ->
     )
 }
 
-fn binop(opcode: Binopcode, instr: &X64Instruction) -> Stmt {
+fn binop(opcode: Binopcode, instr: &X64Instruction) -> Stmt<X86Regs> {
     let memsize = match (
         get_operand_size(&instr.operand(0)),
         get_operand_size(&instr.operand(1)),
@@ -287,16 +287,16 @@ fn binop(opcode: Binopcode, instr: &X64Instruction) -> Stmt {
     }
 }
 
-fn branch(instr: &X64Instruction) -> Stmt {
+fn branch(instr: &X64Instruction) -> Stmt<X86Regs> {
     Stmt::Branch(instr.opcode(), convert_operand(instr.operand(0), Size64))
 }
 
-fn call(instr: &X64Instruction, _metadata: &VwMetadata) -> Stmt {
+fn call(instr: &X64Instruction, _metadata: &VwMetadata) -> Stmt<X86Regs> {
     let dst = convert_operand(instr.operand(0), Size64);
     Stmt::Call(dst)
 }
 
-fn lea(instr: &X64Instruction, addr: &Addr) -> Vec<Stmt> {
+fn lea(instr: &X64Instruction, addr: &Addr) -> Vec<Stmt<X86Regs>> {
     let dst = instr.operand(0);
     let src1 = instr.operand(1);
     if let Operand::RegDisp(reg, disp) = src1 {
@@ -323,7 +323,7 @@ fn lea(instr: &X64Instruction, addr: &Addr) -> Vec<Stmt> {
     }
 }
 
-pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VwMetadata, strict: bool) -> Vec<Stmt> {
+pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VwMetadata, strict: bool) -> Vec<Stmt<X86Regs>> {
     log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
     let mut instrs = Vec::new();
     match instr.opcode() {
@@ -863,7 +863,7 @@ fn parse_probestack<'a>(
 }
 
 // returns (addr, operand(0), operand(1))
-fn parse_bsf<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value, Value)> {
+fn parse_bsf<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value<X86Regs>, Value<X86Regs>)> {
     if let Some(((addr, instr), rest)) = instrs.split_first() {
         if let Opcode::BSF = instr.opcode() {
             return Ok((
@@ -886,7 +886,7 @@ fn parse_bsf<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value, Value)> {
 }
 
 // returns (addr, operand(0), operand(1))
-fn parse_bsr<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value, Value)> {
+fn parse_bsr<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value<X86Regs>, Value<X86Regs>)> {
     if let Some(((addr, instr), rest)) = instrs.split_first() {
         if let Opcode::BSR = instr.opcode() {
             return Ok((
@@ -910,7 +910,7 @@ fn parse_bsr<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value, Value)> {
 
 // returns src of the cmove (dst must be the same)
 // although it says bsf, it also handles bsr
-fn parse_cmovez<'a>(instrs: BlockInstrs<'a>, bsf_dst: &Value) -> IResult<'a, (Addr, Value)> {
+fn parse_cmovez<'a>(instrs: BlockInstrs<'a>, bsf_dst: &Value<X86Regs>) -> IResult<'a, (Addr, Value<X86Regs>)> {
     if let Some(((addr, instr), rest)) = instrs.split_first() {
         if let Opcode::CMOVZ = instr.opcode() {
             let mov_dst = convert_operand(
@@ -986,8 +986,8 @@ fn parse_instrs<'a>(
     instrs: BlockInstrs,
     metadata: &VwMetadata,
     strict: bool,
-) -> Vec<(Addr, Vec<Stmt>)> {
-    let mut block_ir: Vec<(Addr, Vec<Stmt>)> = Vec::new();
+) -> Vec<(Addr, Vec<Stmt<X86Regs>>)> {
+    let mut block_ir: Vec<(Addr, Vec<Stmt<X86Regs>>)> = Vec::new();
     let mut rest = instrs;
     while let Ok((more, (addr, stmts))) = parse_instr(rest, metadata, strict) {
         rest = more;
@@ -1006,7 +1006,7 @@ fn parse_instrs<'a>(
     block_ir
 }
 
-pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap {
+pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<X86Regs> {
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
     for block_addr in g.nodes() {
@@ -1027,7 +1027,7 @@ pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap {
 // TODO: baby version of nom, resolve crate incompatibilities later
 
 type IResult<'a, O> = Result<(BlockInstrs<'a>, O), ParseErr<BlockInstrs<'a>>>;
-type StmtResult = (Addr, Vec<Stmt>);
+type StmtResult = (Addr, Vec<Stmt<X86Regs>>);
 type Addr = u64;
 
 

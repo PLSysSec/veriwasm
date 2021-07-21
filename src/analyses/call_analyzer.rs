@@ -2,7 +2,7 @@ use crate::{analyses, ir, lattices, loaders};
 use analyses::reaching_defs::ReachingDefnAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
 use ir::types::{
-    Binopcode, IRBlock, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value, X86Regs,
+    Binopcode, IRBlock, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value, X86Regs, RegT,
 };
 use ir::utils::{extract_stack_offset, is_stack_access};
 use lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
@@ -19,24 +19,24 @@ use CallCheckValue::*;
 use ValSize::*;
 use X86Regs::*;
 
-pub struct CallAnalyzer {
+pub struct CallAnalyzer<Ar> {
     pub metadata: VwMetadata,
-    pub reaching_defs: AnalysisResult<ReachLattice>,
-    pub reaching_analyzer: ReachingDefnAnalyzer,
+    pub reaching_defs: AnalysisResult<ReachLattice<Ar>>,
+    pub reaching_analyzer: ReachingDefnAnalyzer<Ar>,
     pub funcs: Vec<u64>,
-    pub irmap: IRMap,
+    pub irmap: IRMap<Ar>,
     pub cfg: VW_CFG,
 }
 
-impl CallAnalyzer {
+impl<Ar> CallAnalyzer<Ar> {
     //1. get enclosing block addr
     //2. get result for that block start
     //3. get result for specific addr
     pub fn fetch_result(
         &self,
-        result: &AnalysisResult<CallCheckLattice>,
+        result: &AnalysisResult<CallCheckLattice<Ar>>,
         loc_idx: &LocIdx,
-    ) -> CallCheckLattice {
+    ) -> CallCheckLattice<Ar> {
         if self.cfg.blocks.contains_key(&loc_idx.addr) {
             return result.get(&loc_idx.addr).unwrap().clone();
         }
@@ -63,9 +63,9 @@ impl CallAnalyzer {
 
     pub fn get_fn_ptr_type(
         &self,
-        result: &AnalysisResult<CallCheckLattice>,
+        result: &AnalysisResult<CallCheckLattice<Ar>>,
         loc_idx: &LocIdx,
-        src: &Value,
+        src: &Value<Ar>,
     ) -> Option<u32> {
         let def_state = self.fetch_result(result, loc_idx);
         if let Value::Reg(regnum, size) = src {
@@ -78,8 +78,8 @@ impl CallAnalyzer {
     }
 }
 
-impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
-    fn analyze_block(&self, state: &CallCheckLattice, irblock: &IRBlock) -> CallCheckLattice {
+impl<Ar: RegT> AbstractAnalyzer<Ar, CallCheckLattice<Ar>> for CallAnalyzer<Ar> {
+    fn analyze_block(&self, state: &CallCheckLattice<Ar>, irblock: &IRBlock<Ar>) -> CallCheckLattice<Ar> {
         let mut new_state = state.clone();
         for (addr, instruction) in irblock.iter() {
             for (idx, ir_insn) in instruction.iter().enumerate() {
@@ -104,10 +104,10 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 
     fn aexec_unop(
         &self,
-        in_state: &mut CallCheckLattice,
+        in_state: &mut CallCheckLattice<Ar>,
         _opcode: &Unopcode,
-        dst: &Value,
-        src: &Value,
+        dst: &Value<Ar>,
+        src: &Value<Ar>,
         _loc_idx: &LocIdx,
     ) -> () {
         in_state.set(dst, self.aeval_unop(in_state, src))
@@ -115,11 +115,11 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 
     fn aexec_binop(
         &self,
-        in_state: &mut CallCheckLattice,
+        in_state: &mut CallCheckLattice<Ar>,
         opcode: &Binopcode,
-        dst: &Value,
-        src1: &Value,
-        src2: &Value,
+        dst: &Value<Ar>,
+        src1: &Value<Ar>,
+        src2: &Value<Ar>,
         loc_idx: &LocIdx,
     ) -> () {
         match (opcode, src1, src2) {
@@ -162,11 +162,11 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 
     fn process_branch(
         &self,
-        irmap: &IRMap,
-        in_state: &CallCheckLattice,
+        irmap: &IRMap<Ar>,
+        in_state: &CallCheckLattice<Ar>,
         succ_addrs: &Vec<u64>,
         addr: &u64,
-    ) -> Vec<(u64, CallCheckLattice)> {
+    ) -> Vec<(u64, CallCheckLattice<Ar>)> {
         log::info!("Processing branch: 0x{:x}", addr);
         if succ_addrs.len() == 2 {
             let br_stmt = irmap
@@ -307,7 +307,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
 }
 
 // mem[LucetTableBase + 8]
-pub fn is_table_size(in_state: &CallCheckLattice, memargs: &MemArgs) -> bool {
+pub fn is_table_size<Ar>(in_state: &CallCheckLattice<Ar>, memargs: &MemArgs<Ar>) -> bool {
     if let MemArgs::Mem2Args(MemArg::Reg(regnum1, size), MemArg::Imm(_, _, 8)) = memargs {
         if let Some(LucetTablesBase) = in_state.regs.get_reg(*regnum1, *size).v {
             return true;
@@ -316,7 +316,7 @@ pub fn is_table_size(in_state: &CallCheckLattice, memargs: &MemArgs) -> bool {
     false
 }
 
-pub fn is_fn_ptr(in_state: &CallCheckLattice, memargs: &MemArgs) -> Option<u32> {
+pub fn is_fn_ptr<Ar>(in_state: &CallCheckLattice<Ar>, memargs: &MemArgs<Ar>) -> Option<u32> {
     if let MemArgs::Mem3Args(
         MemArg::Reg(regnum1, size1),
         MemArg::Reg(regnum2, size2),
@@ -338,7 +338,7 @@ pub fn is_fn_ptr(in_state: &CallCheckLattice, memargs: &MemArgs) -> Option<u32> 
 
 // returns none if not a typeof op
 // returns Some(regnum) if result is type of regnum
-pub fn is_typeof(in_state: &CallCheckLattice, memargs: &MemArgs) -> Option<X86Regs> {
+pub fn is_typeof<Ar>(in_state: &CallCheckLattice<Ar>, memargs: &MemArgs<Ar>) -> Option<X86Regs> {
     if let MemArgs::Mem2Args(MemArg::Reg(regnum1, size1), MemArg::Reg(regnum2, size2)) = memargs {
         match (
             in_state.regs.get_reg(*regnum1, *size1).v,
@@ -352,12 +352,12 @@ pub fn is_typeof(in_state: &CallCheckLattice, memargs: &MemArgs) -> Option<X86Re
     None
 }
 
-impl CallAnalyzer {
+impl<Ar> CallAnalyzer<Ar> {
     fn is_func_start(&self, addr: u64) -> bool {
         self.funcs.contains(&addr)
     }
 
-    pub fn aeval_unop(&self, in_state: &CallCheckLattice, value: &Value) -> CallCheckValueLattice {
+    pub fn aeval_unop(&self, in_state: &CallCheckLattice<Ar>, value: &Value<Ar>) -> CallCheckValueLattice {
         match value {
             Value::Mem(memsize, memargs) => {
                 if is_table_size(in_state, memargs) {
@@ -413,10 +413,10 @@ impl CallAnalyzer {
     //checked_val << 4
     pub fn aeval_binop(
         &self,
-        in_state: &CallCheckLattice,
+        in_state: &CallCheckLattice<Ar>,
         opcode: &Binopcode,
-        src1: &Value,
-        src2: &Value,
+        src1: &Value<Ar>,
+        src2: &Value<Ar>,
         loc_idx: &LocIdx,
     ) -> CallCheckValueLattice {
         if let Binopcode::Shl = opcode {
