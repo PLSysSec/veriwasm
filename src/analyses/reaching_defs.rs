@@ -1,6 +1,6 @@
 use crate::{analyses, ir, lattices, loaders};
 use analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
-use ir::types::{Binopcode, IRMap, Stmt, Unopcode, ValSize, X86Regs, RegT};
+use ir::types::{Binopcode, IRMap, RegT, Stmt, Unopcode, ValSize, X86Regs};
 use lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
 use lattices::VarState;
 use loaders::types::VwMetadata;
@@ -83,8 +83,8 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, ReachLattice<Ar>> for ReachingDefnAnalyzer<A
         // s.regs.set_reg(R13, Size64, loc(0xdeadbeef, 12));
         // s.regs.set_reg(R14, Size64, loc(0xdeadbeef, 13));
         // s.regs.set_reg(R15, Size64, loc(0xdeadbeef, 14));
-        for r in Ar::iter(){
-            s.regs.set_reg(r, Size64, loc(0xdeadbeef, r.into().into() ));
+        for r in Ar::iter() {
+            s.regs.set_reg(r, Size64, loc(0xdeadbeef, r.into().into()));
         }
 
         s.stack.update(0x8, loc(0xdeadbeef, 15), 4);
@@ -122,8 +122,10 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, ReachLattice<Ar>> for ReachingDefnAnalyzer<A
                 in_state.set(dst, singleton(loc_idx.clone()))
             }
             Stmt::Call(_) => {
-                for r in Ar::iter(){
-                    in_state.regs.set_reg(r, Size64, loc(0xdeadbeef, r.into().into()));
+                for r in Ar::iter() {
+                    in_state
+                        .regs
+                        .set_reg(r, Size64, loc(0xdeadbeef, r.into().into()));
                 }
                 // in_state.regs.set_reg(Rax, Size64, loc(loc_idx.addr, 0));
                 // in_state.regs.set_reg(Rcx, Size64, loc(loc_idx.addr, 1));

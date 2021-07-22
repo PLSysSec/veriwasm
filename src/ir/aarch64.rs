@@ -1,15 +1,15 @@
-use crate::ir::types::{Stmt, IRMap, ValSize};
-use crate::VwMetadata;
-use yaxpeax_core::analyses::control_flow::VW_CFG;
-use crate::VwModule;
-use capstone::prelude::*;
-use capstone::arch::arm64;
 use crate::ir::types::ParseErr;
 use crate::ir::types::Value;
+use crate::ir::types::{IRMap, Stmt, ValSize};
+use crate::VwMetadata;
+use crate::VwModule;
+use capstone::arch::arm64;
 use capstone::arch::arm64::Arm64Operand;
 use capstone::arch::ArchOperand;
+use capstone::prelude::*;
 use core::convert::TryFrom;
-use ValSize::{Size128, Size16, Size256, Size32, Size512, Size64, Size8}; 
+use yaxpeax_core::analyses::control_flow::VW_CFG;
+use ValSize::{Size128, Size16, Size256, Size32, Size512, Size64, Size8};
 
 use crate::ir::types::RegT;
 
@@ -85,7 +85,7 @@ impl Aarch64Regs {
 //         let next_reg = self.current_reg + 1;
 //         match Aarch64Regs::try_from(next_reg) {
 //             Ok(r) => {
-//                 let current = self.current_reg; 
+//                 let current = self.current_reg;
 //                 self.current_reg = next_reg;
 //                 Some(r)
 //             }
@@ -140,7 +140,6 @@ impl TryFrom<u16> for Aarch64Regs {
     }
 }
 
-
 impl TryFrom<u8> for Aarch64Regs {
     type Error = std::string::String;
 
@@ -161,10 +160,10 @@ impl From<Aarch64Regs> for u8 {
     }
 }
 
-
-fn reg_names<T, I>(cs: &Capstone, regs: T) -> String 
-where T: Iterator<Item = I>,
-I: Into<RegId>
+fn reg_names<T, I>(cs: &Capstone, regs: T) -> String
+where
+    T: Iterator<Item = I>,
+    I: Into<RegId>,
 {
     let names: Vec<String> = regs.map(|x| cs.reg_name(x.into()).unwrap()).collect();
     names.join(", ")
@@ -180,17 +179,16 @@ I: Into<RegId>
 //     println!("{:?}", regs_written);
 //     println!("regs written: {}", reg_names(cs, regs_written));
 
-
 //     let arch_detail = detail.arch_detail();
 //     let operands = arch_detail.operands();
 //     println!("{:?} {:?}", instr, arch_detail);
 //     for op in operands{
 //         // let op: Arm64Operand = op.into();
 //         match op {
-//             ArchOperand::Arm64Operand(inner) => { println!("{:?} {:?}", inner.op_type, inner.access ); } 
-//             _ => panic!("Not aarch64?") 
+//             ArchOperand::Arm64Operand(inner) => { println!("{:?} {:?}", inner.op_type, inner.access ); }
+//             _ => panic!("Not aarch64?")
 //         }
-        
+
 //     }
 //     unimplemented!();
 
@@ -216,9 +214,9 @@ I: Into<RegId>
 //     // return sources;
 // }
 
-fn convert_reg(op: capstone::RegId) -> Value<Aarch64Regs>{
+fn convert_reg(op: capstone::RegId) -> Value<Aarch64Regs> {
     Value::Reg(Aarch64Regs::try_from(op.0).unwrap(), Size64)
-} 
+}
 
 fn generic_clear(cs: &Capstone, instr: &Aarch64Insn) -> Vec<Stmt<Aarch64Regs>> {
     let mut stmts: Vec<Stmt<Aarch64Regs>> = vec![];
@@ -248,15 +246,15 @@ pub fn lift(
     strict: bool,
 ) -> Vec<Stmt<Aarch64Regs>> {
     let mut instrs = Vec::new();
-    match instr.mnemonic(){
+    match instr.mnemonic() {
         other_insn => {
-            if strict{
+            if strict {
                 println!("Unknown instruction: {:?}", other_insn);
                 unimplemented!();
             } else {
                 instrs.extend(generic_clear(cs, instr));
             }
-        },
+        }
     }
     instrs
 }
@@ -300,11 +298,9 @@ fn parse_instrs<'a>(
     block_ir
 }
 
-fn disas_aarch64<'a>(cs: &'a Capstone, buf: &[u8], addr: u64) -> capstone::Instructions<'a>{
+fn disas_aarch64<'a>(cs: &'a Capstone, buf: &[u8], addr: u64) -> capstone::Instructions<'a> {
     match cs.disasm_all(buf, addr) {
-        Ok(insns) => { 
-            insns
-        }
+        Ok(insns) => insns,
         Err(err) => {
             panic!();
         }
@@ -320,7 +316,12 @@ pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Aarch64R
         .build()
         .expect("Failed to create capstone handle");
     cs.set_detail(true).unwrap();
-    let text_segment = module.program.segments.iter().find(|seg| seg.name == ".text").expect("No text section?");
+    let text_segment = module
+        .program
+        .segments
+        .iter()
+        .find(|seg| seg.name == ".text")
+        .expect("No text section?");
 
     for block_addr in g.nodes() {
         let block = cfg.get_block(block_addr);
@@ -338,16 +339,15 @@ type Addr = u64;
 type StmtResult = (Addr, Vec<Stmt<Aarch64Regs>>);
 type Aarch64Insn<'a> = capstone::Insn<'a>;
 
-
 impl RegT for Aarch64Regs {
     fn is_rsp(&self) -> bool {
         self == &W31
     }
-    
+
     fn is_rbp(&self) -> bool {
         self == &W29
     }
-    
+
     fn is_zf(&self) -> bool {
         self == &Zf
     }

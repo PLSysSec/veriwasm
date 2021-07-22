@@ -6,14 +6,14 @@ mod x64;
 
 // pub use self::cfg::fully_resolved_cfg;
 // pub use self::x64::lift_cfg;
-use crate::ir::types::{Stmt, RegT};
-use crate::loaders::types::VwArch;
-use crate::VwMetadata;
-use core::str::FromStr;
-use crate::IRMap;
-use crate::{VwModule, VW_CFG};
-pub use self::x64::lift_cfg as x64_lift_cfg;
 pub use self::aarch64::lift_cfg as aarch64_lift_cfg;
+pub use self::x64::lift_cfg as x64_lift_cfg;
+use crate::ir::types::{RegT, Stmt};
+use crate::loaders::types::VwArch;
+use crate::IRMap;
+use crate::VwMetadata;
+use crate::{VwModule, VW_CFG};
+use core::str::FromStr;
 
 // pub trait Liftable {
 //     // type Ar;

@@ -32,7 +32,6 @@ use std::collections::HashMap;
 
 use crate::loaders::types::{ExecutableType, VwArch};
 
-
 #[derive(Debug)]
 pub struct PassConfig {
     pub stack: bool,

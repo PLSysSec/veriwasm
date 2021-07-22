@@ -1,3 +1,5 @@
+use crate::ir::types::RegT;
+use crate::ir::types::X86Regs;
 use crate::{analyses, checkers, ir, lattices};
 use analyses::StackAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
@@ -6,8 +8,6 @@ use ir::types::{IRMap, MemArgs, Stmt, Value};
 use ir::utils::{get_imm_mem_offset, is_bp_access, is_stack_access};
 use lattices::reachingdefslattice::LocIdx;
 use lattices::stackgrowthlattice::StackGrowthLattice;
-use crate::ir::types::X86Regs;
-use crate::ir::types::RegT;
 
 pub struct StackChecker<'a, Ar> {
     irmap: &'a IRMap<Ar>,

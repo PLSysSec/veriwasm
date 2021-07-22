@@ -1,9 +1,9 @@
+use crate::ir::types::RegT;
 use crate::{analyses, ir, lattices};
 use analyses::AnalysisResult;
 use ir::types::{IRMap, Stmt};
 use lattices::reachingdefslattice::LocIdx;
 use lattices::Lattice;
-use crate::ir::types::RegT;
 
 mod call_checker;
 mod heap_checker;

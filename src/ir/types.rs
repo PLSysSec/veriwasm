@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::hash::Hash;
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]
@@ -85,31 +85,31 @@ impl ValSize {
 
 #[derive(Debug, Clone)]
 pub enum MemArgs<Ar> {
-    Mem1Arg(MemArg<Ar>),                  // [arg]
-    Mem2Args(MemArg<Ar>, MemArg<Ar>),         // [arg1 + arg2]
+    Mem1Arg(MemArg<Ar>),                          // [arg]
+    Mem2Args(MemArg<Ar>, MemArg<Ar>),             // [arg1 + arg2]
     Mem3Args(MemArg<Ar>, MemArg<Ar>, MemArg<Ar>), // [arg1 + arg2 + arg3]
     MemScale(MemArg<Ar>, MemArg<Ar>, MemArg<Ar>), // [arg1 + arg2 * arg3]
 }
 #[derive(Debug, Clone)]
 pub enum MemArg<Ar> {
-    Reg(Ar, ValSize),      // register mappings captured in `crate::lattices`
+    Reg(Ar, ValSize),           // register mappings captured in `crate::lattices`
     Imm(ImmType, ValSize, i64), // signed, size, const
 }
 
-impl<Ar: RegT> MemArg<Ar>{
+impl<Ar: RegT> MemArg<Ar> {
     pub fn is_rsp(&self) -> bool {
         match self {
             MemArg::Reg(r, Size64) if r.is_rsp() => true,
-            MemArg::Reg(r, _) if r.is_rsp() =>  panic!("Illegal RSP access"),
-            _ => false
+            MemArg::Reg(r, _) if r.is_rsp() => panic!("Illegal RSP access"),
+            _ => false,
         }
     }
 
     pub fn is_rbp(&self) -> bool {
         match self {
             MemArg::Reg(r, Size64) if r.is_rbp() => true,
-            MemArg::Reg(r, _) if r.is_rbp() =>  panic!("Illegal RSP access"),
-            _ => false
+            MemArg::Reg(r, _) if r.is_rbp() => panic!("Illegal RSP access"),
+            _ => false,
         }
     }
 }
@@ -122,20 +122,20 @@ pub enum Value<Ar> {
     RIPConst,
 }
 
-impl<Ar: RegT> Value<Ar>{
+impl<Ar: RegT> Value<Ar> {
     pub fn is_rsp(&self) -> bool {
         match self {
             Value::Reg(r, Size64) if r.is_rsp() => true,
-            Value::Reg(r, _) if r.is_rsp() =>  panic!("Illegal RSP access"),
-            _ => false
+            Value::Reg(r, _) if r.is_rsp() => panic!("Illegal RSP access"),
+            _ => false,
         }
     }
 
     pub fn is_rbp(&self) -> bool {
         match self {
             Value::Reg(r, Size64) if r.is_rbp() => true,
-            Value::Reg(r, _) if r.is_rbp() =>  panic!("Illegal RSP access"),
-            _ => false
+            Value::Reg(r, _) if r.is_rbp() => panic!("Illegal RSP access"),
+            _ => false,
         }
     }
 
@@ -156,14 +156,14 @@ impl<Ar> From<i64> for Value<Ar> {
 // Parameterized by architecture register set
 #[derive(Debug, Clone)]
 pub enum Stmt<Ar> {
-    Clear(Value<Ar>, Vec<Value<Ar>>),                      // clear v <- vs
-    Unop(Unopcode, Value<Ar>, Value<Ar>),                  // v1 <- uop v2
-    Binop(Binopcode, Value<Ar>, Value<Ar>, Value<Ar>),         // v1 <- bop v2 v3
-    Undefined,                                     // undefined
-    Ret,                                           // return
+    Clear(Value<Ar>, Vec<Value<Ar>>),                  // clear v <- vs
+    Unop(Unopcode, Value<Ar>, Value<Ar>),              // v1 <- uop v2
+    Binop(Binopcode, Value<Ar>, Value<Ar>, Value<Ar>), // v1 <- bop v2 v3
+    Undefined,                                         // undefined
+    Ret,                                               // return
     Branch(yaxpeax_x86::long_mode::Opcode, Value<Ar>), // br branch-type v
     Call(Value<Ar>),                                   // call v
-    ProbeStack(u64),                               // probestack
+    ProbeStack(u64),                                   // probestack
 }
 
 #[derive(Debug, Clone)]
@@ -257,21 +257,20 @@ impl X86Regs {
 pub struct RegsIterator<Ar> {
     current_reg: u8,
     reg_type: PhantomData<Ar>,
-
 }
 
-impl<Ar:RegT> Iterator for RegsIterator<Ar> {
+impl<Ar: RegT> Iterator for RegsIterator<Ar> {
     type Item = Ar;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next_reg = self.current_reg + 1;
         match Self::Item::try_from(next_reg) {
             Ok(r) => {
-                let current = self.current_reg; 
+                let current = self.current_reg;
                 self.current_reg = next_reg;
                 Some(r)
             }
-            Err(_) => None
+            Err(_) => None,
         }
     }
 }
@@ -280,11 +279,11 @@ impl RegT for X86Regs {
     fn is_rsp(&self) -> bool {
         self == &Rsp
     }
-    
+
     fn is_rbp(&self) -> bool {
         self == &Rbp
     }
-    
+
     fn is_zf(&self) -> bool {
         self == &Zf
     }
@@ -292,7 +291,6 @@ impl RegT for X86Regs {
     fn pinned_heap_reg() -> Self {
         Rdi
     }
-
 }
 
 impl TryFrom<u8> for X86Regs {
@@ -355,7 +353,9 @@ pub enum ParseErr<E> {
 }
 
 //#[derive(PartialEq, PartialOrd, Clone, Eq, Debug, Copy, Hash)]
-pub trait RegT: Debug + Clone + PartialEq + Eq + PartialOrd + Hash + Copy + TryFrom<u8> + Into<u8>{ 
+pub trait RegT:
+    Debug + Clone + PartialEq + Eq + PartialOrd + Hash + Copy + TryFrom<u8> + Into<u8>
+{
     fn is_rsp(&self) -> bool;
     fn is_rbp(&self) -> bool;
     fn is_zf(&self) -> bool;
@@ -367,5 +367,3 @@ pub trait RegT: Debug + Clone + PartialEq + Eq + PartialOrd + Hash + Copy + TryF
         }
     }
 }
-
-

@@ -1,18 +1,24 @@
 use crate::{analyses, ir, lattices};
 use analyses::AbstractAnalyzer;
-use ir::types::{Binopcode, Stmt, Unopcode, Value, RegT};
-use ir::utils::{get_imm_offset};
+use ir::types::{Binopcode, RegT, Stmt, Unopcode, Value};
+use ir::utils::get_imm_offset;
 use lattices::reachingdefslattice::LocIdx;
 use lattices::stackgrowthlattice::StackGrowthLattice;
 
 pub struct StackAnalyzer {}
 
-fn sg_lattice(stackgrowth: i64, probestack: i64, rbp: i64) -> StackGrowthLattice{
+fn sg_lattice(stackgrowth: i64, probestack: i64, rbp: i64) -> StackGrowthLattice {
     StackGrowthLattice::new((stackgrowth, probestack, rbp))
 }
 
-impl StackAnalyzer{
-    fn aeval_binop<Ar: RegT>(&self, in_state: &mut StackGrowthLattice, opcode: &Binopcode, src1: &Value<Ar>, src2: &Value<Ar>) -> StackGrowthLattice{
+impl StackAnalyzer {
+    fn aeval_binop<Ar: RegT>(
+        &self,
+        in_state: &mut StackGrowthLattice,
+        opcode: &Binopcode,
+        src1: &Value<Ar>,
+        src2: &Value<Ar>,
+    ) -> StackGrowthLattice {
         if src1.is_rsp() {
             let offset = get_imm_offset(src2);
             if let Some((x, probestack, rbp)) = in_state.v {
@@ -32,20 +38,23 @@ impl StackAnalyzer{
                     }
                     _ => panic!("Illegal RSP write"),
                 }
-            } 
-        } 
+            }
+        }
         Default::default()
     }
 }
-
 
 impl<Ar: RegT> AbstractAnalyzer<Ar, StackGrowthLattice> for StackAnalyzer {
     fn init_state(&self) -> StackGrowthLattice {
         StackGrowthLattice::new((0, 4096, 0))
     }
 
-
-    fn aexec(&self, in_state: &mut StackGrowthLattice, ir_instr: &Stmt<Ar>, loc_idx: &LocIdx) -> () {
+    fn aexec(
+        &self,
+        in_state: &mut StackGrowthLattice,
+        ir_instr: &Stmt<Ar>,
+        loc_idx: &LocIdx,
+    ) -> () {
         match ir_instr {
             Stmt::Clear(dst, _) => {
                 if dst.is_rsp() {
@@ -55,7 +64,6 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, StackGrowthLattice> for StackAnalyzer {
             Stmt::Unop(Unopcode::Mov, dst, src) if dst.is_rsp() && src.is_rbp() => {
                 if let Some((_, probestack, rbp_sg)) = in_state.v {
                     *in_state = sg_lattice(rbp_sg, probestack, rbp_sg);
-
                 }
             }
             Stmt::Unop(Unopcode::Mov, dst, src) if dst.is_rbp() && src.is_rsp() => {
@@ -72,11 +80,11 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, StackGrowthLattice> for StackAnalyzer {
             Stmt::Binop(Binopcode::Test, _, _, _) => (),
             Stmt::Binop(opcode, dst, src1, src2) => {
                 log::debug!(
-                "Processing stack instruction: 0x{:x} {:?}",
-                loc_idx.addr,
-                ir_instr
+                    "Processing stack instruction: 0x{:x} {:?}",
+                    loc_idx.addr,
+                    ir_instr
                 );
-                if dst.is_rsp() {                    
+                if dst.is_rsp() {
                     *in_state = self.aeval_binop(in_state, opcode, src1, src2);
                 }
             }

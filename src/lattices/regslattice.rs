@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use crate::ir::types::{ValSize, X86Regs, RegT};
+use crate::ir::types::{RegT, ValSize, X86Regs};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarSlot};
 use std::hash::Hash;
@@ -14,7 +14,10 @@ pub struct ArchRegsLattice<Ar: RegT, T> {
     pub map: HashMap<Ar, VarSlot<T>>,
 }
 
-fn hashmap_le<Ar: RegT, T: PartialOrd>(s1: &ArchRegsLattice<Ar, T>, s2: &ArchRegsLattice<Ar, T>) -> bool {
+fn hashmap_le<Ar: RegT, T: PartialOrd>(
+    s1: &ArchRegsLattice<Ar, T>,
+    s2: &ArchRegsLattice<Ar, T>,
+) -> bool {
     for (k1, v1) in s1.map.iter() {
         if !s2.map.contains_key(k1) {
             return false;
@@ -53,7 +56,7 @@ impl<Ar: RegT, T: Lattice + Clone> ArchRegsLattice<Ar, T> {
 
     pub fn get_reg_index(&self, index: u8, size: ValSize) -> T {
         let reg_index = match Ar::try_from(index) {
-            Err(err) => panic!("get_reg_index")/*panic!("{}", err)*/,
+            Err(err) => panic!("get_reg_index"), /*panic!("{}", err)*/
             Ok(reg) => reg,
         };
         self.get_reg(reg_index, size)
@@ -71,7 +74,7 @@ impl<Ar: RegT, T: Lattice + Clone> ArchRegsLattice<Ar, T> {
 
     pub fn set_reg_index(&mut self, index: u8, size: ValSize, value: T) -> () {
         let reg_index = match Ar::try_from(index) {
-            Err(err) => panic!("set_reg_index")/*panic!("{}", err)*/,
+            Err(err) => panic!("set_reg_index"), /*panic!("{}", err)*/
             Ok(reg) => reg,
         };
         self.set_reg(reg_index, size, value)

@@ -13,16 +13,15 @@ use analyses::run_worklist;
 use analyses::HeapAnalyzer;
 use checkers::check_heap;
 // use ir::lift_cfg;
-use ir::{x64_lift_cfg, aarch64_lift_cfg};
+use crate::ir::types::X86Regs;
 use ir::types::IRMap;
+use ir::{aarch64_lift_cfg, x64_lift_cfg};
 use loaders::types::{ExecutableType, VwArch, VwMetadata, VwModule};
 use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;
+use std::str::FromStr;
 use yaxpeax_core::analyses::control_flow::{VW_Block, VW_CFG};
 use yaxpeax_core::memory::repr::process::{ModuleData, ModuleInfo, Segment};
-use std::str::FromStr;
-use crate::ir::types::X86Regs;
-
 
 #[derive(Clone, Copy, Debug)]
 pub enum ValidationError {
@@ -95,7 +94,7 @@ fn get_cfg_from_compiler_info(
     cfg
 }
 
-fn create_dummy_module(code: &[u8], format: ExecutableType, arch: VwArch) -> VwModule{
+fn create_dummy_module(code: &[u8], format: ExecutableType, arch: VwArch) -> VwModule {
     let seg = Segment {
         start: 0,
         data: code.iter().cloned().collect(),
@@ -152,8 +151,7 @@ fn create_dummy_module(code: &[u8], format: ExecutableType, arch: VwArch) -> VwM
     module
 }
 
-
-fn create_dummy_lucet_module(code: &[u8]) -> VwModule{
+fn create_dummy_lucet_module(code: &[u8]) -> VwModule {
     create_dummy_module(code, ExecutableType::Lucet, VwArch::X64)
 }
 
@@ -180,11 +178,9 @@ pub fn validate_heap(
         }
     }
 
-
     let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
     let module = create_dummy_lucet_module(&code);
     let irmap: IRMap<X86Regs> = x64_lift_cfg(&module, &cfg, false);
-
 
     // TODO: regalloc checker from Lucet too.
     // TODO: how hard would this be to adapt to Wasmtime? Extra level of indirection:
@@ -230,17 +226,15 @@ pub fn validate_heap(
     Ok(())
 }
 
-
-pub fn wasmtime_test_hook(){
+pub fn wasmtime_test_hook() {
     println!("Wasmtime has called into VeriWasm!");
 }
-
 
 pub fn validate_wasmtime_func(
     code: &[u8],
     basic_blocks: &[usize],
     cfg_edges: &[(usize, usize)],
-    arch_str: &str, 
+    arch_str: &str,
 ) -> Result<(), ValidationError> {
     println!("VeriWasm is verifying the Wasmtime aot compilation!");
     let arch = VwArch::from_str(arch_str).map_err(|err| ValidationError::Other(err))?;
@@ -248,7 +242,7 @@ pub fn validate_wasmtime_func(
     println!("{:?} {:?} {:?}", code.len(), basic_blocks, cfg_edges);
     let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
     let module = create_dummy_module(code, ExecutableType::Wasmtime, arch);
-    match arch{
+    match arch {
         VwArch::X64 => {
             x64_lift_cfg(&module, &cfg, false);
         }

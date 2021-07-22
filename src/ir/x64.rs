@@ -323,7 +323,12 @@ fn lea(instr: &X64Instruction, addr: &Addr) -> Vec<Stmt<X86Regs>> {
     }
 }
 
-pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VwMetadata, strict: bool) -> Vec<Stmt<X86Regs>> {
+pub fn lift(
+    instr: &X64Instruction,
+    addr: &Addr,
+    metadata: &VwMetadata,
+    strict: bool,
+) -> Vec<Stmt<X86Regs>> {
     log::debug!("lift: addr 0x{:x} instr {:?}", addr, instr);
     let mut instrs = Vec::new();
     match instr.opcode() {
@@ -910,7 +915,10 @@ fn parse_bsr<'a>(instrs: BlockInstrs<'a>) -> IResult<'a, (Addr, Value<X86Regs>, 
 
 // returns src of the cmove (dst must be the same)
 // although it says bsf, it also handles bsr
-fn parse_cmovez<'a>(instrs: BlockInstrs<'a>, bsf_dst: &Value<X86Regs>) -> IResult<'a, (Addr, Value<X86Regs>)> {
+fn parse_cmovez<'a>(
+    instrs: BlockInstrs<'a>,
+    bsf_dst: &Value<X86Regs>,
+) -> IResult<'a, (Addr, Value<X86Regs>)> {
     if let Some(((addr, instr), rest)) = instrs.split_first() {
         if let Opcode::CMOVZ = instr.opcode() {
             let mov_dst = convert_operand(
@@ -1029,7 +1037,5 @@ pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<X86Regs>
 type IResult<'a, O> = Result<(BlockInstrs<'a>, O), ParseErr<BlockInstrs<'a>>>;
 type StmtResult = (Addr, Vec<Stmt<X86Regs>>);
 type Addr = u64;
-
-
 
 type BlockInstrs<'a> = &'a [(Addr, X64Instruction)];

@@ -8,8 +8,8 @@ pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod switchlattice;
 use crate::{ir, lattices};
-use ir::types::{Binopcode, MemArg, MemArgs, ValSize, Value, X86Regs, RegT};
-use ir::utils::{get_imm_offset};
+use ir::types::{Binopcode, MemArg, MemArgs, RegT, ValSize, Value, X86Regs};
+use ir::utils::get_imm_offset;
 use lattices::reachingdefslattice::LocIdx;
 use lattices::regslattice::ArchRegsLattice;
 use lattices::stacklattice::StackLattice;
@@ -45,7 +45,13 @@ pub trait VarState {
     fn set(&mut self, index: &Value<Self::Ar>, v: Self::Var) -> ();
     fn set_to_bot(&mut self, index: &Value<Self::Ar>) -> ();
     fn on_call(&mut self) -> ();
-    fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value<Self::Ar>, src1: &Value<Self::Ar>, src2: &Value<Self::Ar>);
+    fn adjust_stack_offset(
+        &mut self,
+        opcode: &Binopcode,
+        dst: &Value<Self::Ar>,
+        src1: &Value<Self::Ar>,
+        src2: &Value<Self::Ar>,
+    );
 }
 
 #[derive(Eq, Clone, Copy, Debug)]
@@ -222,7 +228,13 @@ impl<Ar: RegT, T: Lattice + Clone> VarState for VariableState<Ar, T> {
         self.regs.clear_regs();
     }
 
-    fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value<Ar>, src1: &Value<Ar>, src2: &Value<Ar>) {
+    fn adjust_stack_offset(
+        &mut self,
+        opcode: &Binopcode,
+        dst: &Value<Ar>,
+        src1: &Value<Ar>,
+        src2: &Value<Ar>,
+    ) {
         if dst.is_rsp() {
             if src1.is_rsp() {
                 let adjustment = get_imm_offset(src2);

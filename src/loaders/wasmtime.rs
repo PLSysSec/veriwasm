@@ -70,7 +70,7 @@ pub fn load_wasmtime_program(config: &runner::Config) -> VwModule {
     // let buffer = fs::read(path).expect("Something went wrong reading the file");
     // let store: Store = Store::default();
     // // Deserialize wasmtime module
-    // let module = unsafe { Module::deserialize(store.engine(), &buffer).unwrap() }; 
+    // let module = unsafe { Module::deserialize(store.engine(), &buffer).unwrap() };
     unimplemented!();
     // let obj = module.obj();
 

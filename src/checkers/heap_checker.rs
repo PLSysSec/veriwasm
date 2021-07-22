@@ -1,6 +1,6 @@
 use crate::analyses::{AbstractAnalyzer, AnalysisResult, HeapAnalyzer};
 use crate::checkers::Checker;
-use crate::ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value, X86Regs, RegT};
+use crate::ir::types::{IRMap, MemArg, MemArgs, RegT, Stmt, ValSize, Value, X86Regs};
 use crate::ir::utils::{is_mem_access, is_stack_access};
 use crate::lattices::heaplattice::{HeapLattice, HeapValue};
 use crate::lattices::reachingdefslattice::LocIdx;
@@ -70,7 +70,12 @@ impl<Ar: RegT> Checker<Ar, HeapLattice<Ar>> for HeapChecker<'_, Ar> {
         self.analyzer.aexec(state, ir_stmt, loc)
     }
 
-    fn check_statement(&self, state: &HeapLattice<Ar>, ir_stmt: &Stmt<Ar>, loc_idx: &LocIdx) -> bool {
+    fn check_statement(
+        &self,
+        state: &HeapLattice<Ar>,
+        ir_stmt: &Stmt<Ar>,
+        loc_idx: &LocIdx,
+    ) -> bool {
         match ir_stmt {
             //1. Check that at each call rdi = HeapBase
             Stmt::Call(v) => match state.regs.get_reg(Ar::pinned_heap_reg(), Size64).v {
@@ -297,7 +302,12 @@ impl<Ar: RegT> HeapChecker<'_, Ar> {
         false
     }
 
-    fn check_mem_access(&self, state: &HeapLattice<Ar>, access: &Value<Ar>, loc_idx: &LocIdx) -> bool {
+    fn check_mem_access(
+        &self,
+        state: &HeapLattice<Ar>,
+        access: &Value<Ar>,
+        loc_idx: &LocIdx,
+    ) -> bool {
         // Case 1: its a stack access
         if is_stack_access(access) {
             return true;

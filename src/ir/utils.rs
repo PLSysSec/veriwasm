@@ -2,22 +2,16 @@ use crate::ir::types::*;
 
 use ValSize::*;
 
-pub fn is_stack_access<Ar:RegT>(v: &Value<Ar>) -> bool {
+pub fn is_stack_access<Ar: RegT>(v: &Value<Ar>) -> bool {
     if let Value::Mem(_size, memargs) = v {
         match memargs {
             MemArgs::Mem1Arg(memarg) => return memarg.is_rsp(),
-            MemArgs::Mem2Args(memarg1, memarg2) => {
-                return memarg1.is_rsp() || memarg2.is_rsp()
-            }
+            MemArgs::Mem2Args(memarg1, memarg2) => return memarg1.is_rsp() || memarg2.is_rsp(),
             MemArgs::Mem3Args(memarg1, memarg2, memarg3) => {
-                return memarg1.is_rsp()
-                    || memarg2.is_rsp()
-                    || memarg3.is_rsp()
+                return memarg1.is_rsp() || memarg2.is_rsp() || memarg3.is_rsp()
             }
             MemArgs::MemScale(memarg1, memarg2, memarg3) => {
-                return memarg1.is_rsp()
-                    || memarg2.is_rsp()
-                    || memarg3.is_rsp()
+                return memarg1.is_rsp() || memarg2.is_rsp() || memarg3.is_rsp()
             }
         }
     }
@@ -28,9 +22,7 @@ pub fn is_bp_access<Ar: RegT>(v: &Value<Ar>) -> bool {
     if let Value::Mem(_size, memargs) = v {
         match memargs {
             MemArgs::Mem1Arg(memarg) => return memarg.is_rbp(),
-            MemArgs::Mem2Args(memarg1, memarg2) => {
-                return memarg1.is_rbp() || memarg2.is_rbp()
-            }
+            MemArgs::Mem2Args(memarg1, memarg2) => return memarg1.is_rbp() || memarg2.is_rbp(),
             MemArgs::Mem3Args(memarg1, memarg2, memarg3) => {
                 return memarg1.is_rbp() || memarg2.is_rbp() || memarg3.is_rbp()
             }
@@ -111,8 +103,7 @@ pub fn get_rsp_offset<Ar: RegT>(memargs: &MemArgs<Ar>) -> Option<i64> {
         MemArgs::Mem2Args(arg1, arg2) if arg1.is_rsp() => {
             if let MemArg::Imm(_, _, offset) = arg2 {
                 return Some(*offset);
-            }
-            else{
+            } else {
                 None
             }
         }

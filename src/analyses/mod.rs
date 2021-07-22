@@ -4,7 +4,7 @@ mod jump_analyzer;
 pub mod locals_analyzer;
 pub mod reaching_defs;
 mod stack_analyzer;
-use crate::ir::types::{Binopcode, IRBlock, IRMap, Stmt, Unopcode, Value, RegT};
+use crate::ir::types::{Binopcode, IRBlock, IRMap, RegT, Stmt, Unopcode, Value};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarState};
 use std::collections::{HashMap, VecDeque};
