@@ -7,6 +7,7 @@ use ir::utils::{get_imm_mem_offset, is_bp_access, is_stack_access};
 use lattices::reachingdefslattice::LocIdx;
 use lattices::stackgrowthlattice::StackGrowthLattice;
 use crate::ir::types::X86Regs;
+use crate::ir::types::RegT;
 
 pub struct StackChecker<'a, Ar> {
     irmap: &'a IRMap<Ar>,
@@ -25,7 +26,7 @@ pub fn check_stack<Ar>(
     .check(result)
 }
 
-impl<Ar> Checker<Ar, StackGrowthLattice> for StackChecker<'_, Ar> {
+impl<Ar: RegT> Checker<Ar, StackGrowthLattice> for StackChecker<'_, Ar> {
     fn check(&self, result: AnalysisResult<StackGrowthLattice>) -> bool {
         self.check_state_at_statements(result)
     }

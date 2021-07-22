@@ -1,7 +1,6 @@
 use crate::ir::types::*;
 
 use ValSize::*;
-use X86Regs::*;
 
 pub fn is_stack_access<Ar:RegT>(v: &Value<Ar>) -> bool {
     if let Value::Mem(_size, memargs) = v {
@@ -106,25 +105,16 @@ pub fn has_indirect_jumps<Ar>(irmap: &IRMap<Ar>) -> bool {
     false
 }
 
-pub fn get_rsp_offset(memargs: &MemArgs<X86Regs>) -> Option<i64> {
+pub fn get_rsp_offset<Ar: RegT>(memargs: &MemArgs<Ar>) -> Option<i64> {
     match memargs {
-        MemArgs::Mem1Arg(arg) => {
-            if let MemArg::Reg(regnum, _) = arg {
-                if *regnum == Rsp {
-                    return Some(0);
-                }
+        MemArgs::Mem1Arg(arg) if arg.is_rsp() => Some(0),
+        MemArgs::Mem2Args(arg1, arg2) if arg1.is_rsp() => {
+            if let MemArg::Imm(_, _, offset) = arg2 {
+                return Some(*offset);
             }
-            None
-        }
-        MemArgs::Mem2Args(arg1, arg2) => {
-            if let MemArg::Reg(regnum, _) = arg1 {
-                if *regnum == Rsp {
-                    if let MemArg::Imm(_, _, offset) = arg2 {
-                        return Some(*offset);
-                    }
-                }
+            else{
+                None
             }
-            None
         }
         _ => None,
     }

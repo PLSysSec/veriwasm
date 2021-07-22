@@ -21,6 +21,8 @@ use std::collections::BTreeMap;
 use yaxpeax_core::analyses::control_flow::{VW_Block, VW_CFG};
 use yaxpeax_core::memory::repr::process::{ModuleData, ModuleInfo, Segment};
 use std::str::FromStr;
+use crate::ir::types::X86Regs;
+
 
 #[derive(Clone, Copy, Debug)]
 pub enum ValidationError {
@@ -181,7 +183,7 @@ pub fn validate_heap(
 
     let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
     let module = create_dummy_lucet_module(&code);
-    let irmap = module.arch.lift_cfg(&module, &cfg, false);
+    let irmap: IRMap<X86Regs> = module.arch.lift_cfg(&module, &cfg, false);
 
 
     // TODO: regalloc checker from Lucet too.
@@ -246,7 +248,7 @@ pub fn validate_wasmtime_func(
     println!("{:?} {:?} {:?}", code.len(), basic_blocks, cfg_edges);
     let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
     let module = create_dummy_module(code, ExecutableType::Wasmtime, arch);
-    let irmap = module.arch.lift_cfg(&module, &cfg, false);
+    let irmap: IRMap<X86Regs> = module.arch.lift_cfg(&module, &cfg, false);
     println!("Done!");
     Ok(())
 }

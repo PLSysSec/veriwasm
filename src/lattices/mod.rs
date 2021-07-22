@@ -132,14 +132,14 @@ impl<T: Eq + Clone + Debug> ConstLattice<T> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Clone, Debug)]
-pub struct VariableState<Ar, T> {
+pub struct VariableState<Ar: RegT, T> {
     pub regs: ArchRegsLattice<Ar, T>,
     pub stack: StackLattice<T>,
 }
 
 // Don't derive default because it requires regs to have a default as well
 // https://github.com/rust-lang/rust/issues/26925
-impl<Ar, T> Default for VariableState<Ar, T> {
+impl<Ar: RegT, T> Default for VariableState<Ar, T> {
     fn default() -> Self {
         VariableState {
             regs: Default::default(),

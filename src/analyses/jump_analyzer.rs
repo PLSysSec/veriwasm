@@ -13,7 +13,7 @@ use SwitchValue::{JmpOffset, JmpTarget, SwitchBase, UpperBound};
 use ValSize::*;
 use X86Regs::*;
 
-pub struct SwitchAnalyzer<Ar> {
+pub struct SwitchAnalyzer<Ar: RegT> {
     pub metadata: VwMetadata,
     pub reaching_defs: AnalysisResult<ReachLattice<Ar>>,
     pub reaching_analyzer: ReachingDefnAnalyzer<Ar>,

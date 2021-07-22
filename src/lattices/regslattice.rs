@@ -5,11 +5,12 @@ use std::convert::TryFrom;
 use crate::ir::types::{ValSize, X86Regs, RegT};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarSlot};
+use std::hash::Hash;
 
 // use X86Regs::*;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
-pub struct ArchRegsLattice<Ar, T> {
+pub struct ArchRegsLattice<Ar: RegT, T> {
     pub map: HashMap<Ar, VarSlot<T>>,
 }
 
@@ -113,7 +114,7 @@ impl<Ar: RegT, T: Lattice + Clone> ArchRegsLattice<Ar, T> {
 
 // Don't derive default because it requires regs to have a default as well
 // https://github.com/rust-lang/rust/issues/26925
-impl<Ar, T> Default for ArchRegsLattice<Ar, T> {
+impl<Ar: RegT, T> Default for ArchRegsLattice<Ar, T> {
     fn default() -> Self {
         ArchRegsLattice {
             map: Default::default(),

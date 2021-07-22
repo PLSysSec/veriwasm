@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_core::memory::MemoryRepr;
 use crate::ir::types::X86Regs;
+use crate::ir::types::RegT;
 
 fn load_target(program: &ModuleData, addr: u64) -> i64 {
     let b0 = program.read(addr).unwrap() as u32;
@@ -33,7 +34,7 @@ fn extract_jmp_targets(program: &ModuleData, aval: &SwitchValueLattice) -> Vec<i
 }
 
 // addr -> vec of targets
-pub fn resolve_jumps<Ar>(
+pub fn resolve_jumps<Ar: RegT>(
     program: &ModuleData,
     result: AnalysisResult<SwitchLattice<Ar>>,
     irmap: &IRMap<Ar>,

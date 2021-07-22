@@ -11,7 +11,7 @@ pub mod locals_checker;
 mod stack_checker;
 
 /*      Public API for checker submodule      */
-pub use self::call_checker::check_calls;
+// pub use self::call_checker::check_calls;
 pub use self::heap_checker::check_heap;
 pub use self::jump_resolver::resolve_jumps;
 pub use self::stack_checker::check_stack;

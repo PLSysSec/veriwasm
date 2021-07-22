@@ -14,25 +14,12 @@ use crate::IRMap;
 use crate::{VwModule, VW_CFG};
 
 pub trait Liftable {
-    type Ar;
-    fn lift_cfg( &self, module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Self::Ar>;
+    // type Ar;
+    fn lift_cfg<Ar>( &self, module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Ar>;
 }
 // TODO: make static dispatch
 impl Liftable for VwArch {
-    // fn lift(
-    //     &self,
-    //     instr: &yaxpeax_x86::long_mode::Instruction,
-    //     addr: &u64,
-    //     metadata: &VwMetadata,
-    //     strict: bool,
-    // ) -> Vec<Stmt> {
-    //     match self {
-    //         VwArch::X64 => x64::lift(instr, addr, metadata, strict),
-    //         VwArch::Aarch64 => aarch64::lift(instr, addr, metadata, strict),
-    //     }
-    // }
-
-    fn lift_cfg( &self, module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Self::Ar> {
+    fn lift_cfg<Ar>(&self, module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Ar> {
         match self {
             VwArch::X64 => x64::lift_cfg(module, cfg, strict),
             VwArch::Aarch64 => aarch64::lift_cfg(module, cfg, strict),
@@ -40,3 +27,13 @@ impl Liftable for VwArch {
     }
 }
 
+// impl<Ar> VwArch {
+//     fn lift_cfg(s: &str) -> Result<Self, Self::Err> {
+//         match &s.to_string().to_lowercase()[..] {
+//             "x86_64" => Ok(VwArch::X64),
+//             "x64" => Ok(VwArch::X64),
+//             "aarch64" => Ok(VwArch::Aarch64),
+//             _ => Err("Unknown architecture"),
+//         }
+//     }
+// }

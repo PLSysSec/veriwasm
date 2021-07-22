@@ -10,7 +10,7 @@ use ValSize::*;
 use X86Regs::*;
 
 //Top level function
-pub fn analyze_reaching_defs<Ar>(
+pub fn analyze_reaching_defs<Ar: RegT>(
     cfg: &VW_CFG,
     irmap: &IRMap<X86Regs>,
     _metadata: VwMetadata,

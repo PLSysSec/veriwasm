@@ -11,13 +11,13 @@ use HeapValue::*;
 use ValSize::*;
 use X86Regs::*;
 
-pub struct HeapChecker<'a, Ar> {
+pub struct HeapChecker<'a, Ar: RegT> {
     irmap: &'a IRMap<Ar>,
     analyzer: &'a HeapAnalyzer,
     name_addr_map: &'a HashMap<u64, String>,
 }
 
-pub fn check_heap<Ar>(
+pub fn check_heap<Ar: RegT>(
     result: AnalysisResult<HeapLattice<Ar>>,
     irmap: &IRMap<Ar>,
     analyzer: &HeapAnalyzer,
@@ -31,7 +31,7 @@ pub fn check_heap<Ar>(
     .check(result)
 }
 
-fn memarg_is_frame<Ar>(memarg: &MemArg<Ar>) -> bool {
+fn memarg_is_frame<Ar: RegT>(memarg: &MemArg<Ar>) -> bool {
     if let MemArg::Reg(Rbp, size) = memarg {
         assert_eq!(*size, Size64);
         true
@@ -40,7 +40,7 @@ fn memarg_is_frame<Ar>(memarg: &MemArg<Ar>) -> bool {
     }
 }
 
-fn is_frame_access<Ar>(v: &Value<Ar>) -> bool {
+fn is_frame_access<Ar: RegT>(v: &Value<Ar>) -> bool {
     if let Value::Mem(_, memargs) = v {
         // Accept only operands of the form `[rbp + OFFSET]` where `OFFSET` is an integer. In
         // Cranelift-generated code from Wasm, there are never arrays or variable-length data in
@@ -127,7 +127,7 @@ impl<Ar: RegT> Checker<Ar, HeapLattice<Ar>> for HeapChecker<'_, Ar> {
     }
 }
 
-impl<Ar> HeapChecker<'_, Ar> {
+impl<Ar: RegT> HeapChecker<'_, Ar> {
     fn check_global_access(&self, state: &HeapLattice<Ar>, access: &Value<Ar>) -> bool {
         if let Value::Mem(_, memargs) = access {
             match memargs {
@@ -337,7 +337,7 @@ impl<Ar> HeapChecker<'_, Ar> {
     }
 }
 
-pub fn memarg_repr<Ar>(state: &HeapLattice<Ar>, memarg: &MemArg<Ar>) -> String {
+pub fn memarg_repr<Ar: RegT>(state: &HeapLattice<Ar>, memarg: &MemArg<Ar>) -> String {
     match memarg {
         MemArg::Reg(regnum, size) => {
             format!("{:?}: {:?}", regnum, state.regs.get_reg(*regnum, *size).v)
@@ -346,7 +346,7 @@ pub fn memarg_repr<Ar>(state: &HeapLattice<Ar>, memarg: &MemArg<Ar>) -> String {
     }
 }
 
-pub fn print_mem_access<Ar>(state: &HeapLattice<Ar>, access: &Value<Ar>) {
+pub fn print_mem_access<Ar: RegT>(state: &HeapLattice<Ar>, access: &Value<Ar>) {
     if let Value::Mem(_, memargs) = access {
         match memargs {
             MemArgs::Mem1Arg(x) => log::debug!("mem[{:?}]", memarg_repr(state, x)),

@@ -107,7 +107,7 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, HeapLattice<Ar>> for HeapAnalyzer {
     }
 }
 
-pub fn is_globalbase_access<Ar>(in_state: &HeapLattice<Ar>, memargs: &MemArgs<Ar>) -> bool {
+pub fn is_globalbase_access<Ar: RegT>(in_state: &HeapLattice<Ar>, memargs: &MemArgs<Ar>) -> bool {
     if let MemArgs::Mem2Args(arg1, _arg2) = memargs {
         if let MemArg::Reg(regnum, size) = arg1 {
             assert_eq!(size.into_bits(), 64);

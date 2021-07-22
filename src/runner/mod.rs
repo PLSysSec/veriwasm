@@ -1,16 +1,16 @@
 use crate::{analyses, checkers, ir, lattices, loaders};
 
-use crate::lattices::calllattice::CallCheckLattice;
+// use crate::lattices::calllattice::CallCheckLattice;
 use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use crate::lattices::VariableState;
 use crate::{IRMap, VwMetadata, VW_CFG};
-use analyses::locals_analyzer::LocalsAnalyzer;
+// use analyses::locals_analyzer::LocalsAnalyzer;
 use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
 use analyses::{run_worklist, AnalysisResult};
 
-use analyses::{CallAnalyzer, HeapAnalyzer, StackAnalyzer};
-use checkers::locals_checker::check_locals;
-use checkers::{check_calls, check_heap, check_stack};
+use analyses::{HeapAnalyzer, StackAnalyzer};
+// use checkers::locals_checker::check_locals;
+use checkers::{check_heap, check_stack};
 use ir::fully_resolved_cfg;
 use ir::types::{FunType, RegT};
 use ir::utils::has_indirect_calls;
@@ -49,54 +49,54 @@ pub struct Config {
     pub arch: VwArch,
 }
 
-pub fn run_locals<Ar: RegT>(
-    reaching_defs: AnalysisResult<VariableState<Ar, ReachingDefnLattice>>,
-    call_analysis: AnalysisResult<CallCheckLattice<Ar>>,
-    plt_bounds: (u64, u64),
-    all_addrs_map: &HashMap<u64, String>, // index into func_signatures.signatures
-    func_signatures: &VwFuncInfo,
-    func_name: &String,
-    cfg: &VW_CFG,
-    irmap: &IRMap<Ar>,
-    metadata: &VwMetadata,
-    valid_funcs: &Vec<u64>,
-) -> bool {
-    let fun_type = func_signatures
-        .indexes
-        .get(func_name)
-        .and_then(|index| {
-            func_signatures
-                .signatures
-                .get(usize::try_from(*index).unwrap())
-        })
-        .map(to_system_v)
-        .unwrap_or(FunType {
-            args: Vec::new(),
-            ret: None,
-        });
-    let call_analyzer = CallAnalyzer {
-        metadata: metadata.clone(),
-        reaching_defs: reaching_defs.clone(),
-        reaching_analyzer: ReachingDefnAnalyzer {
-            cfg: cfg.clone(),
-            irmap: irmap.clone(),
-        },
-        funcs: valid_funcs.clone(),
-        irmap: irmap.clone(),
-        cfg: cfg.clone(),
-    };
-    let locals_analyzer = LocalsAnalyzer {
-        fun_type,
-        plt_bounds,
-        symbol_table: func_signatures,
-        name_addr_map: all_addrs_map,
-        call_analysis,
-        call_analyzer,
-    };
-    let locals_result = run_worklist(&cfg, &irmap, &locals_analyzer);
-    let locals_safe = check_locals(locals_result, &irmap, &locals_analyzer);
-    locals_safe
-}
+// pub fn run_locals<Ar: RegT>(
+//     reaching_defs: AnalysisResult<VariableState<Ar, ReachingDefnLattice>>,
+//     call_analysis: AnalysisResult<CallCheckLattice<Ar>>,
+//     plt_bounds: (u64, u64),
+//     all_addrs_map: &HashMap<u64, String>, // index into func_signatures.signatures
+//     func_signatures: &VwFuncInfo,
+//     func_name: &String,
+//     cfg: &VW_CFG,
+//     irmap: &IRMap<Ar>,
+//     metadata: &VwMetadata,
+//     valid_funcs: &Vec<u64>,
+// ) -> bool {
+//     let fun_type = func_signatures
+//         .indexes
+//         .get(func_name)
+//         .and_then(|index| {
+//             func_signatures
+//                 .signatures
+//                 .get(usize::try_from(*index).unwrap())
+//         })
+//         .map(to_system_v)
+//         .unwrap_or(FunType {
+//             args: Vec::new(),
+//             ret: None,
+//         });
+//     let call_analyzer = CallAnalyzer {
+//         metadata: metadata.clone(),
+//         reaching_defs: reaching_defs.clone(),
+//         reaching_analyzer: ReachingDefnAnalyzer {
+//             cfg: cfg.clone(),
+//             irmap: irmap.clone(),
+//         },
+//         funcs: valid_funcs.clone(),
+//         irmap: irmap.clone(),
+//         cfg: cfg.clone(),
+//     };
+//     let locals_analyzer = LocalsAnalyzer {
+//         fun_type,
+//         plt_bounds,
+//         symbol_table: func_signatures,
+//         name_addr_map: all_addrs_map,
+//         call_analysis,
+//         call_analyzer,
+//     };
+//     let locals_result = run_worklist(&cfg, &irmap, &locals_analyzer);
+//     let locals_safe = check_locals(locals_result, &irmap, &locals_analyzer);
+//     locals_safe
+// }
 
 fn run_stack<Ar: RegT>(cfg: &VW_CFG, irmap: &IRMap<Ar>) -> bool {
     let stack_analyzer = StackAnalyzer {};
@@ -119,39 +119,39 @@ fn run_heap<Ar: RegT>(
     heap_safe
 }
 
-fn run_calls<Ar: RegT>(
-    cfg: &VW_CFG,
-    irmap: &IRMap<Ar>,
-    metadata: &VwMetadata,
-    valid_funcs: &Vec<u64>,
-    plt: (u64, u64),
-) -> (
-    bool,
-    AnalysisResult<CallCheckLattice<Ar>>,
-    AnalysisResult<VariableState<Ar, ReachingDefnLattice>>,
-) {
-    let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
-    let call_analyzer = CallAnalyzer {
-        metadata: metadata.clone(),
-        reaching_defs: reaching_defs.clone(),
-        reaching_analyzer: ReachingDefnAnalyzer {
-            cfg: cfg.clone(),
-            irmap: irmap.clone(),
-        },
-        funcs: valid_funcs.clone(),
-        irmap: irmap.clone(),
-        cfg: cfg.clone(),
-    };
-    let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
-    let call_safe = check_calls(
-        call_result.clone(),
-        &irmap,
-        &call_analyzer,
-        &valid_funcs,
-        &plt,
-    );
-    (call_safe, call_result, reaching_defs)
-}
+// fn run_calls<Ar: RegT>(
+//     cfg: &VW_CFG,
+//     irmap: &IRMap<Ar>,
+//     metadata: &VwMetadata,
+//     valid_funcs: &Vec<u64>,
+//     plt: (u64, u64),
+// ) -> (
+//     bool,
+//     AnalysisResult<CallCheckLattice<Ar>>,
+//     AnalysisResult<VariableState<Ar, ReachingDefnLattice>>,
+// ) {
+//     let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
+//     let call_analyzer = CallAnalyzer {
+//         metadata: metadata.clone(),
+//         reaching_defs: reaching_defs.clone(),
+//         reaching_analyzer: ReachingDefnAnalyzer {
+//             cfg: cfg.clone(),
+//             irmap: irmap.clone(),
+//         },
+//         funcs: valid_funcs.clone(),
+//         irmap: irmap.clone(),
+//         cfg: cfg.clone(),
+//     };
+//     let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
+//     let call_safe = check_calls(
+//         call_result.clone(),
+//         &irmap,
+//         &call_analyzer,
+//         &valid_funcs,
+//         &plt,
+//     );
+//     (call_safe, call_result, reaching_defs)
+// }
 
 pub fn run(config: Config) {
     let module = load_program(&config);
@@ -195,32 +195,32 @@ pub fn run(config: Config) {
         }
 
         let call_start = Instant::now();
-        if config.active_passes.call {
-            // if config.active_passes.linear_mem {
-            println!("Checking Call Safety");
-            let (call_safe, indirect_calls_result, reaching_defs) =
-                run_calls(&cfg, &irmap, &module.metadata, &valid_funcs, plt);
-            if !call_safe {
-                panic!("Not Call Safe");
-            }
+        // if config.active_passes.call {
+        //     // if config.active_passes.linear_mem {
+        //     println!("Checking Call Safety");
+        //     let (call_safe, indirect_calls_result, reaching_defs) =
+        //         run_calls(&cfg, &irmap, &module.metadata, &valid_funcs, plt);
+        //     if !call_safe {
+        //         panic!("Not Call Safe");
+        //     }
 
-            // println!("Checking Locals Safety");
-            // let locals_safe = run_locals(
-            //     reaching_defs,
-            //     indirect_calls_result,
-            //     plt,
-            //     &all_addrs_map,
-            //     &func_signatures,
-            //     &func_name,
-            //     &cfg,
-            //     &irmap,
-            //     &module.metadata,
-            //     &valid_funcs,
-            // );
-            // if !locals_safe {
-            //     panic!("Not Locals Safe");
-            // }
-        }
+        //     // println!("Checking Locals Safety");
+        //     // let locals_safe = run_locals(
+        //     //     reaching_defs,
+        //     //     indirect_calls_result,
+        //     //     plt,
+        //     //     &all_addrs_map,
+        //     //     &func_signatures,
+        //     //     &func_name,
+        //     //     &cfg,
+        //     //     &irmap,
+        //     //     &module.metadata,
+        //     //     &valid_funcs,
+        //     // );
+        //     // if !locals_safe {
+        //     //     panic!("Not Locals Safe");
+        //     // }
+        // }
         let locals_start = Instant::now(); //alwyas 0 right now, locals time grouped with calls
 
         let end = Instant::now();
