@@ -13,7 +13,7 @@ use yaxpeax_core::analyses::control_flow::VW_CFG;
 /*     Public API     */
 // pub use self::call_analyzer::CallAnalyzer;
 pub use self::heap_analyzer::HeapAnalyzer;
-pub use self::jump_analyzer::SwitchAnalyzer;
+// pub use self::jump_analyzer::SwitchAnalyzer;
 pub use self::stack_analyzer::StackAnalyzer;
 
 pub type AnalysisResult<T> = HashMap<u64, T>;

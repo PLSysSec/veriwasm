@@ -520,13 +520,14 @@ pub enum ParseErr<E> {
 }
 
 //#[derive(PartialEq, PartialOrd, Clone, Eq, Debug, Copy, Hash)]
-pub trait RegT: Debug + Clone + PartialEq + Eq + PartialOrd + Hash + Copy + TryFrom<u8>{ 
+pub trait RegT: Debug + Clone + PartialEq + Eq + PartialOrd + Hash + Copy + TryFrom<u8> + Into<u8>{ 
     fn is_rsp(&self) -> bool;
     fn is_rbp(&self) -> bool;
     fn is_zf(&self) -> bool;
     fn iter() -> RegsIterator<Self> {
         RegsIterator {
             current_reg: 0,
+            reg_type: PhantomData,
         }
     }
 }

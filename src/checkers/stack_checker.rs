@@ -14,7 +14,7 @@ pub struct StackChecker<'a, Ar> {
     analyzer: &'a StackAnalyzer,
 }
 
-pub fn check_stack<Ar>(
+pub fn check_stack<Ar: RegT>(
     result: AnalysisResult<StackGrowthLattice>,
     irmap: &IRMap<Ar>,
     analyzer: &StackAnalyzer,
@@ -121,7 +121,7 @@ impl<Ar: RegT> Checker<Ar, StackGrowthLattice> for StackChecker<'_, Ar> {
     }
 }
 
-impl<Ar> StackChecker<'_, Ar> {
+impl<Ar: RegT> StackChecker<'_, Ar> {
     fn check_stack_read(&self, state: &StackGrowthLattice, src: &Value<Ar>) -> bool {
         if let Value::Mem(_, memargs) = src {
             match memargs {

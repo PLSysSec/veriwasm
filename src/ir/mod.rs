@@ -4,28 +4,30 @@ pub mod types;
 pub mod utils;
 mod x64;
 
-pub use self::cfg::fully_resolved_cfg;
+// pub use self::cfg::fully_resolved_cfg;
 // pub use self::x64::lift_cfg;
-use crate::ir::types::Stmt;
+use crate::ir::types::{Stmt, RegT};
 use crate::loaders::types::VwArch;
 use crate::VwMetadata;
 use core::str::FromStr;
 use crate::IRMap;
 use crate::{VwModule, VW_CFG};
+pub use self::x64::lift_cfg as x64_lift_cfg;
+pub use self::aarch64::lift_cfg as aarch64_lift_cfg;
 
-pub trait Liftable {
-    // type Ar;
-    fn lift_cfg<Ar>( &self, module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Ar>;
-}
-// TODO: make static dispatch
-impl Liftable for VwArch {
-    fn lift_cfg<Ar>(&self, module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Ar> {
-        match self {
-            VwArch::X64 => x64::lift_cfg(module, cfg, strict),
-            VwArch::Aarch64 => aarch64::lift_cfg(module, cfg, strict),
-        }
-    }
-}
+// pub trait Liftable {
+//     // type Ar;
+//     fn lift_cfg<Ar: RegT>( &self, module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Ar>;
+// }
+// // TODO: make static dispatch
+// impl Liftable for VwArch {
+//     fn lift_cfg<Ar: RegT>(&self, module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Ar> {
+//         match self {
+//             VwArch::X64 => x64::lift_cfg(module, cfg, strict),
+//             VwArch::Aarch64 => aarch64::lift_cfg(module, cfg, strict),
+//         }
+//     }
+// }
 
 // impl<Ar> VwArch {
 //     fn lift_cfg(s: &str) -> Result<Self, Self::Err> {

@@ -53,7 +53,7 @@ impl<Ar: RegT, T: Lattice + Clone> ArchRegsLattice<Ar, T> {
 
     pub fn get_reg_index(&self, index: u8, size: ValSize) -> T {
         let reg_index = match Ar::try_from(index) {
-            Err(err) => panic!("{}", err),
+            Err(err) => panic!("get_reg_index")/*panic!("{}", err)*/,
             Ok(reg) => reg,
         };
         self.get_reg(reg_index, size)
@@ -71,7 +71,7 @@ impl<Ar: RegT, T: Lattice + Clone> ArchRegsLattice<Ar, T> {
 
     pub fn set_reg_index(&mut self, index: u8, size: ValSize, value: T) -> () {
         let reg_index = match Ar::try_from(index) {
-            Err(err) => panic!("{}", err),
+            Err(err) => panic!("set_reg_index")/*panic!("{}", err)*/,
             Ok(reg) => reg,
         };
         self.set_reg(reg_index, size, value)

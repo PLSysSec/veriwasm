@@ -13,7 +13,7 @@ use analyses::run_worklist;
 use analyses::HeapAnalyzer;
 use checkers::check_heap;
 // use ir::lift_cfg;
-use ir::Liftable;
+use ir::{x64_lift_cfg, aarch64_lift_cfg};
 use ir::types::IRMap;
 use loaders::types::{ExecutableType, VwArch, VwMetadata, VwModule};
 use petgraph::graphmap::GraphMap;
@@ -183,7 +183,7 @@ pub fn validate_heap(
 
     let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
     let module = create_dummy_lucet_module(&code);
-    let irmap: IRMap<X86Regs> = module.arch.lift_cfg(&module, &cfg, false);
+    let irmap: IRMap<X86Regs> = x64_lift_cfg(&module, &cfg, false);
 
 
     // TODO: regalloc checker from Lucet too.
@@ -248,7 +248,15 @@ pub fn validate_wasmtime_func(
     println!("{:?} {:?} {:?}", code.len(), basic_blocks, cfg_edges);
     let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
     let module = create_dummy_module(code, ExecutableType::Wasmtime, arch);
-    let irmap: IRMap<X86Regs> = module.arch.lift_cfg(&module, &cfg, false);
+    match arch{
+        VwArch::X64 => {
+            x64_lift_cfg(&module, &cfg, false);
+        }
+        VwArch::Aarch64 => {
+            aarch64_lift_cfg(&module, &cfg, false);
+        }
+    }
+    // let irmap: IRMap<X86Regs> = x64_lift_cfg(&module, &cfg, false);
     println!("Done!");
     Ok(())
 }

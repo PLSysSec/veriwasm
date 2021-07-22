@@ -139,7 +139,7 @@ pub struct VariableState<Ar: RegT, T> {
 
 // Don't derive default because it requires regs to have a default as well
 // https://github.com/rust-lang/rust/issues/26925
-impl<Ar: RegT, T> Default for VariableState<Ar, T> {
+impl<Ar: RegT, T: Default> Default for VariableState<Ar, T> {
     fn default() -> Self {
         VariableState {
             regs: Default::default(),
@@ -219,7 +219,7 @@ impl<Ar: RegT, T: Lattice + Clone> VarState for VariableState<Ar, T> {
     }
 
     fn on_call(&mut self) {
-        self.regs.clear_caller_save_regs();
+        self.regs.clear_regs();
     }
 
     fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value<Ar>, src1: &Value<Ar>, src2: &Value<Ar>) {

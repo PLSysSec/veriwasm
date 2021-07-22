@@ -31,14 +31,14 @@ pub fn check_heap<Ar: RegT>(
     .check(result)
 }
 
-fn memarg_is_frame<Ar: RegT>(memarg: &MemArg<Ar>) -> bool {
-    if let MemArg::Reg(Rbp, size) = memarg {
-        assert_eq!(*size, Size64);
-        true
-    } else {
-        false
-    }
-}
+// fn memarg_is_frame<Ar: RegT>(memarg: &MemArg<Ar>) -> bool {
+//     if let MemArg::Reg(Rbp, size) = memarg {
+//         assert_eq!(*size, Size64);
+//         true
+//     } else {
+//         false
+//     }
+// }
 
 fn is_frame_access<Ar: RegT>(v: &Value<Ar>) -> bool {
     if let Value::Mem(_, memargs) = v {
@@ -47,9 +47,9 @@ fn is_frame_access<Ar: RegT>(v: &Value<Ar>) -> bool {
         // the function frame, so there should never be a computed address (e.g., `[rbp + 4*eax +
         // OFFSET]`).
         match memargs {
-            MemArgs::Mem1Arg(memarg) => memarg_is_frame(memarg),
+            MemArgs::Mem1Arg(memarg) => memarg.is_rbp(),
             MemArgs::Mem2Args(memarg1, memarg2) => {
-                memarg_is_frame(memarg1) && matches!(memarg2, MemArg::Imm(..))
+                memarg1.is_rbp() && matches!(memarg2, MemArg::Imm(..))
             }
             _ => false,
         }

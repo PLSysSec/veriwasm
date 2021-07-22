@@ -66,7 +66,7 @@ impl<Ar: RegT> ReachingDefnAnalyzer<Ar> {
 
 impl<Ar: RegT> AbstractAnalyzer<Ar, ReachLattice<Ar>> for ReachingDefnAnalyzer<Ar> {
     fn init_state(&self) -> ReachLattice<Ar> {
-        let mut s: ReachLattice = Default::default();
+        let mut s: ReachLattice<Ar> = Default::default();
 
         // s.regs.set_reg(Rax, Size64, loc(0xdeadbeef, 0));
         // s.regs.set_reg(Rcx, Size64, loc(0xdeadbeef, 1));
@@ -84,7 +84,7 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, ReachLattice<Ar>> for ReachingDefnAnalyzer<A
         // s.regs.set_reg(R14, Size64, loc(0xdeadbeef, 13));
         // s.regs.set_reg(R15, Size64, loc(0xdeadbeef, 14));
         for r in Ar::iter(){
-            s.regs.set_reg(r, Size64, loc(0xdeadbeef, r as u8));
+            s.regs.set_reg(r, Size64, loc(0xdeadbeef, r.into().into() ));
         }
 
         s.stack.update(0x8, loc(0xdeadbeef, 15), 4);
@@ -123,7 +123,7 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, ReachLattice<Ar>> for ReachingDefnAnalyzer<A
             }
             Stmt::Call(_) => {
                 for r in Ar::iter(){
-                    in_state.regs.set_reg(r, Size64, loc(0xdeadbeef, r as u8));
+                    in_state.regs.set_reg(r, Size64, loc(0xdeadbeef, r.into().into()));
                 }
                 // in_state.regs.set_reg(Rax, Size64, loc(loc_idx.addr, 0));
                 // in_state.regs.set_reg(Rcx, Size64, loc(loc_idx.addr, 1));
