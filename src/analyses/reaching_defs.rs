@@ -12,7 +12,7 @@ use X86Regs::*;
 //Top level function
 pub fn analyze_reaching_defs<Ar: RegT>(
     cfg: &VW_CFG,
-    irmap: &IRMap<X86Regs>,
+    irmap: &IRMap<Ar>,
     _metadata: VwMetadata,
 ) -> AnalysisResult<ReachLattice<Ar>> {
     run_worklist(

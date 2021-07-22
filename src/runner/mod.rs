@@ -1,24 +1,24 @@
-// use crate::{analyses, checkers, ir, lattices, loaders};
+use crate::{analyses, checkers, ir, lattices, loaders};
 
 // // use crate::lattices::calllattice::CallCheckLattice;
 // use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 // use crate::lattices::VariableState;
-// use crate::{IRMap, VwMetadata, VW_CFG};
+use crate::{IRMap, VwMetadata, VW_CFG};
 // // use analyses::locals_analyzer::LocalsAnalyzer;
 // use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
-// use analyses::{run_worklist, AnalysisResult};
+use analyses::{run_worklist, AnalysisResult};
 
-// use analyses::{HeapAnalyzer, StackAnalyzer};
+use analyses::{HeapAnalyzer, StackAnalyzer};
 // // use checkers::locals_checker::check_locals;
-// use checkers::{check_heap, check_stack};
+use checkers::{check_heap, check_stack};
 // use ir::fully_resolved_cfg;
-// use ir::types::{FunType, RegT};
+use ir::types::{FunType, RegT};
 // use ir::utils::has_indirect_calls;
 // use loaders::load_program;
 // use loaders::types::{ExecutableType, VwArch, VwFuncInfo};
 // use loaders::utils::get_data;
 // use loaders::utils::to_system_v;
-// use std::collections::HashMap;
+use std::collections::HashMap;
 // use std::convert::TryFrom;
 // use std::iter::FromIterator;
 
@@ -101,26 +101,26 @@ pub struct Config {
 // //     locals_safe
 // // }
 
-// fn run_stack<Ar: RegT>(cfg: &VW_CFG, irmap: &IRMap<Ar>) -> bool {
-//     let stack_analyzer = StackAnalyzer {};
-//     let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
-//     let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
-//     stack_safe
-// }
+fn run_stack<Ar: RegT>(cfg: &VW_CFG, irmap: &IRMap<Ar>) -> bool {
+    let stack_analyzer = StackAnalyzer {};
+    let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
+    let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
+    stack_safe
+}
 
-// fn run_heap<Ar: RegT>(
-//     cfg: &VW_CFG,
-//     irmap: &IRMap<Ar>,
-//     metadata: &VwMetadata,
-//     all_addrs_map: &HashMap<u64, String>,
-// ) -> bool {
-//     let heap_analyzer = HeapAnalyzer {
-//         metadata: metadata.clone(),
-//     };
-//     let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
-//     let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer, &all_addrs_map);
-//     heap_safe
-// }
+fn run_heap<Ar: RegT>(
+    cfg: &VW_CFG,
+    irmap: &IRMap<Ar>,
+    metadata: &VwMetadata,
+    all_addrs_map: &HashMap<u64, String>,
+) -> bool {
+    let heap_analyzer = HeapAnalyzer {
+        metadata: metadata.clone(),
+    };
+    let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
+    let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer, &all_addrs_map);
+    heap_safe
+}
 
 // // fn run_calls<Ar: RegT>(
 // //     cfg: &VW_CFG,

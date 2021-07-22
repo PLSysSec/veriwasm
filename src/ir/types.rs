@@ -22,57 +22,59 @@ pub enum ValSize {
     Size512,
 }
 
+use ValSize::*;
+
 impl ValSize {
     pub fn try_from_bits(value: u32) -> Result<Self, String> {
         match value {
-            1 => Ok(ValSize::Size1),
-            8 => Ok(ValSize::Size8),
-            16 => Ok(ValSize::Size16),
-            32 => Ok(ValSize::Size32),
-            64 => Ok(ValSize::Size64),
-            128 => Ok(ValSize::Size128),
-            256 => Ok(ValSize::Size256),
-            512 => Ok(ValSize::Size512),
+            1 => Ok(Size1),
+            8 => Ok(Size8),
+            16 => Ok(Size16),
+            32 => Ok(Size32),
+            64 => Ok(Size64),
+            128 => Ok(Size128),
+            256 => Ok(Size256),
+            512 => Ok(Size512),
             _ => Err(format!("Not a valid bit length: {:?}", value)),
         }
     }
 
     pub fn into_bits(self) -> u32 {
         match self {
-            ValSize::Size1 => 1,
-            ValSize::Size8 => 8,
-            ValSize::Size16 => 16,
-            ValSize::Size32 => 32,
-            ValSize::Size64 => 64,
-            ValSize::Size128 => 128,
-            ValSize::Size256 => 256,
-            ValSize::Size512 => 512,
+            Size1 => 1,
+            Size8 => 8,
+            Size16 => 16,
+            Size32 => 32,
+            Size64 => 64,
+            Size128 => 128,
+            Size256 => 256,
+            Size512 => 512,
         }
     }
 
     pub fn try_from_bytes(value: u32) -> Result<Self, String> {
         match value {
-            1 => Ok(ValSize::Size8),
-            2 => Ok(ValSize::Size16),
-            4 => Ok(ValSize::Size32),
-            8 => Ok(ValSize::Size64),
-            16 => Ok(ValSize::Size128),
-            32 => Ok(ValSize::Size256),
-            64 => Ok(ValSize::Size512),
+            1 => Ok(Size8),
+            2 => Ok(Size16),
+            4 => Ok(Size32),
+            8 => Ok(Size64),
+            16 => Ok(Size128),
+            32 => Ok(Size256),
+            64 => Ok(Size512),
             _ => Err(format!("Not a valid byte length: {:?}", value)),
         }
     }
 
     pub fn into_bytes(self) -> u32 {
         match self {
-            ValSize::Size1 => panic!("1 bit flag cannot be converted to bytes"),
-            ValSize::Size8 => 1,
-            ValSize::Size16 => 2,
-            ValSize::Size32 => 4,
-            ValSize::Size64 => 8,
-            ValSize::Size128 => 16,
-            ValSize::Size256 => 32,
-            ValSize::Size512 => 64,
+            Size1 => panic!("1 bit flag cannot be converted to bytes"),
+            Size8 => 1,
+            Size16 => 2,
+            Size32 => 4,
+            Size64 => 8,
+            Size128 => 16,
+            Size256 => 32,
+            Size512 => 64,
         }
     }
 
@@ -274,178 +276,6 @@ impl<Ar:RegT> Iterator for RegsIterator<Ar> {
     }
 }
 
-// pub struct X86RegsIterator {
-//     current_reg: Option<X86Regs>,
-// }
-
-// impl X86Regs {
-//     pub fn iter() -> X86RegsIterator {
-//         X86RegsIterator {
-//             current_reg: Some(Rax),
-//         }
-//     }
-// }
-
-// impl Iterator for X86RegsIterator {
-//     type Item = X86Regs;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         match self.current_reg {
-//             None => None,
-//             Some(reg) => match reg {
-//                 Rax => {
-//                     self.current_reg = Some(Rcx);
-//                     return Some(Rax);
-//                 }
-//                 Rcx => {
-//                     self.current_reg = Some(Rdx);
-//                     return Some(Rcx);
-//                 }
-//                 Rdx => {
-//                     self.current_reg = Some(Rbx);
-//                     return Some(Rdx);
-//                 }
-//                 Rbx => {
-//                     self.current_reg = Some(Rsp);
-//                     return Some(Rbx);
-//                 }
-//                 Rsp => {
-//                     self.current_reg = Some(Rbp);
-//                     return Some(Rsp);
-//                 }
-//                 Rbp => {
-//                     self.current_reg = Some(Rsi);
-//                     return Some(Rbp);
-//                 }
-//                 Rsi => {
-//                     self.current_reg = Some(Rdi);
-//                     return Some(Rsi);
-//                 }
-//                 Rdi => {
-//                     self.current_reg = Some(R8);
-//                     return Some(Rdi);
-//                 }
-//                 R8 => {
-//                     self.current_reg = Some(R9);
-//                     return Some(R8);
-//                 }
-//                 R9 => {
-//                     self.current_reg = Some(R10);
-//                     return Some(R9);
-//                 }
-//                 R10 => {
-//                     self.current_reg = Some(R11);
-//                     return Some(R10);
-//                 }
-//                 R11 => {
-//                     self.current_reg = Some(R12);
-//                     return Some(R11);
-//                 }
-//                 R12 => {
-//                     self.current_reg = Some(R13);
-//                     return Some(R12);
-//                 }
-//                 R13 => {
-//                     self.current_reg = Some(R14);
-//                     return Some(R13);
-//                 }
-//                 R14 => {
-//                     self.current_reg = Some(R15);
-//                     return Some(R14);
-//                 }
-//                 R15 => {
-//                     self.current_reg = Some(Zf);
-//                     return Some(R15);
-//                 }
-//                 Zf => {
-//                     self.current_reg = Some(Cf);
-//                     return Some(Zf);
-//                 }
-//                 Cf => {
-//                     self.current_reg = Some(Pf);
-//                     return Some(Cf);
-//                 }
-//                 Pf => {
-//                     self.current_reg = Some(Sf);
-//                     return Some(Pf);
-//                 }
-//                 Sf => {
-//                     self.current_reg = Some(Of);
-//                     return Some(Sf);
-//                 }
-//                 Of => {
-//                     self.current_reg = Some(Zmm0);
-//                     return Some(Of);
-//                 }
-//                 Zmm0 => {
-//                     self.current_reg = Some(Zmm1);
-//                     return Some(Zmm0);
-//                 }
-//                 Zmm1 => {
-//                     self.current_reg = Some(Zmm2);
-//                     return Some(Zmm1);
-//                 }
-//                 Zmm2 => {
-//                     self.current_reg = Some(Zmm3);
-//                     return Some(Zmm2);
-//                 }
-//                 Zmm3 => {
-//                     self.current_reg = Some(Zmm4);
-//                     return Some(Zmm3);
-//                 }
-//                 Zmm4 => {
-//                     self.current_reg = Some(Zmm5);
-//                     return Some(Zmm4);
-//                 }
-//                 Zmm5 => {
-//                     self.current_reg = Some(Zmm6);
-//                     return Some(Zmm5);
-//                 }
-//                 Zmm6 => {
-//                     self.current_reg = Some(Zmm7);
-//                     return Some(Zmm6);
-//                 }
-//                 Zmm7 => {
-//                     self.current_reg = Some(Zmm8);
-//                     return Some(Zmm7);
-//                 }
-//                 Zmm8 => {
-//                     self.current_reg = Some(Zmm9);
-//                     return Some(Zmm8);
-//                 }
-//                 Zmm9 => {
-//                     self.current_reg = Some(Zmm10);
-//                     return Some(Zmm9);
-//                 }
-//                 Zmm10 => {
-//                     self.current_reg = Some(Zmm11);
-//                     return Some(Zmm10);
-//                 }
-//                 Zmm11 => {
-//                     self.current_reg = Some(Zmm12);
-//                     return Some(Zmm11);
-//                 }
-//                 Zmm12 => {
-//                     self.current_reg = Some(Zmm13);
-//                     return Some(Zmm12);
-//                 }
-//                 Zmm13 => {
-//                     self.current_reg = Some(Zmm14);
-//                     return Some(Zmm13);
-//                 }
-//                 Zmm14 => {
-//                     self.current_reg = Some(Zmm15);
-//                     return Some(Zmm14);
-//                 }
-//                 Zmm15 => {
-//                     self.current_reg = None;
-//                     return Some(Zmm15);
-//                 }
-//             },
-//         }
-//     }
-// }
-
 impl RegT for X86Regs {
     fn is_rsp(&self) -> bool {
         self == &Rsp
@@ -458,6 +288,11 @@ impl RegT for X86Regs {
     fn is_zf(&self) -> bool {
         self == &Zf
     }
+
+    fn pinned_heap_reg() -> Self {
+        Rdi
+    }
+
 }
 
 impl TryFrom<u8> for X86Regs {
@@ -524,6 +359,7 @@ pub trait RegT: Debug + Clone + PartialEq + Eq + PartialOrd + Hash + Copy + TryF
     fn is_rsp(&self) -> bool;
     fn is_rbp(&self) -> bool;
     fn is_zf(&self) -> bool;
+    fn pinned_heap_reg() -> Self;
     fn iter() -> RegsIterator<Self> {
         RegsIterator {
             current_reg: 0,

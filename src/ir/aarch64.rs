@@ -351,4 +351,8 @@ impl RegT for Aarch64Regs {
     fn is_zf(&self) -> bool {
         self == &Zf
     }
+
+    fn pinned_heap_reg() -> Self {
+        unimplemented!()
+    }
 }

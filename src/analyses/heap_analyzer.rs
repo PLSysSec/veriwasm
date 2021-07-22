@@ -1,6 +1,6 @@
 use crate::{analyses, ir, lattices, loaders};
 use analyses::{AbstractAnalyzer, AnalysisResult};
-use ir::types::{Binopcode, MemArg, MemArgs, Unopcode, ValSize, Value, X86Regs, RegT};
+use ir::types::{Binopcode, MemArg, MemArgs, Unopcode, ValSize, Value, X86Regs, RegT, Stmt};
 use ir::utils::{extract_stack_offset, is_stack_access};
 use lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
 use lattices::reachingdefslattice::LocIdx;
@@ -21,11 +21,41 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, HeapLattice<Ar>> for HeapAnalyzer {
         let mut result: HeapLattice<Ar> = Default::default();
         result
             .regs
-            .set_reg(Rdi, Size64, HeapValueLattice::new(HeapBase));
+            .set_reg(Ar::pinned_heap_reg(), Size64, HeapValueLattice::new(HeapBase));
         result
     }
 
-    fn aexec_unop(
+    fn aexec(&self, in_state: &mut HeapLattice<Ar>, ir_instr: &Stmt<Ar>, loc_idx: &LocIdx){
+        match ir_instr {
+            Stmt::Clear(dst, _srcs) => in_state.set_to_bot(dst),
+            Stmt::Unop(opcode, dst, src) => self.aexec_unop(in_state, opcode, &dst, &src, loc_idx),
+            Stmt::Binop(opcode, dst, src1, src2) => {
+                self.aexec_binop(in_state, opcode, dst, src1, src2, loc_idx);
+                in_state.adjust_stack_offset(opcode, dst, src1, src2)
+            }
+            Stmt::Call(_) => in_state.on_call(),
+            _ => (),
+        }
+    }
+}
+
+pub fn is_globalbase_access<Ar: RegT>(in_state: &HeapLattice<Ar>, memargs: &MemArgs<Ar>) -> bool {
+    if let MemArgs::Mem2Args(arg1, _arg2) = memargs {
+        if let MemArg::Reg(regnum, size) = arg1 {
+            assert_eq!(size.into_bits(), 64);
+            let base = in_state.regs.get_reg(*regnum, *size);
+            if let Some(v) = base.v {
+                if let HeapBase = v {
+                    return true;
+                }
+            }
+        }
+    };
+    false
+}
+
+impl HeapAnalyzer {
+    fn aexec_unop<Ar: RegT>(
         &self,
         in_state: &mut HeapLattice<Ar>,
         opcode: &Unopcode,
@@ -57,7 +87,7 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, HeapLattice<Ar>> for HeapAnalyzer {
         }
     }
 
-    fn aexec_binop(
+    fn aexec_binop<Ar: RegT>(
         &self,
         in_state: &mut HeapLattice<Ar>,
         opcode: &Binopcode,
@@ -105,25 +135,8 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, HeapLattice<Ar>> for HeapAnalyzer {
 
         in_state.set_to_bot(dst);
     }
-}
 
-pub fn is_globalbase_access<Ar: RegT>(in_state: &HeapLattice<Ar>, memargs: &MemArgs<Ar>) -> bool {
-    if let MemArgs::Mem2Args(arg1, _arg2) = memargs {
-        if let MemArg::Reg(regnum, size) = arg1 {
-            assert_eq!(size.into_bits(), 64);
-            let base = in_state.regs.get_reg(*regnum, *size);
-            if let Some(v) = base.v {
-                if let HeapBase = v {
-                    return true;
-                }
-            }
-        }
-    };
-    false
-}
-
-impl HeapAnalyzer {
-    pub fn aeval_unop<Ar: RegT>(&self, in_state: &HeapLattice<Ar>, value: &Value<Ar>) -> HeapValueLattice {
+    fn aeval_unop<Ar: RegT>(&self, in_state: &HeapLattice<Ar>, value: &Value<Ar>) -> HeapValueLattice {
         match value {
             Value::Mem(memsize, memargs) => {
                 if is_globalbase_access(in_state, memargs) {

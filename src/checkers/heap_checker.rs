@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use HeapValue::*;
 use ValSize::*;
-use X86Regs::*;
+// use X86Regs::*;
 
 pub struct HeapChecker<'a, Ar: RegT> {
     irmap: &'a IRMap<Ar>,
@@ -73,7 +73,7 @@ impl<Ar: RegT> Checker<Ar, HeapLattice<Ar>> for HeapChecker<'_, Ar> {
     fn check_statement(&self, state: &HeapLattice<Ar>, ir_stmt: &Stmt<Ar>, loc_idx: &LocIdx) -> bool {
         match ir_stmt {
             //1. Check that at each call rdi = HeapBase
-            Stmt::Call(v) => match state.regs.get_reg(Rdi, Size64).v {
+            Stmt::Call(v) => match state.regs.get_reg(Ar::pinned_heap_reg(), Size64).v {
                 Some(HeapBase) => (),
                 _ => {
                     if let Value::Imm(_, _, dst) = v {

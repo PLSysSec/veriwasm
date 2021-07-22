@@ -18,7 +18,7 @@ pub use self::stack_analyzer::StackAnalyzer;
 
 pub type AnalysisResult<T> = HashMap<u64, T>;
 
-pub trait AbstractAnalyzer<Ar: RegT, State: Lattice + VarState + Clone> {
+pub trait AbstractAnalyzer<Ar: RegT, State: Lattice + Clone> {
     fn init_state(&self) -> State {
         Default::default()
     }
@@ -34,44 +34,45 @@ pub trait AbstractAnalyzer<Ar: RegT, State: Lattice + VarState + Clone> {
             .map(|addr| (addr.clone(), in_state.clone()))
             .collect()
     }
-    fn aexec_unop(
-        &self,
-        in_state: &mut State,
-        _opcode: &Unopcode,
-        dst: &Value<Ar>,
-        _src: &Value<Ar>,
-        _loc_idx: &LocIdx,
-    ) -> () {
-        in_state.set_to_bot(dst)
-    }
-    fn aexec_binop(
-        &self,
-        in_state: &mut State,
-        opcode: &Binopcode,
-        dst: &Value<Ar>,
-        _src1: &Value<Ar>,
-        _src2: &Value<Ar>,
-        _loc_idx: &LocIdx,
-    ) -> () {
-        match opcode {
-            Binopcode::Cmp => (),
-            Binopcode::Test => (),
-            _ => in_state.set_to_bot(dst),
-        }
-    }
+    // fn aexec_unop(
+    //     &self,
+    //     in_state: &mut State,
+    //     _opcode: &Unopcode,
+    //     dst: &Value<Ar>,
+    //     _src: &Value<Ar>,
+    //     _loc_idx: &LocIdx,
+    // ) -> () {
+    //     in_state.set_to_bot(dst)
+    // }
+    // fn aexec_binop(
+    //     &self,
+    //     in_state: &mut State,
+    //     opcode: &Binopcode,
+    //     dst: &Value<Ar>,
+    //     _src1: &Value<Ar>,
+    //     _src2: &Value<Ar>,
+    //     _loc_idx: &LocIdx,
+    // ) -> () {
+    //     match opcode {
+    //         Binopcode::Cmp => (),
+    //         Binopcode::Test => (),
+    //         _ => in_state.set_to_bot(dst),
+    //     }
+    // }
 
-    fn aexec(&self, in_state: &mut State, ir_instr: &Stmt<Ar>, loc_idx: &LocIdx) -> () {
-        match ir_instr {
-            Stmt::Clear(dst, _srcs) => in_state.set_to_bot(dst),
-            Stmt::Unop(opcode, dst, src) => self.aexec_unop(in_state, opcode, &dst, &src, loc_idx),
-            Stmt::Binop(opcode, dst, src1, src2) => {
-                self.aexec_binop(in_state, opcode, dst, src1, src2, loc_idx);
-                in_state.adjust_stack_offset(opcode, dst, src1, src2)
-            }
-            Stmt::Call(_) => in_state.on_call(),
-            _ => (),
-        }
-    }
+    fn aexec(&self, in_state: &mut State, ir_instr: &Stmt<Ar>, loc_idx: &LocIdx);
+    // {
+    //     match ir_instr {
+    //         Stmt::Clear(dst, _srcs) => in_state.set_to_bot(dst),
+    //         Stmt::Unop(opcode, dst, src) => self.aexec_unop(in_state, opcode, &dst, &src, loc_idx),
+    //         Stmt::Binop(opcode, dst, src1, src2) => {
+    //             self.aexec_binop(in_state, opcode, dst, src1, src2, loc_idx);
+    //             in_state.adjust_stack_offset(opcode, dst, src1, src2)
+    //         }
+    //         Stmt::Call(_) => in_state.on_call(),
+    //         _ => (),
+    //     }
+    // }
 
     fn analyze_block(&self, state: &State, irblock: &IRBlock<Ar>) -> State {
         let mut new_state = state.clone();

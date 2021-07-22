@@ -91,5 +91,6 @@ fn main() {
         arch,
     };
 
-    run(config);
+    unimplemented!("Standalone checker is not currently in a useable state :(");
+    // run(config);
 }
