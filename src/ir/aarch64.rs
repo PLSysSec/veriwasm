@@ -1,3 +1,4 @@
+
 use crate::ir::types::ParseErr;
 use crate::ir::types::Value;
 use crate::ir::types::{IRMap, Stmt, ValSize};
@@ -17,42 +18,75 @@ use crate::ir::types::RegT;
 // TODO: add flags iter
 #[derive(PartialEq, PartialOrd, Clone, Eq, Debug, Copy, Hash)]
 pub enum Aarch64Regs {
-    W0,
-    W1,
-    W2,
-    W3,
-    W4,
-    W5,
-    W6,
-    W7,
-    W8,
-    W9,
-    W10,
-    W11,
-    W12,
-    W13,
-    W14,
-    W15,
-    W16,
-    W17,
-    W18,
-    W19,
-    W20,
-    W21,
-    W22,
-    W23,
-    W24,
-    W25,
-    W26,
-    W27,
-    W28,
-    W29,
-    W30,
-    W31,
-    Nf,
-    Zf,
-    Cf,
-    Vf,
+    X0,
+    X1,
+    X2,
+    X3,
+    X4,
+    X5,
+    X6,
+    X7,
+    X8,
+    X9,
+    X10,
+    X11,
+    X12,
+    X13,
+    X14,
+    X15,
+    X16,
+    X17,
+    X18,
+    X19,
+    X20,
+    X21,
+    X22,
+    X23,
+    X24,
+    X25,
+    X26,
+    X27,
+    X28,
+    X29,
+    X30,
+    X31,
+    Nzcv,
+    // Nf,
+    // Zf,
+    // Cf,
+    // Vf,
+    D0,
+    D1,
+    D2,
+    D3,
+    D4,
+    D5,
+    D6,
+    D7,
+    D8,
+    D9,
+    D10,
+    D11,
+    D12,
+    D13,
+    D14,
+    D15,
+    D16,
+    D17,
+    D18,
+    D19,
+    D20,
+    D21,
+    D22,
+    D23,
+    D24,
+    D25,
+    D26,
+    D27,
+    D28,
+    D29,
+    D30,
+    D31,
 }
 
 use self::Aarch64Regs::*;
@@ -60,7 +94,7 @@ use self::Aarch64Regs::*;
 impl Aarch64Regs {
     pub fn is_flag(self) -> bool {
         match self {
-            Nf | Zf | Cf | Vf => true,
+            Nzcv => true,
             _ => false,
         }
     }
@@ -99,42 +133,75 @@ impl TryFrom<u16> for Aarch64Regs {
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
-            0 => Ok(W0),
-            1 => Ok(W1),
-            2 => Ok(W2),
-            3 => Ok(W3),
-            4 => Ok(W4),
-            5 => Ok(W5),
-            6 => Ok(W6),
-            7 => Ok(W7),
-            8 => Ok(W8),
-            9 => Ok(W9),
-            10 => Ok(W10),
-            11 => Ok(W11),
-            12 => Ok(W12),
-            13 => Ok(W13),
-            14 => Ok(W14),
-            15 => Ok(W15),
-            16 => Ok(W16),
-            17 => Ok(W17),
-            18 => Ok(W18),
-            19 => Ok(W19),
-            20 => Ok(W20),
-            21 => Ok(W21),
-            22 => Ok(W22),
-            23 => Ok(W23),
-            24 => Ok(W24),
-            25 => Ok(W25),
-            26 => Ok(W26),
-            27 => Ok(W27),
-            28 => Ok(W28),
-            29 => Ok(W29),
-            30 => Ok(W30),
-            31 => Ok(W31),
-            32 => Ok(Nf),
-            33 => Ok(Zf),
-            34 => Ok(Cf),
-            35 => Ok(Vf),
+            0 => Ok(X0),
+            1 => Ok(X1),
+            2 => Ok(X2),
+            3 => Ok(X3),
+            4 => Ok(X4),
+            5 => Ok(X5),
+            6 => Ok(X6),
+            7 => Ok(X7),
+            8 => Ok(X8),
+            9 => Ok(X9),
+            10 => Ok(X10),
+            11 => Ok(X11),
+            12 => Ok(X12),
+            13 => Ok(X13),
+            14 => Ok(X14),
+            15 => Ok(X15),
+            16 => Ok(X16),
+            17 => Ok(X17),
+            18 => Ok(X18),
+            19 => Ok(X19),
+            20 => Ok(X20),
+            21 => Ok(X21),
+            22 => Ok(X22),
+            23 => Ok(X23),
+            24 => Ok(X24),
+            25 => Ok(X25),
+            26 => Ok(X26),
+            27 => Ok(X27),
+            28 => Ok(X28),
+            29 => Ok(X29),
+            30 => Ok(X30),
+            31 => Ok(X31),
+            32 => Ok(Nzcv),
+            // 32 => Ok(Nf),
+            // 33 => Ok(Zf),
+            // 34 => Ok(Cf),
+            // 35 => Ok(Vf),
+            33 => Ok(D0), 
+	        34 => Ok(D1),
+	        35 => Ok(D2),
+	        36 => Ok(D3),
+	        37 => Ok(D4),
+	        38 => Ok(D5),
+	        39 => Ok(D6),
+	        40 => Ok(D7),
+	        41 => Ok(D8),
+	        42 => Ok(D9),
+	        43 => Ok(D10),
+	        44 => Ok(D11),
+	        45 => Ok(D12),
+	        46 => Ok(D13),
+	        47 => Ok(D14),
+	        48 => Ok(D15),
+	        49 => Ok(D16),
+	        50 => Ok(D17),
+	        51 => Ok(D18),
+	        52 => Ok(D19),
+	        53 => Ok(D20),
+	        54 => Ok(D21),
+	        55 => Ok(D22),
+	        56 => Ok(D23),
+	        57 => Ok(D24),
+	        58 => Ok(D25),
+	        59 => Ok(D26),
+	        60 => Ok(D27),
+	        61 => Ok(D28),
+	        62 => Ok(D29),
+	        63 => Ok(D30),
+	        64 => Ok(D31),
             _ => Err(format!("Unknown register: index = {:?}", value)),
         }
     }
@@ -214,28 +281,48 @@ where
 //     // return sources;
 // }
 
-fn convert_reg(op: capstone::RegId) -> Value<Aarch64Regs> {
-    Value::Reg(Aarch64Regs::try_from(op.0).unwrap(), Size64)
+// "ffr",
+// "fp",
+// "lr",
+// "nzcv",
+// "sp",
+// "wsp",
+// "wzr",
+// "xzr",
+
+fn convert_reg(reg: capstone::RegId) -> Value<Aarch64Regs> {
+    match reg.0 {
+        2 => Value::Reg(X29, Size64), // fp
+        3 => Value::Reg(X30, Size64), // lr
+        4 => Value::Reg(Nzcv, Size64), // NZCV
+        5 => Value::Reg(X31, Size64), // sp
+        r @ 9..=40 => Value::Reg(Aarch64Regs::try_from(r - 9).unwrap(), Size8),
+        r @ 41..=72 => Value::Reg(Aarch64Regs::try_from(r - 41 + 33).unwrap(), Size64),
+        r @ 73..=104 => Value::Reg(Aarch64Regs::try_from(r - 73).unwrap(), Size16),
+        r @ 153..=184 => Value::Reg(Aarch64Regs::try_from(r - 153 + 33).unwrap(), Size32),
+        r @ 185..=215 =>  Value::Reg(Aarch64Regs::try_from(r - 185).unwrap(), Size32),
+        r @ 216..=244 => Value::Reg(Aarch64Regs::try_from(r - 216).unwrap(), Size32),
+        _ => panic!("Unknown register: {:?}", reg),
+    }
 }
 
+//TODO: handle all memory reads and writes
 fn generic_clear(cs: &Capstone, instr: &Aarch64Insn) -> Vec<Stmt<Aarch64Regs>> {
     let mut stmts: Vec<Stmt<Aarch64Regs>> = vec![];
     let detail = cs.insn_detail(instr).expect("Unable to get detail");
     // let sources = get_sources(cs, instr, &detail);
     let regs_read = detail.regs_read();
-    println!("capstone reg sources: {:?}", regs_read);
+    println!("capstone reg sources: {:?}", reg_names(cs, regs_read.clone()));
     let reg_sources: Vec<Value<Aarch64Regs>> = regs_read.map(|reg| convert_reg(reg)).collect();
     println!("VW reg sources: {:?}", reg_sources);
     let regs_write = detail.regs_write();
-    println!("capstone reg sources: {:?}", regs_write);
+    println!("capstone reg sources: {:?}", reg_names(cs, regs_write.clone()));
     let reg_dsts: Vec<Value<Aarch64Regs>> = regs_write.map(|reg| convert_reg(reg)).collect();
     println!("VW reg sources: {:?}", reg_dsts);
-    unimplemented!();
-    // let dsts = get_destinations(&instr);
-    // for dst in dsts {
-    //     stmts.push(Stmt::Clear(dst, sources.clone()));
-    // }
-    // stmts
+    for dst in reg_dsts {
+        stmts.push(Stmt::Clear(dst, reg_sources.clone()));
+    }
+    stmts
 }
 
 pub fn lift(
@@ -341,15 +428,15 @@ type Aarch64Insn<'a> = capstone::Insn<'a>;
 
 impl RegT for Aarch64Regs {
     fn is_rsp(&self) -> bool {
-        self == &W31
+        self == &X31
     }
 
     fn is_rbp(&self) -> bool {
-        self == &W29
+        self == &X29
     }
 
     fn is_zf(&self) -> bool {
-        self == &Zf
+        self == &Nzcv
     }
 
     fn pinned_heap_reg() -> Self {

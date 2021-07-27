@@ -244,10 +244,11 @@ pub fn validate_wasmtime_func(
     let module = create_dummy_module(code, ExecutableType::Wasmtime, arch);
     match arch {
         VwArch::X64 => {
-            x64_lift_cfg(&module, &cfg, false);
+            let ircfh = x64_lift_cfg(&module, &cfg, false);
         }
         VwArch::Aarch64 => {
-            aarch64_lift_cfg(&module, &cfg, false);
+            let ircfg = aarch64_lift_cfg(&module, &cfg, false);
+            println!("{:?}", ircfg);
         }
     }
     // let irmap: IRMap<X86Regs> = x64_lift_cfg(&module, &cfg, false);
