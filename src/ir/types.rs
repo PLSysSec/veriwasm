@@ -96,6 +96,19 @@ pub enum MemArg<Ar> {
     Imm(ImmType, ValSize, i64), // signed, size, const
 }
 
+impl<Ar: RegT> TryFrom<Value<Ar>> for MemArg<Ar> {
+    type Error = &'static str;
+
+    fn try_from(v: Value<Ar>) -> Result<Self, Self::Error> {
+        match v {
+            Value::Reg(r, sz) => Ok(Self::Reg(r, sz)),
+            Value::Mem(_, _) => Err("Memargs cannot be nested"),
+            Value::Imm(ty, imm, sz) => Ok(Self::Imm(ty, imm, sz)),
+            Value::RIPConst => Err("Memargs cannot be made from RIPConst"),
+        }
+    }
+}
+
 impl<Ar: RegT> MemArg<Ar> {
     pub fn is_rsp(&self) -> bool {
         match self {
@@ -123,6 +136,13 @@ pub enum Value<Ar> {
 }
 
 impl<Ar: RegT> Value<Ar> {
+    pub fn get_size(&self) -> ValSize {
+        match self {
+            Value::Mem(sz, _) | Value::Reg(_, sz) | Value::Imm(_, sz, _) => *sz,
+            RIPConst => Size64,
+        }
+    }
+
     pub fn is_rsp(&self) -> bool {
         match self {
             Value::Reg(r, Size64) if r.is_rsp() => true,

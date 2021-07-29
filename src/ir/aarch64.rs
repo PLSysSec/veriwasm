@@ -1,15 +1,16 @@
-
 use crate::ir::types::ParseErr;
-use crate::ir::types::Value;
-use crate::ir::types::{IRMap, Stmt, ValSize};
+use crate::ir::types::{
+    Binopcode, IRBlock, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value,
+};
 use crate::VwMetadata;
 use crate::VwModule;
 use capstone::arch::arm64;
 use capstone::arch::arm64::Arm64Operand;
+use capstone::arch::arm64::{Arm64OpMem, Arm64OperandType};
 use capstone::arch::ArchOperand;
 use capstone::prelude::*;
 use core::convert::TryFrom;
-use yaxpeax_core::analyses::control_flow::VW_CFG;
+use yaxpeax_core::analyses::control_flow::{VW_Block, VW_CFG};
 use ValSize::{Size128, Size16, Size256, Size32, Size512, Size64, Size8};
 
 use crate::ir::types::RegT;
@@ -170,38 +171,38 @@ impl TryFrom<u16> for Aarch64Regs {
             // 33 => Ok(Zf),
             // 34 => Ok(Cf),
             // 35 => Ok(Vf),
-            33 => Ok(D0), 
-	        34 => Ok(D1),
-	        35 => Ok(D2),
-	        36 => Ok(D3),
-	        37 => Ok(D4),
-	        38 => Ok(D5),
-	        39 => Ok(D6),
-	        40 => Ok(D7),
-	        41 => Ok(D8),
-	        42 => Ok(D9),
-	        43 => Ok(D10),
-	        44 => Ok(D11),
-	        45 => Ok(D12),
-	        46 => Ok(D13),
-	        47 => Ok(D14),
-	        48 => Ok(D15),
-	        49 => Ok(D16),
-	        50 => Ok(D17),
-	        51 => Ok(D18),
-	        52 => Ok(D19),
-	        53 => Ok(D20),
-	        54 => Ok(D21),
-	        55 => Ok(D22),
-	        56 => Ok(D23),
-	        57 => Ok(D24),
-	        58 => Ok(D25),
-	        59 => Ok(D26),
-	        60 => Ok(D27),
-	        61 => Ok(D28),
-	        62 => Ok(D29),
-	        63 => Ok(D30),
-	        64 => Ok(D31),
+            33 => Ok(D0),
+            34 => Ok(D1),
+            35 => Ok(D2),
+            36 => Ok(D3),
+            37 => Ok(D4),
+            38 => Ok(D5),
+            39 => Ok(D6),
+            40 => Ok(D7),
+            41 => Ok(D8),
+            42 => Ok(D9),
+            43 => Ok(D10),
+            44 => Ok(D11),
+            45 => Ok(D12),
+            46 => Ok(D13),
+            47 => Ok(D14),
+            48 => Ok(D15),
+            49 => Ok(D16),
+            50 => Ok(D17),
+            51 => Ok(D18),
+            52 => Ok(D19),
+            53 => Ok(D20),
+            54 => Ok(D21),
+            55 => Ok(D22),
+            56 => Ok(D23),
+            57 => Ok(D24),
+            58 => Ok(D25),
+            59 => Ok(D26),
+            60 => Ok(D27),
+            61 => Ok(D28),
+            62 => Ok(D29),
+            63 => Ok(D30),
+            64 => Ok(D31),
             _ => Err(format!("Unknown register: index = {:?}", value)),
         }
     }
@@ -292,15 +293,15 @@ where
 
 fn convert_reg(reg: capstone::RegId) -> Value<Aarch64Regs> {
     match reg.0 {
-        2 => Value::Reg(X29, Size64), // fp
-        3 => Value::Reg(X30, Size64), // lr
+        2 => Value::Reg(X29, Size64),  // fp
+        3 => Value::Reg(X30, Size64),  // lr
         4 => Value::Reg(Nzcv, Size64), // NZCV
-        5 => Value::Reg(X31, Size64), // sp
+        5 => Value::Reg(X31, Size64),  // sp
         r @ 9..=40 => Value::Reg(Aarch64Regs::try_from(r - 9).unwrap(), Size8),
         r @ 41..=72 => Value::Reg(Aarch64Regs::try_from(r - 41 + 33).unwrap(), Size64),
         r @ 73..=104 => Value::Reg(Aarch64Regs::try_from(r - 73).unwrap(), Size16),
         r @ 153..=184 => Value::Reg(Aarch64Regs::try_from(r - 153 + 33).unwrap(), Size32),
-        r @ 185..=215 =>  Value::Reg(Aarch64Regs::try_from(r - 185).unwrap(), Size32),
+        r @ 185..=215 => Value::Reg(Aarch64Regs::try_from(r - 185).unwrap(), Size32),
         r @ 216..=244 => Value::Reg(Aarch64Regs::try_from(r - 216).unwrap(), Size32),
         _ => panic!("Unknown register: {:?}", reg),
     }
@@ -312,17 +313,106 @@ fn generic_clear(cs: &Capstone, instr: &Aarch64Insn) -> Vec<Stmt<Aarch64Regs>> {
     let detail = cs.insn_detail(instr).expect("Unable to get detail");
     // let sources = get_sources(cs, instr, &detail);
     let regs_read = detail.regs_read();
-    println!("capstone reg sources: {:?}", reg_names(cs, regs_read.clone()));
+    // println!("capstone reg sources: {:?}", reg_names(cs, regs_read.clone()));
     let reg_sources: Vec<Value<Aarch64Regs>> = regs_read.map(|reg| convert_reg(reg)).collect();
-    println!("VW reg sources: {:?}", reg_sources);
+    // println!("VW reg sources: {:?}", reg_sources);
     let regs_write = detail.regs_write();
-    println!("capstone reg sources: {:?}", reg_names(cs, regs_write.clone()));
+    // println!("capstone reg sources: {:?}", reg_names(cs, regs_write.clone()));
     let reg_dsts: Vec<Value<Aarch64Regs>> = regs_write.map(|reg| convert_reg(reg)).collect();
-    println!("VW reg sources: {:?}", reg_dsts);
+    // println!("VW reg sources: {:?}", reg_dsts);
     for dst in reg_dsts {
         stmts.push(Stmt::Clear(dst, reg_sources.clone()));
     }
     stmts
+}
+
+fn convert_memargs(memargs: &Arm64OpMem, sz: &ValSize) -> Value<Aarch64Regs> {
+    let disp = MemArg::try_from(Value::from(memargs.disp() as i64)).unwrap();
+    let memargs = match (memargs.base().0, memargs.index().0) {
+        (0, 0) => MemArgs::Mem1Arg(disp),
+        (b, 0) => {
+            let base = MemArg::try_from(convert_reg(memargs.base())).unwrap();
+            MemArgs::Mem2Args(base, disp)
+        }
+        (b, i) => {
+            let base = MemArg::try_from(convert_reg(memargs.base())).unwrap();
+            let index = MemArg::try_from(convert_reg(memargs.index())).unwrap();
+            MemArgs::Mem3Args(base, index, disp)
+        }
+        (_, _) => panic!("Wierd looking memory access: {:?}", memargs),
+    };
+    Value::Mem(*sz, memargs)
+    // let base = MemArg::try_from(convert_reg(memargs.base())).unwrap();
+    // let index =  MemArg::try_from(convert_reg(memargs.index())).unwrap();
+    // let disp = MemArg::try_from(Value::from(memargs.disp() as i64)).unwrap();
+    // Value::Mem(*sz, MemArgs::Mem3Args(base, index, disp))
+}
+
+fn convert_operand_mem(cs: &Capstone, op: &Arm64Operand, sz: &ValSize) -> Value<Aarch64Regs> {
+    match &op.op_type {
+        Arm64OperandType::Mem(memargs) => convert_memargs(memargs, sz),
+        other => panic!("Unknown Operand in conver_memargs: {:?}", other),
+    }
+}
+
+fn convert_operand_no_mem(cs: &Capstone, op: &Arm64Operand) -> Value<Aarch64Regs> {
+    match &op.op_type {
+        Arm64OperandType::Reg(reg) => convert_reg(*reg),
+        Arm64OperandType::Imm(imm) => Value::from(*imm),
+        Arm64OperandType::Mem(memargs) => panic!(
+            "convert_operand_no_mem called on mem: memargs = {:?}",
+            memargs
+        ),
+        Arm64OperandType::Fp(f_imm) => panic!("unknnown operand: f_imm = {:?}", f_imm),
+        Arm64OperandType::Cimm(c_imm) => panic!("unknnown operand: c_imm = {:?}", c_imm),
+        other => panic!("Unknown Operand: {:?}", other),
+    }
+}
+
+fn get_aarch64_operands(cs: &Capstone, instr: &Aarch64Insn) -> Vec<Arm64Operand> {
+    let detail = cs.insn_detail(instr).expect("Unable to get detail");
+    let arch_detail = detail.arch_detail();
+    let operands = arch_detail.operands();
+    operands
+        .iter()
+        .map(|op| match op {
+            ArchOperand::Arm64Operand(inner) => inner.clone(),
+            _ => panic!("Not aarch64?"),
+        })
+        .collect()
+}
+
+fn unop(cs: &Capstone, opcode: Unopcode, instr: &Aarch64Insn) -> Stmt<Aarch64Regs> {
+    let operands = get_aarch64_operands(cs, instr);
+    assert_eq!(operands.len(), 2);
+    let dst = convert_operand_no_mem(cs, &operands[0]);
+    let src = convert_operand_no_mem(cs, &operands[1]);
+    Stmt::Unop(opcode, dst, src)
+}
+
+fn parse_call(cs: &Capstone, instr: &Aarch64Insn) -> Stmt<Aarch64Regs> {
+    let operands = get_aarch64_operands(cs, instr);
+    assert_eq!(operands.len(), 1);
+    let dst = convert_operand_no_mem(cs, &operands[0]);
+    Stmt::Call(dst)
+}
+
+fn parse_ldur(cs: &Capstone, instr: &Aarch64Insn) -> Stmt<Aarch64Regs> {
+    let operands = get_aarch64_operands(cs, instr);
+    assert_eq!(operands.len(), 2);
+    let dst = convert_operand_no_mem(cs, &operands[0]);
+    let sz = dst.get_size();
+    let src = convert_operand_mem(cs, &operands[1], &sz);
+    Stmt::Unop(Unopcode::Mov, dst, src)
+}
+
+fn parse_stur(cs: &Capstone, instr: &Aarch64Insn) -> Stmt<Aarch64Regs> {
+    let operands = get_aarch64_operands(cs, instr);
+    assert_eq!(operands.len(), 2);
+    let src = convert_operand_no_mem(cs, &operands[0]);
+    let sz = src.get_size();
+    let dst = convert_operand_mem(cs, &operands[1], &sz);
+    Stmt::Unop(Unopcode::Mov, dst, src)
 }
 
 pub fn lift(
@@ -333,7 +423,12 @@ pub fn lift(
     strict: bool,
 ) -> Vec<Stmt<Aarch64Regs>> {
     let mut instrs = Vec::new();
-    match instr.mnemonic() {
+    match instr.mnemonic().unwrap() {
+        "ret" => instrs.push(Stmt::Ret),
+        "mov" => instrs.push(unop(cs, Unopcode::Mov, instr)),
+        "blr" => instrs.push(parse_call(cs, instr)),
+        "ldur" => instrs.push(parse_ldur(cs, instr)),
+        "stur" => instrs.push(parse_stur(cs, instr)),
         other_insn => {
             if strict {
                 println!("Unknown instruction: {:?}", other_insn);
@@ -394,6 +489,60 @@ fn disas_aarch64<'a>(cs: &'a Capstone, buf: &[u8], addr: u64) -> capstone::Instr
     }
 }
 
+fn ends_in_check(block: &VW_Block, instrs: &capstone::Instructions, buf: &[u8]) -> bool {
+    let last_instr = instrs.last().unwrap();
+    let bytes_read = last_instr.address() + last_instr.bytes().len() as u64;
+    if last_instr.mnemonic() == Some("b.hs") {
+        if bytes_read <= block.end - block.start {
+            let rest = &buf[(block.start + bytes_read) as usize..(block.end as usize)];
+            return &rest[0..4] == [0, 0, 160, 212];
+        }
+    }
+    false
+}
+
+fn lift_block(
+    cs: &Capstone,
+    module: &VwModule,
+    block: &VW_Block,
+    buf: &[u8],
+    strict: bool,
+) -> IRBlock<Aarch64Regs> {
+    // block range is inclusive, range here is excl
+    let instrs = disas_aarch64(&cs, buf, block.start);
+    let last_instr = instrs.last().unwrap();
+    let bytes_read = last_instr.address() + last_instr.bytes().len() as u64;
+    //  println!("Dissassembled = [0x{:x}:0x{:x}] from block [0x{:x}:0x{:x}]", block.start, bytes_read, block.start, block.end);
+    println!("Disas_aarch64({:x}, {:?}) = ", block.start, buf.len());
+    for instr in instrs.iter() {
+        println!(
+            "0x{:x}: {:?} {:?}",
+            instr.address(),
+            instr.mnemonic(),
+            instr.op_str()
+        );
+    }
+    //  if last_instr.mnemonic() == Some("b.hs") {
+    //     if bytes_read <= block.end - block.start{
+    //         let rest = &buf[(block.start + bytes_read) as usize.. (block.end as usize) ];
+    //         println!("{:?}", &rest[0..4] == [0, 0, 160, 212]);
+    //     }
+    //  }
+    let mut block_ir = parse_instrs(&cs, &instrs, &module.metadata, strict);
+
+    if ends_in_check(&block, &instrs, buf) {
+        let new_instrs = disas_aarch64(
+            &cs,
+            &buf[(bytes_read + 4) as usize..],
+            block.start + bytes_read + 4,
+        );
+        let new_ir = parse_instrs(&cs, &new_instrs, &module.metadata, strict);
+        block_ir.extend(new_ir);
+    }
+    println!("After that:");
+    block_ir
+}
+
 pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Aarch64Regs> {
     let mut irmap = IRMap::new();
     let g = &cfg.graph;
@@ -412,9 +561,10 @@ pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap<Aarch64R
 
     for block_addr in g.nodes() {
         let block = cfg.get_block(block_addr);
-        let buf = &text_segment.data[block.start as usize..block.end as usize];
-        let instrs = disas_aarch64(&cs, buf, block.start);
-        let block_ir = parse_instrs(&cs, &instrs, &module.metadata, strict);
+        // block range is inclusive, range here is excl
+        let buf = &text_segment.data[block.start as usize..=block.end as usize];
+        let block_ir = lift_block(&cs, module, &block, buf, strict);
+
         irmap.insert(block_addr, block_ir);
     }
     irmap
@@ -440,6 +590,6 @@ impl RegT for Aarch64Regs {
     }
 
     fn pinned_heap_reg() -> Self {
-        unimplemented!()
+        X0
     }
 }

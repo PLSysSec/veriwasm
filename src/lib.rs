@@ -10,8 +10,8 @@ pub mod loaders;
 pub mod runner;
 
 use analyses::run_worklist;
-use analyses::HeapAnalyzer;
-use checkers::check_heap;
+use analyses::{HeapAnalyzer, StackAnalyzer};
+use checkers::{check_heap, check_stack};
 // use ir::lift_cfg;
 use crate::ir::types::X86Regs;
 use ir::types::IRMap;
@@ -25,6 +25,7 @@ use yaxpeax_core::memory::repr::process::{ModuleData, ModuleInfo, Segment};
 
 #[derive(Clone, Copy, Debug)]
 pub enum ValidationError {
+    StackUnsafe,
     HeapUnsafe,
     Other(&'static str),
 }
@@ -236,6 +237,7 @@ pub fn validate_wasmtime_func(
     cfg_edges: &[(usize, usize)],
     arch_str: &str,
 ) -> Result<(), ValidationError> {
+    // env_logger::init();
     println!("VeriWasm is verifying the Wasmtime aot compilation!");
     let arch = VwArch::from_str(arch_str).map_err(|err| ValidationError::Other(err))?;
     println!("Arch = {:?}", arch);
@@ -244,11 +246,39 @@ pub fn validate_wasmtime_func(
     let module = create_dummy_module(code, ExecutableType::Wasmtime, arch);
     match arch {
         VwArch::X64 => {
-            let ircfh = x64_lift_cfg(&module, &cfg, false);
+            let irmap = x64_lift_cfg(&module, &cfg, false);
         }
         VwArch::Aarch64 => {
-            let ircfg = aarch64_lift_cfg(&module, &cfg, false);
-            println!("{:?}", ircfg);
+            let irmap = aarch64_lift_cfg(&module, &cfg, false);
+            println!("CFG entry: {:x}", cfg.entrypoint);
+            for (_, block) in cfg.blocks.iter() {
+                println!("CFG block: [0x{:x} : 0x{:x}]", block.start, block.end);
+            }
+            println!("CFG graph: {:?}", cfg.graph);
+
+            for (baddr, block) in irmap.iter() {
+                println!("{:x} ============ ", baddr);
+                for (addr, ir_instr) in block.iter() {
+                    println!("  {:x} {:?}", addr, ir_instr);
+                }
+            }
+            //println!("{:?}", irmap);
+
+            let stack_analyzer = StackAnalyzer {};
+            let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
+            let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
+            // if !stack_safe {
+            //     return Err(ValidationError::StackUnsafe);
+            // }
+
+            // let heap_analyzer = HeapAnalyzer {
+            //     metadata: module.metadata.clone(),
+            // };
+            // let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
+            // let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
+            // if !heap_safe {
+            //     return Err(ValidationError::HeapUnsafe);
+            // }
         }
     }
     // let irmap: IRMap<X86Regs> = x64_lift_cfg(&module, &cfg, false);
