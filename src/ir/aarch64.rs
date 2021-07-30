@@ -88,6 +88,8 @@ pub enum Aarch64Regs {
     D29,
     D30,
     D31,
+
+    Xz,
 }
 
 use self::Aarch64Regs::*;
@@ -203,6 +205,7 @@ impl TryFrom<u16> for Aarch64Regs {
             62 => Ok(D29),
             63 => Ok(D30),
             64 => Ok(D31),
+            65 => Ok(Xz),
             _ => Err(format!("Unknown register: index = {:?}", value)),
         }
     }
@@ -237,66 +240,15 @@ where
     names.join(", ")
 }
 
-// // Captures all register and flag sources
-// // TODO: Memory?
-// fn get_sources(cs: &Capstone, instr: &Aarch64Insn, detail: &InsnDetail) -> Vec<Value> {
-//     let regs_read = detail.regs_read().iter().map(|&op| convert_op(op));
-//     println!("{:?}", regs_read);
-//     println!("regs read: {}", reg_names(cs, regs_read));
-//     let regs_written = detail.regs_write().iter().map(|&op| convert_op(op));
-//     println!("{:?}", regs_written);
-//     println!("regs written: {}", reg_names(cs, regs_written));
-
-//     let arch_detail = detail.arch_detail();
-//     let operands = arch_detail.operands();
-//     println!("{:?} {:?}", instr, arch_detail);
-//     for op in operands{
-//         // let op: Arm64Operand = op.into();
-//         match op {
-//             ArchOperand::Arm64Operand(inner) => { println!("{:?} {:?}", inner.op_type, inner.access ); }
-//             _ => panic!("Not aarch64?")
-//         }
-
-//     }
-//     unimplemented!();
-
-//     // let uses_vec = <AMD64 as ValueLocations>::decompose(instr);
-//     // let mut sources = Vec::new();
-//     // for (loc, dir) in uses_vec {
-//     //     match (loc, dir) {
-//     //         (Some(Location::Register(reg)), Direction::Read) => {
-//     //             sources.push(convert_reg(reg));
-//     //         }
-//     //         (Some(Location::ZF), Direction::Read) => {
-//     //             sources.push(Value::Reg(Zf, Size8));
-//     //         }
-//     //         (Some(Location::CF), Direction::Read) => {
-//     //             sources.push(Value::Reg(Cf, Size8));
-//     //         }
-//     //         (Some(Location::UnevalMem(op)), Direction::Read) => {
-//     //             sources.push(convert_operand(op, Size32)); // is Size32 right?
-//     //         }
-//     //         _ => {}
-//     //     }
-//     // }
-//     // return sources;
-// }
-
-// "ffr",
-// "fp",
-// "lr",
-// "nzcv",
-// "sp",
-// "wsp",
-// "wzr",
-// "xzr",
-
 fn convert_reg(reg: capstone::RegId) -> Value<Aarch64Regs> {
     match reg.0 {
         2 => Value::Reg(X29, Size64),  // fp
         3 => Value::Reg(X30, Size64),  // lr
         4 => Value::Reg(Nzcv, Size64), // NZCV
         5 => Value::Reg(X31, Size64),  // sp
+        7 => Value::Reg(Xz, Size32), // wzr
+        8 => Value::Reg(Xz, Size64), // xzr
+
         r @ 9..=40 => Value::Reg(Aarch64Regs::try_from(r - 9).unwrap(), Size8),
         r @ 41..=72 => Value::Reg(Aarch64Regs::try_from(r - 41 + 33).unwrap(), Size64),
         r @ 73..=104 => Value::Reg(Aarch64Regs::try_from(r - 73).unwrap(), Size16),
@@ -317,9 +269,9 @@ fn generic_clear(cs: &Capstone, instr: &Aarch64Insn) -> Vec<Stmt<Aarch64Regs>> {
     let reg_sources: Vec<Value<Aarch64Regs>> = regs_read.map(|reg| convert_reg(reg)).collect();
     // println!("VW reg sources: {:?}", reg_sources);
     let regs_write = detail.regs_write();
-    // println!("capstone reg sources: {:?}", reg_names(cs, regs_write.clone()));
+    // println!("capstone reg dsts: {:?}", reg_names(cs, regs_write.clone()));
     let reg_dsts: Vec<Value<Aarch64Regs>> = regs_write.map(|reg| convert_reg(reg)).collect();
-    // println!("VW reg sources: {:?}", reg_dsts);
+    // println!("VW reg dsts: {:?}", reg_dsts);
     for dst in reg_dsts {
         stmts.push(Stmt::Clear(dst, reg_sources.clone()));
     }
@@ -327,25 +279,32 @@ fn generic_clear(cs: &Capstone, instr: &Aarch64Insn) -> Vec<Stmt<Aarch64Regs>> {
 }
 
 fn convert_memargs(memargs: &Arm64OpMem, sz: &ValSize) -> Value<Aarch64Regs> {
-    let disp = MemArg::try_from(Value::from(memargs.disp() as i64)).unwrap();
+    let imm = memargs.disp() as i64;
+    let disp = MemArg::try_from(Value::from(imm)).unwrap();
     let memargs = match (memargs.base().0, memargs.index().0) {
         (0, 0) => MemArgs::Mem1Arg(disp),
         (b, 0) => {
             let base = MemArg::try_from(convert_reg(memargs.base())).unwrap();
-            MemArgs::Mem2Args(base, disp)
+            if imm == 0{
+                MemArgs::Mem1Arg(base)
+            }
+            else{
+                MemArgs::Mem2Args(base, disp)
+            }
         }
         (b, i) => {
             let base = MemArg::try_from(convert_reg(memargs.base())).unwrap();
             let index = MemArg::try_from(convert_reg(memargs.index())).unwrap();
-            MemArgs::Mem3Args(base, index, disp)
+            if imm == 0 {
+                MemArgs::Mem2Args(base, index)
+            }
+            else{
+                MemArgs::Mem3Args(base, index, disp)
+            }
         }
         (_, _) => panic!("Wierd looking memory access: {:?}", memargs),
     };
     Value::Mem(*sz, memargs)
-    // let base = MemArg::try_from(convert_reg(memargs.base())).unwrap();
-    // let index =  MemArg::try_from(convert_reg(memargs.index())).unwrap();
-    // let disp = MemArg::try_from(Value::from(memargs.disp() as i64)).unwrap();
-    // Value::Mem(*sz, MemArgs::Mem3Args(base, index, disp))
 }
 
 fn convert_operand_mem(cs: &Capstone, op: &Arm64Operand, sz: &ValSize) -> Value<Aarch64Regs> {
@@ -397,6 +356,13 @@ fn parse_call(cs: &Capstone, instr: &Aarch64Insn) -> Stmt<Aarch64Regs> {
     Stmt::Call(dst)
 }
 
+// fn do_load(){
+//     let dst = convert_operand_no_mem(cs, &operands[0]);
+//     let sz = dst.get_size();
+//     let src = convert_operand_mem(cs, &operands[1], &sz);
+//     Stmt::Unop(Unopcode::Mov, dst, src)
+// }
+
 fn parse_ldur(cs: &Capstone, instr: &Aarch64Insn) -> Stmt<Aarch64Regs> {
     let operands = get_aarch64_operands(cs, instr);
     assert_eq!(operands.len(), 2);
@@ -415,6 +381,57 @@ fn parse_stur(cs: &Capstone, instr: &Aarch64Insn) -> Stmt<Aarch64Regs> {
     Stmt::Unop(Unopcode::Mov, dst, src)
 }
 
+fn parse_ldp(cs: &Capstone, instr: &Aarch64Insn) -> Vec<Stmt<Aarch64Regs>> {
+    let mut instrs = Vec::new();
+    let operands = get_aarch64_operands(cs, instr);
+    assert_eq!(operands.len(), 4);
+    let dst0 = convert_operand_no_mem(cs, &operands[0]);
+    let dst1 = convert_operand_no_mem(cs, &operands[1]);
+    let sz = dst0.get_size();
+    let src = convert_operand_mem(cs, &operands[2], &sz);
+    let offset = convert_operand_no_mem(cs, &operands[3]);
+    let off = offset.to_imm();
+    let i0 = Stmt::Unop(Unopcode::Mov, dst0, src.add_imm(off));
+    let i1 = Stmt::Binop(Binopcode::Add, Value::Reg(X31, Size64), Value::Reg(X31, Size64), Value::from(8));
+    let i2 = Stmt::Unop(Unopcode::Mov, dst1, src.add_imm(off));
+    let i3 = Stmt::Binop(Binopcode::Add, Value::Reg(X31, Size64), Value::Reg(X31, Size64), Value::from(8));
+    instrs.push(i0);
+    instrs.push(i1);
+    instrs.push(i2);
+    instrs.push(i3);
+    return instrs;
+}
+
+fn parse_stp(cs: &Capstone, instr: &Aarch64Insn) -> Vec<Stmt<Aarch64Regs>> {
+    let mut instrs = Vec::new();
+    let operands = get_aarch64_operands(cs, instr);
+    assert_eq!(operands.len(), 3);
+    let src0 = convert_operand_no_mem(cs, &operands[0]);
+    let src1 = convert_operand_no_mem(cs, &operands[1]);
+    let sz = src0.get_size();
+    let dst = convert_operand_mem(cs, &operands[2], &sz);
+    // let offset = convert_operand_no_mem(cs, &operands[3]);
+    // let off = offset.to_imm();
+
+    let i0 = Stmt::Unop(Unopcode::Mov, src0, dst.clone());
+    let i1 = Stmt::Binop(Binopcode::Add, Value::Reg(X31, Size64), Value::Reg(X31, Size64), Value::from(-8));
+    let i2 = Stmt::Unop(Unopcode::Mov, src1, dst);
+    let i3 = Stmt::Binop(Binopcode::Add, Value::Reg(X31, Size64), Value::Reg(X31, Size64), Value::from(-8));
+    instrs.push(i0);
+    instrs.push(i1);
+    instrs.push(i2);
+    instrs.push(i3);
+    return instrs;
+}
+
+fn parse_cmp(cs: &Capstone, instr: &Aarch64Insn) -> Stmt<Aarch64Regs> {
+    let operands = get_aarch64_operands(cs, instr);
+    assert_eq!(operands.len(), 2);
+    let src0 = convert_operand_no_mem(cs, &operands[0]);
+    let src1 = convert_operand_no_mem(cs, &operands[1]);
+    return Stmt::Binop(Binopcode::Cmp, Value::Reg(Nzcv, Size8), src0, src1);
+}
+
 pub fn lift(
     cs: &Capstone,
     instr: &Aarch64Insn,
@@ -429,6 +446,9 @@ pub fn lift(
         "blr" => instrs.push(parse_call(cs, instr)),
         "ldur" => instrs.push(parse_ldur(cs, instr)),
         "stur" => instrs.push(parse_stur(cs, instr)),
+        "ldp" => instrs.extend(parse_ldp(cs, instr)),
+        "stp" => instrs.extend(parse_stp(cs, instr)),
+        "cmp" => instrs.push(parse_cmp(cs, instr)),
         other_insn => {
             if strict {
                 println!("Unknown instruction: {:?}", other_insn);
@@ -510,9 +530,12 @@ fn lift_block(
 ) -> IRBlock<Aarch64Regs> {
     // block range is inclusive, range here is excl
     let instrs = disas_aarch64(&cs, buf, block.start);
-    let last_instr = instrs.last().unwrap();
-    let bytes_read = last_instr.address() + last_instr.bytes().len() as u64;
-    //  println!("Dissassembled = [0x{:x}:0x{:x}] from block [0x{:x}:0x{:x}]", block.start, bytes_read, block.start, block.end);
+    // if instrs.len() == 0{
+    //     return 
+    // }
+    println!("{:?} length = {:?}", block, instrs.len());
+    // let last_instr = instrs.last().unwrap();
+    // let bytes_read = last_instr.address() + last_instr.bytes().len() as u64;
     println!("Disas_aarch64({:x}, {:?}) = ", block.start, buf.len());
     for instr in instrs.iter() {
         println!(
@@ -522,15 +545,11 @@ fn lift_block(
             instr.op_str()
         );
     }
-    //  if last_instr.mnemonic() == Some("b.hs") {
-    //     if bytes_read <= block.end - block.start{
-    //         let rest = &buf[(block.start + bytes_read) as usize.. (block.end as usize) ];
-    //         println!("{:?}", &rest[0..4] == [0, 0, 160, 212]);
-    //     }
-    //  }
     let mut block_ir = parse_instrs(&cs, &instrs, &module.metadata, strict);
-
+    // Deal with undefined instructions stopping disassembly
     if ends_in_check(&block, &instrs, buf) {
+        let last_instr = instrs.last().unwrap();
+        let bytes_read = last_instr.address() + last_instr.bytes().len() as u64;
         let new_instrs = disas_aarch64(
             &cs,
             &buf[(bytes_read + 4) as usize..],
@@ -539,7 +558,6 @@ fn lift_block(
         let new_ir = parse_instrs(&cs, &new_instrs, &module.metadata, strict);
         block_ir.extend(new_ir);
     }
-    println!("After that:");
     block_ir
 }
 

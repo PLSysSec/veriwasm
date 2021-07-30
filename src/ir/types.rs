@@ -96,6 +96,15 @@ pub enum MemArg<Ar> {
     Imm(ImmType, ValSize, i64), // signed, size, const
 }
 
+impl<Ar: RegT> MemArgs<Ar> {
+    fn add_imm(&self, imm: i64) -> Self {
+        match self{
+            MemArgs::Mem1Arg(arg) => MemArgs::Mem2Args(arg.clone(), MemArg::Imm(ImmType::Signed, Size64, imm)),
+            _ => panic!("adding to bad memargs"),
+        }
+    }
+}
+
 impl<Ar: RegT> TryFrom<Value<Ar>> for MemArg<Ar> {
     type Error = &'static str;
 
@@ -163,6 +172,20 @@ impl<Ar: RegT> Value<Ar> {
         match self {
             Value::Reg(r, _) if r.is_zf() => return true,
             _ => return false,
+        }
+    }
+
+    pub fn to_imm(&self) -> i64 {
+        match self {
+            Value::Imm(_,r, _) => return r.into_bytes().into(),
+            _ => panic!("Not an imm"),
+        }
+    }
+
+    pub fn add_imm(&self, imm: i64) -> Self {
+        match self{
+            Value::Mem(sz, memargs) => Value::Mem(*sz, memargs.add_imm(imm)),
+            _ => panic!("adding to bad value"),
         }
     }
 }
