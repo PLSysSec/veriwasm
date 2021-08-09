@@ -58,7 +58,10 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, StackGrowthLattice> for StackAnalyzer {
         match ir_instr {
             Stmt::Clear(dst, _) => {
                 if dst.is_rsp() {
-                    *in_state = Default::default()
+                    *in_state = Default::default();
+                    // if in_state.v.is_none(){
+                    //     panic!("1. No known stack growth: 0x{:x}: {:?}", loc_idx.addr, ir_instr)
+                    // }
                 }
             }
             Stmt::Unop(Unopcode::Mov, dst, src) if dst.is_rsp() && src.is_rbp() => {
@@ -73,7 +76,10 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, StackGrowthLattice> for StackAnalyzer {
             }
             Stmt::Unop(_, dst, _) => {
                 if dst.is_rsp() {
-                    *in_state = Default::default()
+                    *in_state = Default::default();
+                    // if in_state.v.is_none(){
+                    //     panic!("2. No known stack growth: 0x{:x}: {:?}", loc_idx.addr, ir_instr)
+                    // }
                 }
             }
             Stmt::Binop(Binopcode::Cmp, _, _, _) => (),
@@ -86,6 +92,10 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, StackGrowthLattice> for StackAnalyzer {
                 );
                 if dst.is_rsp() {
                     *in_state = self.aeval_binop(in_state, opcode, src1, src2);
+                    // if in_state.v.is_none(){
+                    //     println!("{:?} {:?} {:?} {:?}", src1, src2, src1.is_rsp(), in_state.v);
+                    //     panic!("3. No known stack growth: 0x{:x}: {:?}", loc_idx.addr, ir_instr)
+                    // }
                 }
             }
             Stmt::ProbeStack(new_probestack) => {
@@ -97,6 +107,12 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, StackGrowthLattice> for StackAnalyzer {
                 }
             }
             _ => (),
+        }
+        if in_state.v.is_none() {
+            panic!(
+                "No known stack growth: 0x{:x}: {:?}",
+                loc_idx.addr, ir_instr
+            )
         }
     }
 }

@@ -150,8 +150,12 @@ pub fn run_worklist<T: AbstractAnalyzer<Ar, State>, State: VarState + Lattice + 
                 }
                 let has_change = *old_state != merged_state;
                 log::debug!(
-                    "At block 0x{:x}: merged input {:?}",
+                    "At block 0x{:x}: 0x{:x}={:?} + 0x{:x}={:?} => merged input {:?}",
                     succ_addr,
+                    addr,
+                    old_state,
+                    succ_addr,
+                    branch_state,
                     merged_state
                 );
                 statemap.insert(succ_addr, merged_state);

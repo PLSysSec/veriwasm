@@ -98,8 +98,10 @@ pub enum MemArg<Ar> {
 
 impl<Ar: RegT> MemArgs<Ar> {
     fn add_imm(&self, imm: i64) -> Self {
-        match self{
-            MemArgs::Mem1Arg(arg) => MemArgs::Mem2Args(arg.clone(), MemArg::Imm(ImmType::Signed, Size64, imm)),
+        match self {
+            MemArgs::Mem1Arg(arg) => {
+                MemArgs::Mem2Args(arg.clone(), MemArg::Imm(ImmType::Signed, Size64, imm))
+            }
             _ => panic!("adding to bad memargs"),
         }
     }
@@ -145,10 +147,22 @@ pub enum Value<Ar> {
 }
 
 impl<Ar: RegT> Value<Ar> {
+    pub fn is_mem(&self) -> bool {
+        matches!(self, Value::Mem(_, _))
+    }
+
+    pub fn is_imm(&self) -> bool {
+        matches!(self, Value::Imm(_, _, _))
+    }
+
+    pub fn is_reg(&self) -> bool {
+        matches!(self, Value::Reg(_, _))
+    }
+
     pub fn get_size(&self) -> ValSize {
         match self {
             Value::Mem(sz, _) | Value::Reg(_, sz) | Value::Imm(_, sz, _) => *sz,
-            RIPConst => Size64,
+            Value::RIPConst => Size64,
         }
     }
 
@@ -177,13 +191,13 @@ impl<Ar: RegT> Value<Ar> {
 
     pub fn to_imm(&self) -> i64 {
         match self {
-            Value::Imm(_,r, _) => return r.into_bytes().into(),
+            Value::Imm(_, r, _) => return r.into_bytes().into(),
             _ => panic!("Not an imm"),
         }
     }
 
     pub fn add_imm(&self, imm: i64) -> Self {
-        match self{
+        match self {
             Value::Mem(sz, memargs) => Value::Mem(*sz, memargs.add_imm(imm)),
             _ => panic!("adding to bad value"),
         }

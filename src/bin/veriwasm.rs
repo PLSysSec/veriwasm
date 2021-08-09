@@ -71,7 +71,7 @@ fn main() {
         ExecutableType::from_str(matches.value_of("executable type").unwrap_or("lucet")).unwrap();
     let arch = VwArch::from_str(matches.value_of("architecture").unwrap_or("x64")).unwrap();
 
-    let has_output = if output_path == "" { false } else { true };
+    let has_output = output_path != "";
 
     let active_passes = PassConfig {
         stack: !disable_stack_checks,
@@ -80,11 +80,11 @@ fn main() {
         zero_cost: enable_zero_cost_checks,
     };
 
-    let config = Config {
+    let _config = Config {
         module_path: module_path.to_string(),
         _num_jobs: num_jobs,
         output_path: output_path.to_string(),
-        has_output: has_output,
+        has_output,
         only_func,
         executable_type,
         active_passes,

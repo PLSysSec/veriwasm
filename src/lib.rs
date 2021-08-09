@@ -98,7 +98,7 @@ fn get_cfg_from_compiler_info(
 fn create_dummy_module(code: &[u8], format: ExecutableType, arch: VwArch) -> VwModule {
     let seg = Segment {
         start: 0,
-        data: code.iter().cloned().collect(),
+        data: code.to_vec(),
         name: ".text".to_owned(),
     };
     let header = yaxpeax_core::goblin::elf::header::Header {
@@ -216,7 +216,7 @@ pub fn validate_heap(
     // that goes through the compilation pipeline with opt passes like
     // all other code. It's also the fastest and simplest to check.
     let heap_analyzer = HeapAnalyzer {
-        metadata: module.metadata.clone(),
+        metadata: module.metadata,
     };
     let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
     // let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
@@ -236,12 +236,21 @@ pub fn validate_wasmtime_func(
     basic_blocks: &[usize],
     cfg_edges: &[(usize, usize)],
     arch_str: &str,
+    func_name: String,
 ) -> Result<(), ValidationError> {
     // env_logger::init();
-    println!("VeriWasm is verifying the Wasmtime aot compilation!");
+    // if func_name != "_wasm_function_569"{
+    // if func_name != "u0:430"{
+    //     return Ok(());
+    // }
+
+    println!(
+        "VeriWasm is verifying the Wasmtime aot compilation: {}",
+        func_name
+    );
     let arch = VwArch::from_str(arch_str).map_err(|err| ValidationError::Other(err))?;
     println!("Arch = {:?}", arch);
-    println!("{:?} {:?} {:?}", code.len(), basic_blocks, cfg_edges);
+    // println!("{:?} {:?} {:?}", code.len(), basic_blocks, cfg_edges);
     let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
     let module = create_dummy_module(code, ExecutableType::Wasmtime, arch);
     match arch {
@@ -250,14 +259,20 @@ pub fn validate_wasmtime_func(
         }
         VwArch::Aarch64 => {
             let irmap = aarch64_lift_cfg(&module, &cfg, false);
-            println!("CFG entry: {:x}", cfg.entrypoint);
-            for (_, block) in cfg.blocks.iter() {
-                println!("CFG block: [0x{:x} : 0x{:x}]", block.start, block.end);
-            }
-            println!("CFG graph: {:?}", cfg.graph);
+            // println!("CFG entry: {:x}", cfg.entrypoint);
+            // for (_, block) in cfg.blocks.iter() {
+            //     println!("CFG block: [0x{:x} : 0x{:x}]", block.start, block.end);
+            // }
+            // println!("CFG graph: {:?}", cfg.graph);
 
             for (baddr, block) in irmap.iter() {
-                println!("{:x} ============ ", baddr);
+                println!(
+                    "[{:x}:{:x}] ============",
+                    cfg.get_block(*baddr).start,
+                    cfg.get_block(*baddr).end
+                );
+                println!("Predecessors: {:x?}", cfg.predecessors(*baddr));
+                println!("Destinations: {:x?}", cfg.destinations(*baddr));
                 for (addr, ir_instr) in block.iter() {
                     println!("  {:x} {:?}", addr, ir_instr);
                 }
@@ -267,9 +282,9 @@ pub fn validate_wasmtime_func(
             let stack_analyzer = StackAnalyzer {};
             let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
             let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
-            // if !stack_safe {
-            //     return Err(ValidationError::StackUnsafe);
-            // }
+            if !stack_safe {
+                return Err(ValidationError::StackUnsafe);
+            }
 
             // let heap_analyzer = HeapAnalyzer {
             //     metadata: module.metadata.clone(),

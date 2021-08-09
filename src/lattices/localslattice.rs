@@ -25,7 +25,7 @@ impl PartialOrd for SlotVal {
             (Init, _) => Some(Greater),
             (_, Init) => Some(Less),
             (UninitCalleeReg(r1), UninitCalleeReg(r2)) => {
-                if r1 == r1 {
+                if r1 == r2 {
                     Some(Equal)
                 } else {
                     None
