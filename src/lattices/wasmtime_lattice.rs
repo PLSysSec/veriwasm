@@ -1,4 +1,5 @@
 use crate::lattices::{ConstLattice, VariableState};
+use std::collections::HashMap;
 
 type WasmtimeResult<T> = Result<T, &'static str>;
 
@@ -8,6 +9,7 @@ type WasmtimeResult<T> = Result<T, &'static str>;
 /// Ptrs are implied to be read-only
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum FieldDesc {
+    R,
     Rw,
     Rx,
     Ptr(Box<FieldDesc>),
@@ -80,3 +82,5 @@ impl WasmtimeValue {
 pub type WasmtimeValueLattice = ConstLattice<WasmtimeValue>;
 
 pub type WasmtimeLattice<Ar> = VariableState<Ar, WasmtimeValueLattice>;
+
+pub type VMOffsets = HashMap<i64, FieldDesc>;

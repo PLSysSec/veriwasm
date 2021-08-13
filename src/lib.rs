@@ -10,12 +10,13 @@ pub mod loaders;
 pub mod runner;
 
 use analyses::run_worklist;
-use analyses::{HeapAnalyzer, StackAnalyzer};
-use checkers::{check_heap, check_stack};
+use analyses::{HeapAnalyzer, StackAnalyzer, WasmtimeAnalyzer};
+use checkers::{check_heap, check_stack, check_wasmtime};
 // use ir::lift_cfg;
 use crate::ir::types::X86Regs;
 use ir::types::IRMap;
 use ir::{aarch64_lift_cfg, x64_lift_cfg};
+use lattices::wasmtime_lattice::{FieldDesc, VMOffsets};
 use loaders::types::{ExecutableType, VwArch, VwMetadata, VwModule};
 use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;
@@ -232,6 +233,13 @@ pub fn wasmtime_test_hook() {
     println!("Wasmtime has called into VeriWasm!");
 }
 
+fn get_vm_offsets() -> VMOffsets {
+    let mut offsets = HashMap::new();
+    offsets.insert(36, FieldDesc::Rx); // ??
+    offsets.insert(44, FieldDesc::R); // ??
+    offsets
+}
+
 pub fn validate_wasmtime_func(
     code: &[u8],
     basic_blocks: &[usize],
@@ -287,13 +295,11 @@ pub fn validate_wasmtime_func(
             //     return Err(ValidationError::StackUnsafe);
             // }
             println!("Checking heap for {}", func_name);
-
-            let heap_analyzer = HeapAnalyzer {
-                metadata: module.metadata.clone(),
-            };
-            let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
-            let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer, &HashMap::new());
-            if !heap_safe {
+            let offsets = get_vm_offsets();
+            let wasmtime_analyzer = WasmtimeAnalyzer { offsets };
+            let wasmtime_result = run_worklist(&cfg, &irmap, &wasmtime_analyzer);
+            let wasmtime_safe = check_wasmtime(wasmtime_result, &irmap, &wasmtime_analyzer);
+            if !wasmtime_safe {
                 return Err(ValidationError::HeapUnsafe);
             }
         }

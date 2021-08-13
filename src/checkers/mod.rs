@@ -17,6 +17,7 @@ mod wasmtime_checker;
 pub use self::heap_checker::check_heap;
 // pub use self::jump_resolver::resolve_jumps;
 pub use self::stack_checker::check_stack;
+pub use self::wasmtime_checker::check_wasmtime;
 
 pub trait Checker<Ar: RegT, State: Lattice + Clone> {
     fn check(&self, result: AnalysisResult<State>) -> bool;

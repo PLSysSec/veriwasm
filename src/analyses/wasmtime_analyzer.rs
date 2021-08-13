@@ -3,7 +3,9 @@ use analyses::{AbstractAnalyzer, AnalysisResult};
 use ir::types::{Binopcode, MemArg, MemArgs, RegT, Stmt, Unopcode, ValSize, Value};
 use ir::utils::{extract_stack_offset, is_stack_access};
 use lattices::reachingdefslattice::LocIdx;
-use lattices::wasmtime_lattice::{FieldDesc, WasmtimeLattice, WasmtimeValue, WasmtimeValueLattice};
+use lattices::wasmtime_lattice::{
+    FieldDesc, VMOffsets, WasmtimeLattice, WasmtimeValue, WasmtimeValueLattice,
+};
 use lattices::{ConstLattice, VarState};
 // use loaders::types::VwMetadata;
 use std::collections::HashMap;
@@ -13,11 +15,8 @@ use FieldDesc::*;
 use ValSize::*;
 use WasmtimeValue::*;
 
-type VMOffsets = HashMap<i64, FieldDesc>;
-
 pub struct WasmtimeAnalyzer {
-    offsets: VMOffsets,
-    //pub metadata: VwMetadata,
+    pub offsets: VMOffsets,
 }
 
 impl<Ar: RegT> AbstractAnalyzer<Ar, WasmtimeLattice<Ar>> for WasmtimeAnalyzer {
@@ -200,7 +199,11 @@ impl WasmtimeAnalyzer {
                 // 3. mem[VmCtx + c] => offsets[c]
                 let v1 = in_state.regs.get_reg(arg1.to_reg(), Size64).v?;
                 if v1.is_vmctx() && arg2.is_imm() {
-                    let field = self.offsets[&arg2.to_imm()].clone();
+                    let k = &arg2.to_imm();
+                    if !self.offsets.contains_key(k) {
+                        println!("VMCtx field not present: {:?}", k);
+                    }
+                    let field = self.offsets[k].clone();
                     return Some(WasmtimeValueLattice::new(VmCtxField(field)));
                 }
             }

@@ -147,7 +147,7 @@ impl<Ar: RegT> MemArg<Ar> {
 
     pub fn to_imm(&self) -> i64 {
         match self {
-            Self::Imm(_, r, _) => return r.into_bytes().into(),
+            Self::Imm(_, _, v) => return *v,
             _ => panic!("Not an imm"),
         }
     }

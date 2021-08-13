@@ -110,7 +110,7 @@ impl<Ar: RegT> Checker<Ar, WasmtimeLattice<Ar>> for WasmtimeChecker<'_, Ar> {
 }
 
 impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
-    fn check_heap_access(&self, state: &WasmtimeLattice<Ar>, access: &Value<Ar>) -> bool {
+    fn is_heap_access(&self, state: &WasmtimeLattice<Ar>, access: &Value<Ar>) -> bool {
         match access.to_mem() {
             // 1. mem[heapbase]
             MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64)) => {
@@ -153,6 +153,10 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
         }
     }
 
+    fn is_vmctx_access(&self, state: &WasmtimeLattice<Ar>, access: &Value<Ar>) -> bool {
+        unimplemented!()
+    }
+
     fn check_mem_access(
         &self,
         state: &WasmtimeLattice<Ar>,
@@ -168,9 +172,13 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
             return true;
         }
         // Case 4: its a heap access
-        if self.check_heap_access(state, access) {
+        if self.is_heap_access(state, access) {
             return true;
         };
+
+        if self.is_vmctx_access(state, access) {
+            return true;
+        }
         // Case 8: its unknown
         log::debug!("None of the memory accesses at 0x{:x}", loc_idx.addr);
         print_mem_access(state, access);
