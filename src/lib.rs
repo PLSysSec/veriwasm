@@ -19,6 +19,7 @@ use ir::{aarch64_lift_cfg, x64_lift_cfg};
 use loaders::types::{ExecutableType, VwArch, VwMetadata, VwModule};
 use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::str::FromStr;
 use yaxpeax_core::analyses::control_flow::{VW_Block, VW_CFG};
 use yaxpeax_core::memory::repr::process::{ModuleData, ModuleInfo, Segment};
@@ -265,35 +266,36 @@ pub fn validate_wasmtime_func(
             // }
             // println!("CFG graph: {:?}", cfg.graph);
 
-            for (baddr, block) in irmap.iter() {
-                println!(
-                    "[{:x}:{:x}] ============",
-                    cfg.get_block(*baddr).start,
-                    cfg.get_block(*baddr).end
-                );
-                println!("Predecessors: {:x?}", cfg.predecessors(*baddr));
-                println!("Destinations: {:x?}", cfg.destinations(*baddr));
-                for (addr, ir_instr) in block.iter() {
-                    println!("  {:x} {:?}", addr, ir_instr);
-                }
-            }
+            // for (baddr, block) in irmap.iter() {
+            //     println!(
+            //         "[{:x}:{:x}] ============",
+            //         cfg.get_block(*baddr).start,
+            //         cfg.get_block(*baddr).end
+            //     );
+            //     println!("Predecessors: {:x?}", cfg.predecessors(*baddr));
+            //     println!("Destinations: {:x?}", cfg.destinations(*baddr));
+            //     for (addr, ir_instr) in block.iter() {
+            //         println!("  {:x} {:?}", addr, ir_instr);
+            //     }
+            // }
             //println!("{:?}", irmap);
 
-            let stack_analyzer = StackAnalyzer {};
-            let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
-            let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
-            if !stack_safe {
-                return Err(ValidationError::StackUnsafe);
-            }
-
-            // let heap_analyzer = HeapAnalyzer {
-            //     metadata: module.metadata.clone(),
-            // };
-            // let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
-            // let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer);
-            // if !heap_safe {
-            //     return Err(ValidationError::HeapUnsafe);
+            // let stack_analyzer = StackAnalyzer {};
+            // let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
+            // let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
+            // if !stack_safe {
+            //     return Err(ValidationError::StackUnsafe);
             // }
+            println!("Checking heap for {}", func_name);
+
+            let heap_analyzer = HeapAnalyzer {
+                metadata: module.metadata.clone(),
+            };
+            let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
+            let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer, &HashMap::new());
+            if !heap_safe {
+                return Err(ValidationError::HeapUnsafe);
+            }
         }
     }
     // let irmap: IRMap<X86Regs> = x64_lift_cfg(&module, &cfg, false);

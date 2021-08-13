@@ -7,6 +7,7 @@ pub mod regslattice;
 pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod switchlattice;
+pub mod wasmtime_lattice;
 use crate::{ir, lattices};
 use ir::types::{Binopcode, MemArg, MemArgs, RegT, ValSize, Value, X86Regs};
 use ir::utils::get_imm_offset;

@@ -4,6 +4,7 @@ mod jump_analyzer;
 pub mod locals_analyzer;
 pub mod reaching_defs;
 mod stack_analyzer;
+mod wasmtime_analyzer;
 use crate::ir::types::{Binopcode, IRBlock, IRMap, RegT, Stmt, Unopcode, Value};
 use crate::lattices::reachingdefslattice::LocIdx;
 use crate::lattices::{Lattice, VarState};

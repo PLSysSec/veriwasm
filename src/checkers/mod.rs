@@ -10,6 +10,7 @@ mod heap_checker;
 mod jump_resolver;
 pub mod locals_checker;
 mod stack_checker;
+mod wasmtime_checker;
 
 /*      Public API for checker submodule      */
 // pub use self::call_checker::check_calls;

@@ -842,7 +842,12 @@ impl RegT for Aarch64Regs {
         self == &Nzcv
     }
 
+    /// Lucet (which has a pinned heap register) does not support aarch64
     fn pinned_heap_reg() -> Self {
+        unimplemented!()
+    }
+
+    fn pinned_vmctx_reg() -> Self {
         X0
     }
 }

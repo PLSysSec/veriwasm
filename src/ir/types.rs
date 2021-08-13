@@ -121,19 +121,41 @@ impl<Ar: RegT> TryFrom<Value<Ar>> for MemArg<Ar> {
 }
 
 impl<Ar: RegT> MemArg<Ar> {
+    pub fn is_imm(&self) -> bool {
+        matches!(self, Self::Imm(_, _, _))
+    }
+
+    pub fn is_reg(&self) -> bool {
+        matches!(self, Self::Reg(_, _))
+    }
+
     pub fn is_rsp(&self) -> bool {
         match self {
-            MemArg::Reg(r, Size64) if r.is_rsp() => true,
-            MemArg::Reg(r, _) if r.is_rsp() => panic!("Illegal RSP access"),
+            Self::Reg(r, Size64) if r.is_rsp() => true,
+            Self::Reg(r, _) if r.is_rsp() => panic!("Illegal RSP access"),
             _ => false,
         }
     }
 
     pub fn is_rbp(&self) -> bool {
         match self {
-            MemArg::Reg(r, Size64) if r.is_rbp() => true,
-            MemArg::Reg(r, _) if r.is_rbp() => panic!("Illegal RSP access"),
+            Self::Reg(r, Size64) if r.is_rbp() => true,
+            Self::Reg(r, _) if r.is_rbp() => panic!("Illegal RSP access"),
             _ => false,
+        }
+    }
+
+    pub fn to_imm(&self) -> i64 {
+        match self {
+            Self::Imm(_, r, _) => return r.into_bytes().into(),
+            _ => panic!("Not an imm"),
+        }
+    }
+
+    pub fn to_reg(&self) -> Ar {
+        match self {
+            Self::Reg(r, _) => *r,
+            _ => panic!("That's not a reg!"),
         }
     }
 }
@@ -148,57 +170,64 @@ pub enum Value<Ar> {
 
 impl<Ar: RegT> Value<Ar> {
     pub fn is_mem(&self) -> bool {
-        matches!(self, Value::Mem(_, _))
+        matches!(self, Self::Mem(_, _))
     }
 
     pub fn is_imm(&self) -> bool {
-        matches!(self, Value::Imm(_, _, _))
+        matches!(self, Self::Imm(_, _, _))
     }
 
     pub fn is_reg(&self) -> bool {
-        matches!(self, Value::Reg(_, _))
+        matches!(self, Self::Reg(_, _))
     }
 
     pub fn get_size(&self) -> ValSize {
         match self {
-            Value::Mem(sz, _) | Value::Reg(_, sz) | Value::Imm(_, sz, _) => *sz,
-            Value::RIPConst => Size64,
+            Self::Mem(sz, _) | Self::Reg(_, sz) | Self::Imm(_, sz, _) => *sz,
+            Self::RIPConst => Size64,
+        }
+    }
+
+    pub fn to_reg(&self) -> Ar {
+        match self {
+            Self::Reg(r, _) => *r,
+            _ => panic!("That's not a reg!"),
         }
     }
 
     pub fn is_rsp(&self) -> bool {
         match self {
-            Value::Reg(r, Size64) if r.is_rsp() => true,
-            Value::Reg(r, _) if r.is_rsp() => panic!("Illegal RSP access"),
+            Self::Reg(r, Size64) if r.is_rsp() => true,
+            Self::Reg(r, _) if r.is_rsp() => panic!("Illegal RSP access"),
             _ => false,
         }
     }
 
     pub fn is_rbp(&self) -> bool {
         match self {
-            Value::Reg(r, Size64) if r.is_rbp() => true,
-            Value::Reg(r, _) if r.is_rbp() => panic!("Illegal RSP access"),
+            Self::Reg(r, Size64) if r.is_rbp() => true,
+            Self::Reg(r, _) if r.is_rbp() => panic!("Illegal RSP access"),
             _ => false,
         }
     }
 
     pub fn is_zf(&self) -> bool {
         match self {
-            Value::Reg(r, _) if r.is_zf() => return true,
+            Self::Reg(r, _) if r.is_zf() => return true,
             _ => return false,
         }
     }
 
     pub fn to_imm(&self) -> i64 {
         match self {
-            Value::Imm(_, r, _) => return r.into_bytes().into(),
+            Self::Imm(_, r, _) => return r.into_bytes().into(),
             _ => panic!("Not an imm"),
         }
     }
 
     pub fn add_imm(&self, imm: i64) -> Self {
         match self {
-            Value::Mem(sz, memargs) => Value::Mem(*sz, memargs.add_imm(imm)),
+            Self::Mem(sz, memargs) => Self::Mem(*sz, memargs.add_imm(imm)),
             _ => panic!("adding to bad value"),
         }
     }
@@ -206,7 +235,7 @@ impl<Ar: RegT> Value<Ar> {
 
 impl<Ar> From<i64> for Value<Ar> {
     fn from(num: i64) -> Self {
-        Value::Imm(ImmType::Signed, ValSize::Size64, num)
+        Self::Imm(ImmType::Signed, Size64, num)
     }
 }
 
@@ -348,6 +377,10 @@ impl RegT for X86Regs {
     fn pinned_heap_reg() -> Self {
         Rdi
     }
+
+    fn pinned_vmctx_reg() -> Self {
+        Rdi
+    }
 }
 
 impl TryFrom<u8> for X86Regs {
@@ -417,6 +450,7 @@ pub trait RegT:
     fn is_rbp(&self) -> bool;
     fn is_zf(&self) -> bool;
     fn pinned_heap_reg() -> Self;
+    fn pinned_vmctx_reg() -> Self;
     fn iter() -> RegsIterator<Self> {
         RegsIterator {
             current_reg: 0,

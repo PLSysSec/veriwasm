@@ -81,17 +81,19 @@ impl<Ar: RegT> Checker<Ar, HeapLattice<Ar>> for HeapChecker<'_, Ar> {
             Stmt::Call(v) => match state.regs.get_reg(Ar::pinned_heap_reg(), Size64).v {
                 Some(HeapBase) => (),
                 _ => {
-                    if let Value::Imm(_, _, dst) = v {
-                        let target = (*dst + (loc_idx.addr as i64) + 5) as u64;
-                        let name = self.name_addr_map.get(&target).unwrap();
-                        if !is_libcall(name) {
-                            log::debug!("0x{:x}: Call failure", loc_idx.addr);
-                            return false;
-                        }
-                    } else {
-                        log::debug!("0x{:x}: Call failure", loc_idx.addr);
-                        return false;
-                    }
+                    return false;
+                    // if let Value::Imm(_, _, dst) = v {
+                    //     return false;
+                    //     let target = (*dst + (loc_idx.addr as i64) + 5) as u64;
+                    //     let name = self.name_addr_map.get(&target).unwrap();
+                    //     if !is_libcall(name) {
+                    //         log::debug!("0x{:x}: Call failure", loc_idx.addr);
+                    //         return false;
+                    //     }
+                    // } else {
+                    //     log::debug!("0x{:x}: Call failure", loc_idx.addr);
+                    //     return false;
+                    // }
                 }
             },
             //2. Check that all load and store are safe
