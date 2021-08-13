@@ -173,41 +173,40 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
         };
         // Case 8: its unknown
         log::debug!("None of the memory accesses at 0x{:x}", loc_idx.addr);
-        // print_mem_access(state, access);
+        print_mem_access(state, access);
         return false;
     }
 }
+pub fn memarg_repr<Ar: RegT>(state: &WasmtimeLattice<Ar>, memarg: &MemArg<Ar>) -> String {
+    match memarg {
+        MemArg::Reg(regnum, size) => {
+            format!("{:?}: {:?}", regnum, state.regs.get_reg(*regnum, *size).v)
+        }
+        MemArg::Imm(_, _, x) => format!("{:?}", x),
+    }
+}
 
-// pub fn memarg_repr<State: VarState, Ar: RegT>(state: &State, memarg: &MemArg<Ar>) -> String {
-//     match memarg {
-//         MemArg::Reg(regnum, size) => {
-//             format!("{:?}: {:?}", regnum, state.regs.get_reg(*regnum, *size).v)
-//         }
-//         MemArg::Imm(_, _, x) => format!("{:?}", x),
-//     }
-// }
-
-// pub fn print_mem_access<State: VarState, Ar: RegT>(state: &State, access: &Value<Ar>) {
-//     if let Value::Mem(_, memargs) = access {
-//         match memargs {
-//             MemArgs::Mem1Arg(x) => log::debug!("mem[{:?}]", memarg_repr(state, x)),
-//             MemArgs::Mem2Args(x, y) => log::debug!(
-//                 "mem[{:?} + {:?}]",
-//                 memarg_repr(state, x),
-//                 memarg_repr(state, y)
-//             ),
-//             MemArgs::Mem3Args(x, y, z) => log::debug!(
-//                 "mem[{:?} + {:?} + {:?}]",
-//                 memarg_repr(state, x),
-//                 memarg_repr(state, y),
-//                 memarg_repr(state, z)
-//             ),
-//             MemArgs::MemScale(x, y, z) => log::debug!(
-//                 "mem[{:?} + {:?} * {:?}]",
-//                 memarg_repr(state, x),
-//                 memarg_repr(state, y),
-//                 memarg_repr(state, z)
-//             ),
-//         }
-//     }
-// }
+pub fn print_mem_access<Ar: RegT>(state: &WasmtimeLattice<Ar>, access: &Value<Ar>) {
+    if let Value::Mem(_, memargs) = access {
+        match memargs {
+            MemArgs::Mem1Arg(x) => log::debug!("mem[{:?}]", memarg_repr(state, x)),
+            MemArgs::Mem2Args(x, y) => log::debug!(
+                "mem[{:?} + {:?}]",
+                memarg_repr(state, x),
+                memarg_repr(state, y)
+            ),
+            MemArgs::Mem3Args(x, y, z) => log::debug!(
+                "mem[{:?} + {:?} + {:?}]",
+                memarg_repr(state, x),
+                memarg_repr(state, y),
+                memarg_repr(state, z)
+            ),
+            MemArgs::MemScale(x, y, z) => log::debug!(
+                "mem[{:?} + {:?} * {:?}]",
+                memarg_repr(state, x),
+                memarg_repr(state, y),
+                memarg_repr(state, z)
+            ),
+        }
+    }
+}
