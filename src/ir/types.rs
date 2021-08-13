@@ -195,6 +195,13 @@ impl<Ar: RegT> Value<Ar> {
         }
     }
 
+    pub fn to_mem(&self) -> MemArgs<Ar> {
+        match self {
+            Self::Mem(_, memargs) => memargs.clone(),
+            _ => panic!("That's not a reg!"),
+        }
+    }
+
     pub fn is_rsp(&self) -> bool {
         match self {
             Self::Reg(r, Size64) if r.is_rsp() => true,

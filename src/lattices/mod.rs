@@ -10,7 +10,6 @@ pub mod switchlattice;
 pub mod wasmtime_lattice;
 use crate::{ir, lattices};
 use ir::types::{Binopcode, MemArg, MemArgs, RegT, ValSize, Value, X86Regs};
-use ir::utils::get_imm_offset;
 use lattices::reachingdefslattice::LocIdx;
 use lattices::regslattice::ArchRegsLattice;
 use lattices::stacklattice::StackLattice;
@@ -238,7 +237,7 @@ impl<Ar: RegT, T: Lattice + Clone> VarState for VariableState<Ar, T> {
     ) {
         if dst.is_rsp() {
             if src1.is_rsp() {
-                let adjustment = get_imm_offset(src2);
+                let adjustment = src2.to_imm();
                 match opcode {
                     Binopcode::Add => self.stack.update_stack_offset(adjustment),
                     Binopcode::Sub => self.stack.update_stack_offset(-adjustment),

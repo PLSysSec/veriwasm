@@ -16,6 +16,7 @@ use yaxpeax_core::analyses::control_flow::VW_CFG;
 pub use self::heap_analyzer::HeapAnalyzer;
 // pub use self::jump_analyzer::SwitchAnalyzer;
 pub use self::stack_analyzer::StackAnalyzer;
+pub use self::wasmtime_analyzer::WasmtimeAnalyzer;
 
 pub type AnalysisResult<T> = HashMap<u64, T>;
 

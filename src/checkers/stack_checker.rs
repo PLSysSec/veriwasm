@@ -5,7 +5,7 @@ use analyses::StackAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
 use checkers::Checker;
 use ir::types::{IRMap, MemArgs, Stmt, Value};
-use ir::utils::{get_imm_mem_offset, is_bp_access, is_stack_access};
+use ir::utils::{is_bp_access, is_stack_access};
 use lattices::reachingdefslattice::LocIdx;
 use lattices::stackgrowthlattice::StackGrowthLattice;
 
@@ -130,7 +130,7 @@ impl<Ar: RegT> StackChecker<'_, Ar> {
                         && (state.get_stackgrowth().unwrap() < 8096)
                 }
                 MemArgs::Mem2Args(_memarg1, memarg2) => {
-                    let offset = get_imm_mem_offset(memarg2);
+                    let offset = memarg2.to_imm();
                     return (-state.get_probestack().unwrap()
                         <= state.get_stackgrowth().unwrap() + offset)
                         && (state.get_stackgrowth().unwrap() + offset < 8096);
@@ -149,7 +149,7 @@ impl<Ar: RegT> StackChecker<'_, Ar> {
                         && (state.get_rbp().unwrap() < 8096)
                 }
                 MemArgs::Mem2Args(_memarg1, memarg2) => {
-                    let offset = get_imm_mem_offset(memarg2);
+                    let offset = memarg2.to_imm();
                     return (-state.get_probestack().unwrap() <= state.get_rbp().unwrap() + offset)
                         && (state.get_rbp().unwrap() + offset < 8096);
                 }
@@ -167,7 +167,7 @@ impl<Ar: RegT> StackChecker<'_, Ar> {
                         && (state.get_stackgrowth().unwrap() < 0);
                 }
                 MemArgs::Mem2Args(_memarg1, memarg2) => {
-                    let offset = get_imm_mem_offset(memarg2);
+                    let offset = memarg2.to_imm();
                     return (-state.get_probestack().unwrap()
                         <= state.get_stackgrowth().unwrap() + offset)
                         && (state.get_stackgrowth().unwrap() + offset < 0);
@@ -186,7 +186,7 @@ impl<Ar: RegT> StackChecker<'_, Ar> {
                         && (state.get_rbp().unwrap() < 0);
                 }
                 MemArgs::Mem2Args(_memarg1, memarg2) => {
-                    let offset = get_imm_mem_offset(memarg2);
+                    let offset = memarg2.to_imm();
                     return (-state.get_probestack().unwrap() <= state.get_rbp().unwrap() + offset)
                         && (state.get_rbp().unwrap() + offset < 0);
                 }

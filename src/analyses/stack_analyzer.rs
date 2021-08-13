@@ -1,7 +1,6 @@
 use crate::{analyses, ir, lattices};
 use analyses::AbstractAnalyzer;
 use ir::types::{Binopcode, RegT, Stmt, Unopcode, Value};
-use ir::utils::get_imm_offset;
 use lattices::reachingdefslattice::LocIdx;
 use lattices::stackgrowthlattice::StackGrowthLattice;
 
@@ -20,7 +19,7 @@ impl StackAnalyzer {
         src2: &Value<Ar>,
     ) -> StackGrowthLattice {
         if src1.is_rsp() {
-            let offset = get_imm_offset(src2);
+            let offset = src2.to_imm();
             if let Some((x, probestack, rbp)) = in_state.v {
                 match opcode {
                     Binopcode::Add => {

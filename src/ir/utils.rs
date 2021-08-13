@@ -34,38 +34,40 @@ pub fn is_bp_access<Ar: RegT>(v: &Value<Ar>) -> bool {
     false
 }
 
-pub fn extract_stack_offset<Ar>(memargs: &MemArgs<Ar>) -> i64 {
+/// Precondition: should only be called on stack accesses
+/// mem[rsp] => 0
+/// mem[rsp + c] => c
+pub fn extract_stack_offset<Ar: RegT>(memargs: &MemArgs<Ar>) -> i64 {
     match memargs {
         MemArgs::Mem1Arg(_memarg) => 0,
-        MemArgs::Mem2Args(_memarg1, memarg2) => get_imm_mem_offset(memarg2),
-        MemArgs::Mem3Args(_memarg1, _memarg2, _memarg3)
-        | MemArgs::MemScale(_memarg1, _memarg2, _memarg3) => panic!("extract_stack_offset failed"),
+        MemArgs::Mem2Args(_memarg1, memarg2) => memarg2.to_imm(),
+        _ => panic!("extract_stack_offset failed"),
     }
 }
 
-pub fn is_mem_access<Ar>(v: &Value<Ar>) -> bool {
-    if let Value::Mem(_, _) = v {
-        true
-    } else {
-        false
-    }
-}
+// pub fn is_mem_access<Ar>(v: &Value<Ar>) -> bool {
+//     if let Value::Mem(_, _) = v {
+//         true
+//     } else {
+//         false
+//     }
+// }
 
-pub fn get_imm_offset<Ar>(v: &Value<Ar>) -> i64 {
-    if let Value::Imm(_, _, v) = v {
-        *v
-    } else {
-        panic!("get_imm_offset called on something that is not an imm offset")
-    }
-}
+// pub fn get_imm_offset<Ar>(v: &Value<Ar>) -> i64 {
+//     if let Value::Imm(_, _, v) = v {
+//         *v
+//     } else {
+//         panic!("get_imm_offset called on something that is not an imm offset")
+//     }
+// }
 
-pub fn get_imm_mem_offset<Ar>(v: &MemArg<Ar>) -> i64 {
-    if let MemArg::Imm(_, _, v) = v {
-        *v
-    } else {
-        panic!("get_imm_offset called on something that is not an imm offset")
-    }
-}
+// pub fn get_imm_mem_offset<Ar>(v: &MemArg<Ar>) -> i64 {
+//     if let MemArg::Imm(_, _, v) = v {
+//         *v
+//     } else {
+//         panic!("get_imm_offset called on something that is not an imm offset")
+//     }
+// }
 
 pub fn has_indirect_calls<Ar>(irmap: &IRMap<Ar>) -> bool {
     for (_block_addr, ir_block) in irmap {
