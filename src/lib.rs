@@ -237,6 +237,9 @@ fn get_vm_offsets() -> VMOffsets {
     let mut offsets = HashMap::new();
     offsets.insert(36, FieldDesc::Rx); // ??
     offsets.insert(44, FieldDesc::R); // ??
+    offsets.insert(556, FieldDesc::R); // ??
+    offsets.insert(572, FieldDesc::R); // ??
+    offsets.insert(592, FieldDesc::R); // ??
     offsets
 }
 
@@ -299,6 +302,8 @@ pub fn validate_wasmtime_func(
             let wasmtime_analyzer = WasmtimeAnalyzer { offsets };
             let wasmtime_result = run_worklist(&cfg, &irmap, &wasmtime_analyzer);
             let wasmtime_safe = check_wasmtime(wasmtime_result, &irmap, &wasmtime_analyzer);
+            // println!("Wow, a bug!");
+            // return Ok(());
             if !wasmtime_safe {
                 return Err(ValidationError::HeapUnsafe);
             }

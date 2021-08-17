@@ -44,3 +44,4 @@ capstone = { path = "../capstone-rs/capstone-rs" }
 # lucet-module = { path = "../lucet_sandbox_compiler/lucet-module", version = "0.1.1", package="lucet-module-wasmsbx" }
 # # lucet-module = { git = "https://github.com/bytecodealliance/lucet.git" }
 elfkit = "0.0.4"
+itertools = "*"

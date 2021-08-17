@@ -61,7 +61,7 @@ impl WasmtimeAnalyzer {
                 rd,
                 Size64,
                 ConstLattice {
-                    v: Some(Bounded4GB),
+                    v: Some(Bounded4GB(None)),
                 },
             );
             return;
@@ -87,29 +87,52 @@ impl WasmtimeAnalyzer {
         src2: &Value<Ar>,
         _loc_idx: &LocIdx,
     ) {
-        // match opcode {
-        //     Binopcode::Add => {
-        //         if let (
-        //             &Value::Reg(rd, Size64),
-        //             &Value::Reg(rs1, Size64),
-        //             &Value::Reg(rs2, Size64),
-        //         ) = (dst, src1, src2)
-        //         {
-        //             let rs1_val = in_state.regs.get_reg(rs1, Size64).v;
-        //             let rs2_val = in_state.regs.get_reg(rs2, Size64).v;
-        //             match (rs1_val, rs2_val) {
-        //                 (Some(HeapBase), Some(Bounded4GB)) | (Some(Bounded4GB), Some(HeapBase)) => {
-        //                     in_state
-        //                         .regs
-        //                         .set_reg(rd, Size64, ConstLattice { v: Some(HeapAddr) });
-        //                     return;
-        //                 }
-        //                 _ => {}
-        //             }
-        //         }
-        //     }
-        //     _ => {}
-        // }
+        match opcode {
+            Binopcode::Add => {
+                if let (
+                    &Value::Reg(rd, Size64),
+                    &Value::Reg(rs1, sz1),
+                    &Value::Reg(rs2, sz2),
+                ) = (dst, src1, src2)
+                {
+                    let rs1_val = in_state.regs.get_reg(rs1, sz1).v;
+                    let rs2_val = in_state.regs.get_reg(rs2, sz2).v;
+                    match (rs1_val, rs2_val) {
+                        (Some(HeapBase), Some(Bounded4GB(_))) | (Some(Bounded4GB(_)), Some(HeapBase)) => {
+                            in_state
+                                .regs
+                                .set_reg(rd, Size64, ConstLattice { v: Some(HeapAddr) });
+                            return;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+        match opcode {
+            Binopcode::Add => {
+                if let (
+                    &Value::Reg(rd, Size64),
+                    &Value::Reg(rs1, sz1),
+                    &Value::Reg(rs2, sz2),
+                ) = (dst, src1, src2)
+                {
+                    let rs1_val = in_state.regs.get_reg(rs1, sz1).v;
+                    let rs2_val = in_state.regs.get_reg(rs2, sz2).v;
+                    match (rs1_val, rs2_val) {
+                        (Some(VmCtx), Some(Bounded4GB(Some(b)))) | (Some(Bounded4GB(Some(b))), Some(VmCtx)) => {
+                            in_state
+                                .regs
+                                .set_reg(rd, Size64, ConstLattice { v: Some(VmAddr(b)) });
+                            return;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
 
         // Any write to a 32-bit register will clear the upper 32 bits of the containing 64-bit
         // register.
@@ -118,13 +141,13 @@ impl WasmtimeAnalyzer {
                 rd,
                 Size64,
                 ConstLattice {
-                    v: Some(Bounded4GB),
+                    v: Some(Bounded4GB(None)),
                 },
             );
             return;
         }
 
-        // in_state.set_to_bot(dst);
+        in_state.set_to_bot(dst);
     }
 
     fn aeval_unop<Ar: RegT>(
@@ -153,7 +176,7 @@ impl WasmtimeAnalyzer {
 
             Value::Reg(regnum, size) => {
                 if size.into_bits() <= 32 {
-                    return WasmtimeValueLattice::new(Bounded4GB);
+                    return WasmtimeValueLattice::new(Bounded4GB(None));
                 } else {
                     return in_state.regs.get_reg(*regnum, Size64);
                 }
@@ -161,7 +184,7 @@ impl WasmtimeAnalyzer {
 
             Value::Imm(_, _, immval) => {
                 if (*immval >= 0) && (*immval < (1 << 32)) {
-                    return WasmtimeValueLattice::new(Bounded4GB);
+                    return WasmtimeValueLattice::new(Bounded4GB(Some(*immval)));
                 }
             }
             Value::RIPConst => {
@@ -188,6 +211,13 @@ impl WasmtimeAnalyzer {
                 // 1. mem[VmCtx] => HeapBase
                 if v.is_vmctx() {
                     return Some(WasmtimeValueLattice::new(HeapBase));
+                }
+                if let VmAddr(offset) = v {
+                    if !self.offsets.contains_key(&offset){
+                        println!("This offset does not exist = {:?}", offset);
+                    }
+                    let field = self.offsets[&offset].clone();
+                    return Some(WasmtimeValueLattice::new(VmCtxField(field)));
                 }
                 // 2. mem[VmCtxField] => VmCtxField.deref()
                 if v.is_field() {

@@ -64,40 +64,45 @@ impl<Ar: RegT> Checker<Ar, WasmtimeLattice<Ar>> for WasmtimeChecker<'_, Ar> {
         loc_idx: &LocIdx,
     ) -> bool {
         match ir_stmt {
-            //1. Check that at each call rdi = HeapBase
-            Stmt::Call(v) => {
+            //1. Check that at each call vmctx reg = VmCtx
+            // TODO: reenable
+            Stmt::Call(Value::Reg(r, Size64)) => {
                 let v = state.regs.get_reg(Ar::pinned_vmctx_reg(), Size64).v;
-                return v.map(|x| x.is_vmctx()).unwrap_or(false);
+                let target = state.regs.get_reg(*r, Size64).v;
+
+                log::debug!("Call check: target = {:?} vmctx reg = {:?}", target, v);
+                return true;
+                // return v.map(|x| x.is_vmctx()).unwrap_or(false);
             }
 
             //2. Check that all load and store are safe
             Stmt::Unop(_, dst, src) => {
-                if dst.is_mem() && !self.check_mem_access(state, dst, loc_idx) {
+                if dst.is_mem() && !self.check_mem_access(state, dst, loc_idx, true) {
                     return false;
                 }
                 //stack read: probestack <= stackgrowth + c < 8K
-                if src.is_mem() && !self.check_mem_access(state, src, loc_idx) {
+                if src.is_mem() && !self.check_mem_access(state, src, loc_idx, false) {
                     return false;
                 }
             }
 
             Stmt::Binop(_, dst, src1, src2) => {
-                if dst.is_mem() && !self.check_mem_access(state, dst, loc_idx) {
+                if dst.is_mem() && !self.check_mem_access(state, dst, loc_idx, true) {
                     return false;
                 }
-                if src1.is_mem() && !self.check_mem_access(state, src1, loc_idx) {
+                if src1.is_mem() && !self.check_mem_access(state, src1, loc_idx, false) {
                     return false;
                 }
-                if src2.is_mem() && !self.check_mem_access(state, src2, loc_idx) {
+                if src2.is_mem() && !self.check_mem_access(state, src2, loc_idx, false) {
                     return false;
                 }
             }
             Stmt::Clear(dst, srcs) => {
-                if dst.is_mem() && !self.check_mem_access(state, dst, loc_idx) {
+                if dst.is_mem() && !self.check_mem_access(state, dst, loc_idx, true) {
                     return false;
                 }
                 for src in srcs {
-                    if src.is_mem() && !self.check_mem_access(state, src, loc_idx) {
+                    if src.is_mem() && !self.check_mem_access(state, src, loc_idx, false) {
                         return false;
                     }
                 }
@@ -140,7 +145,7 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
                     match (memarg2, memarg3) {
                         (MemArg::Reg(regnum2, size2), MemArg::Imm(_, _, v))
                         | (MemArg::Imm(_, _, v), MemArg::Reg(regnum2, size2)) => {
-                            if let Some(Bounded4GB) = state.regs.get_reg(regnum2, size2).v {
+                            if let Some(Bounded4GB(_)) = state.regs.get_reg(regnum2, size2).v {
                                 return v <= 0xffffffff;
                             }
                         }
@@ -152,9 +157,51 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
             _ => return false,
         }
     }
+    /// 1. mem[vmctx + c] s.t. c is in offsets
+    /// 2. mem[VmCtxField] s.t. write && f.write || ~f.write
+    /// vmctx and VmCtxField will always be regs 
+    fn is_vmctx_access(&self, state: &WasmtimeLattice<Ar>, access: &Value<Ar>, write: bool) -> bool {
+        match access.to_mem() {
+            MemArgs::Mem1Arg(MemArg::Reg(r, Size64)) => {
+                if let Some(v) = state.regs.get_reg(r, Size64).v{ 
+                    if v.is_vmctx() {
+                        return true;
+                    }
+                    if let VmAddr(offset) = v {
+                        // if !self.analyzer.offsets.contains_key(offset){
+                        //     println!("This offset does not exist = {:?}", offset);
+                        // }
+                        let field = self.analyzer.offsets[&offset].clone();
+                        if (field.is_write() && write) || (!write) {
+                            return true;
+                        }
+                    }
+                    if let Ok(field) = v.as_field(){
+                        if (field.is_write() && write) || (!write) {
+                            return true;
+                        }
+                    }
+                }
+            },
+            MemArgs::Mem2Args(MemArg::Reg(r, Size64), MemArg::Imm(_, _, imm)) |   
+            MemArgs::Mem2Args(MemArg::Imm(_, _, imm), MemArg::Reg(r, Size64)) => {
+                let val = state.regs.get_reg(r, Size64).v;
+                if let Some(ref v) = val { 
+                    if v.is_vmctx() && self.analyzer.offsets.contains_key(&imm) {
+                        return true;
+                    }
+                }
+                //TODO: whitelist which field offsets are acceptable 
+                if let Some(ref v) = val { 
+                    if v.is_field() {
+                        return true;
+                    }
+                }
 
-    fn is_vmctx_access(&self, state: &WasmtimeLattice<Ar>, access: &Value<Ar>) -> bool {
-        unimplemented!()
+            },
+            _ => (),
+        }
+        false
     }
 
     fn check_mem_access(
@@ -162,6 +209,7 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
         state: &WasmtimeLattice<Ar>,
         access: &Value<Ar>,
         loc_idx: &LocIdx,
+        write: bool,
     ) -> bool {
         // Case 1: its a stack access
         if is_stack_access(access) {
@@ -176,7 +224,7 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
             return true;
         };
 
-        if self.is_vmctx_access(state, access) {
+        if self.is_vmctx_access(state, access, write) {
             return true;
         }
         // Case 8: its unknown

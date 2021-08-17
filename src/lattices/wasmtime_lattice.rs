@@ -46,9 +46,11 @@ impl FieldDesc {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum WasmtimeValue {
     HeapBase,
-    Bounded4GB,
+    Bounded4GB(Option<i64>), // constant value
+    HeapAddr,
     VmCtx,
     VmCtxField(FieldDesc),
+    VmAddr(i64),
 }
 
 use WasmtimeValue::*;
@@ -59,12 +61,24 @@ impl WasmtimeValue {
     }
 
     pub fn is_bounded(&self) -> bool {
-        matches!(self, Bounded4GB)
+        matches!(self, Bounded4GB(_))
+    }
+
+    pub fn is_heapaddr(&self) -> bool {
+        matches!(self, HeapAddr)
     }
 
     pub fn is_vmctx(&self) -> bool {
         matches!(self, VmCtx)
     }
+
+    pub fn is_vmaddr(&self) -> bool {
+        matches!(self, VmAddr(_))
+    }
+
+    // pub fn as_vmaddr_offset(&self) -> bool {
+    //     matches!(self, VmAddr(v))
+    // }
 
     pub fn is_field(&self) -> bool {
         matches!(self, VmCtxField(_))

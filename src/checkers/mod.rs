@@ -4,6 +4,7 @@ use analyses::AnalysisResult;
 use ir::types::{IRMap, Stmt};
 use lattices::reachingdefslattice::LocIdx;
 use lattices::Lattice;
+use itertools::Itertools;
 
 mod call_checker;
 mod heap_checker;
@@ -25,13 +26,16 @@ pub trait Checker<Ar: RegT, State: Lattice + Clone> {
     fn aexec(&self, state: &mut State, ir_stmt: &Stmt<Ar>, loc: &LocIdx);
 
     fn check_state_at_statements(&self, result: AnalysisResult<State>) -> bool {
-        for (block_addr, mut state) in result {
+        // TODO: only do in sorted order when debug is enabled
+        for block_addr in result.keys().sorted() {
+            let mut state = result[block_addr].clone();
             log::debug!(
                 "Checking block 0x{:x} with start state {:?}",
                 block_addr,
                 state
             );
-            for (addr, ir_stmts) in self.irmap().get(&block_addr).unwrap() {
+            let block = self.irmap().get(&block_addr).unwrap();
+            for (addr, ir_stmts) in block {
                 for (idx, ir_stmt) in ir_stmts.iter().enumerate() {
                     log::debug!(
                         "Checking stmt at 0x{:x}: {:?} with start state {:?}",
