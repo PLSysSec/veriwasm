@@ -71,7 +71,7 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
         Operand::ImmediateI32(imm) => Value::Imm(ImmType::Signed, Size32, imm as i64),
         Operand::ImmediateU64(imm) => Value::Imm(ImmType::Unsigned, Size64, imm as i64),
         Operand::ImmediateI64(imm) => Value::Imm(ImmType::Signed, Size64, imm as i64),
-        Operand::Register(reg) => convert_reg(reg),
+        Operand::Register(reg) => {log::debug!("convert_operand widths {:?} {:?}", op, op.width()); convert_reg(reg)},
         //u32 and u64 are address sizes
         Operand::DisplacementU32(imm) => Value::Mem(
             memsize,
@@ -175,6 +175,7 @@ fn get_destinations(instr: &X64Instruction) -> Vec<Value> {
     for (loc, dir) in uses_vec {
         match (loc, dir) {
             (Some(Location::Register(reg)), Direction::Write) => {
+                // println!("destination: {:?} width = {:?}", reg, reg.width());
                 destinations.push(convert_reg(reg));
             }
             (Some(Location::ZF), Direction::Write) => {
@@ -825,7 +826,8 @@ fn parse_probestack_suffix<'a>(
     instrs: BlockInstrs<'a>,
     metadata: &VwMetadata,
     strict: bool,
-) -> IResult<'a, StmtResult> {
+    probestack_arg: u64, 
+) -> IResult<'a, (i64,StmtResult)> {
     let (rest, (addr, sub_instr)) = parse_single_instr(instrs, metadata, strict)?;
     log::info!(
         "Found potential probestack suffix: {:x} {:?}",
@@ -839,7 +841,16 @@ fn parse_probestack_suffix<'a>(
         Value::Reg(Rax, Size64),
     ) = sub_instr[0]
     {
-        return Ok((rest, (addr, sub_instr)));
+        return Ok((rest, (0, (addr, sub_instr))));
+    }
+    if let Stmt::Binop(
+        Binopcode::Sub,
+        Value::Reg(Rsp, Size64),
+        Value::Reg(Rsp, Size64),
+        Value::Imm(_, _, imm),
+    ) = sub_instr[0]
+    {
+        return Ok((rest, (imm - (probestack_arg as i64), (addr, sub_instr))));
     }
     Err(ParseErr::Error(instrs))
 }
@@ -854,11 +865,14 @@ fn parse_probestack<'a>(
     log::info!("Found potential probestack: 0x{:x}", addr);
     let (rest, (_, call_instr)) = parse_probestack_call(rest, metadata, strict)?;
     log::info!("Found probestack call: 0x{:x}", addr);
-    let (rest, (_, suffix_instr)) = parse_probestack_suffix(rest, metadata, strict)?;
+    let (rest, ( stack_adjustment,(_, suffix_instr))) = parse_probestack_suffix(rest, metadata, strict, probestack_arg)?;
     log::info!("Completed probestack: 0x{:x}", addr);
     let mut stmts = Vec::new();
     stmts.extend(mov_instr);
     stmts.push(Stmt::ProbeStack(probestack_arg));
+    if stack_adjustment != 0{
+        stmts.push(Stmt::Binop(Binopcode::Sub, Value::Reg(Rsp, Size64), Value::Reg(Rsp, Size64), mk_value_i64(stack_adjustment)));
+    }
     Ok((rest, (addr, stmts)))
 }
 
@@ -1001,6 +1015,7 @@ fn parse_instrs<'a>(
                 break;
             }
         }
+        log::info!("Lifted block: 0x{:x} {:?}", addr, stmts);
         block_ir.push((addr, stmts));
     }
     block_ir

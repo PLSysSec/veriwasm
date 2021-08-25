@@ -21,7 +21,7 @@ use yaxpeax_x86::long_mode::Arch as AMD64;
 use X86Regs::*;
 
 pub fn is_libcall(name: &String) -> bool {
-    vec!["floor", "ceil", "trunc"].contains(&&name[..])
+    vec!["floor", "ceil", "trunc", "ceil"].contains(&&name[..])
 }
 
 //return addr of symbol if present, else None

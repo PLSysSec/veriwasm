@@ -16,6 +16,7 @@ fn try_resolve_jumps(
     cfg: &VW_CFG,
     irmap: &IRMap,
     _addr: u64,
+    strict: bool,
 ) -> (VW_CFG, IRMap, i32, u32) {
     println!("Performing a reaching defs pass");
     let reaching_defs = analyze_reaching_defs(cfg, &irmap, module.metadata.clone());
@@ -37,7 +38,7 @@ fn try_resolve_jumps(
         cfg.entrypoint,
         Some(&switch_targets),
     );
-    let irmap = lift_cfg(module, &new_cfg, true);
+    let irmap = lift_cfg(module, &new_cfg, strict);
     let num_targets = switch_targets.len();
     return (new_cfg, irmap, num_targets as i32, still_unresolved);
 }
@@ -48,12 +49,13 @@ fn resolve_cfg(
     cfg: &VW_CFG,
     orig_irmap: &IRMap,
     addr: u64,
+    strict: bool,
 ) -> (VW_CFG, IRMap) {
     let (mut cfg, mut irmap, mut resolved_switches, mut still_unresolved) =
-        try_resolve_jumps(module, contexts, cfg, orig_irmap, addr);
+        try_resolve_jumps(module, contexts, cfg, orig_irmap, addr, strict);
     while still_unresolved != 0 {
         let (new_cfg, new_irmap, new_resolved_switches, new_still_unresolved) =
-            try_resolve_jumps(module, contexts, &cfg, &irmap, addr);
+            try_resolve_jumps(module, contexts, &cfg, &irmap, addr, strict);
         cfg = new_cfg;
         irmap = new_irmap;
         if (new_resolved_switches == resolved_switches) && (new_still_unresolved != 0) {
@@ -71,11 +73,12 @@ pub fn fully_resolved_cfg(
     module: &VwModule,
     contexts: &MergedContextTable,
     addr: u64,
+    strict: bool,
 ) -> (VW_CFG, IRMap) {
     let (cfg, _) = get_cfg(&module.program, contexts, addr, None);
-    let irmap = lift_cfg(module, &cfg, true);
+    let irmap = lift_cfg(module, &cfg, strict);
     if !has_indirect_jumps(&irmap) {
         return (cfg, irmap);
     }
-    return resolve_cfg(module, contexts, &cfg, &irmap, addr);
+    return resolve_cfg(module, contexts, &cfg, &irmap, addr, strict);
 }

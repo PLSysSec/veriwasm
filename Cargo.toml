@@ -25,6 +25,7 @@ serde_json = "1.0.59"
 log = "0.4.14"
 env_logger = "0.8.4"
 goblin = "0.4.1"
+itertools = "0.10.1"
 
 # This should be an optional compile target
 wasmtime = "0.28.0"

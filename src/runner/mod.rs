@@ -154,6 +154,7 @@ fn run_calls(
 }
 
 pub fn run(config: Config) {
+    let strict = false; // should probably be a commandline option
     let module = load_program(&config);
     let (x86_64_data, func_addrs, plt, mut all_addrs) =
         get_data(&module.program, &config.executable_type);
@@ -171,7 +172,7 @@ pub fn run(config: Config) {
         }
         println!("Generating CFG for {:?}", func_name);
         let start = Instant::now();
-        let (cfg, irmap) = fully_resolved_cfg(&module, &x86_64_data.contexts, addr);
+        let (cfg, irmap) = fully_resolved_cfg(&module, &x86_64_data.contexts, addr, strict);
         func_counter += 1;
         println!("Analyzing 0x{:x?}: {:?}", addr, func_name);
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
