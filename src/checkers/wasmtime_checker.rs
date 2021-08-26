@@ -66,12 +66,23 @@ impl<Ar: RegT> Checker<Ar, WasmtimeLattice<Ar>> for WasmtimeChecker<'_, Ar> {
         match ir_stmt {
             //1. Check that at each call vmctx reg = VmCtx
             // TODO: reenable
-            Stmt::Call(Value::Reg(r, Size64)) => {
-                let v = state.regs.get_reg(Ar::pinned_vmctx_reg(), Size64).v;
-                let target = state.regs.get_reg(*r, Size64).v;
+            Stmt::Call(target) => {
+                match target {
+                    Value::Reg(r, Size64) => {
+                        let v = state.regs.get_reg(Ar::pinned_vmctx_reg(), Size64).v;
+                        let target_v = state.regs.get_reg(*r, Size64).v;
+                        log::debug!("Call check: target = {:?} vmctx reg = {:?}", target_v, v);
+                        return target_v
+                            .map(|t| t.is_field() && t.as_field().unwrap().is_exec())
+                            .unwrap_or(false);
+                    }
+                    Value::Mem(_, _) => {
+                        return false;
+                    }
+                    _ => return true,
+                }
 
-                log::debug!("Call check: target = {:?} vmctx reg = {:?}", target, v);
-                return true;
+                // return true;
                 // return v.map(|x| x.is_vmctx()).unwrap_or(false);
             }
 
@@ -159,15 +170,20 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
     }
     /// 1. mem[vmctx + c] s.t. c is in offsets
     /// 2. mem[VmCtxField] s.t. write && f.write || ~f.write
-    /// vmctx and VmCtxField will always be regs 
-    fn is_vmctx_access(&self, state: &WasmtimeLattice<Ar>, access: &Value<Ar>, write: bool) -> bool {
+    /// vmctx and VmCtxField will always be regs
+    fn is_vmctx_access(
+        &self,
+        state: &WasmtimeLattice<Ar>,
+        access: &Value<Ar>,
+        write: bool,
+    ) -> bool {
         match access.to_mem() {
             MemArgs::Mem1Arg(MemArg::Reg(r, Size64)) => {
-                if let Some(v) = state.regs.get_reg(r, Size64).v{ 
+                if let Some(v) = state.regs.get_reg(r, Size64).v {
                     if v.is_vmctx() {
                         return true;
                     }
-                    if let VmAddr(offset) = v {
+                    if let VmAddr(Some(offset)) = v {
                         // if !self.analyzer.offsets.contains_key(offset){
                         //     println!("This offset does not exist = {:?}", offset);
                         // }
@@ -176,29 +192,62 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
                             return true;
                         }
                     }
-                    if let Ok(field) = v.as_field(){
+                    if let Ok(field) = v.as_field() {
                         if (field.is_write() && write) || (!write) {
                             return true;
                         }
                     }
                 }
-            },
-            MemArgs::Mem2Args(MemArg::Reg(r, Size64), MemArg::Imm(_, _, imm)) |   
-            MemArgs::Mem2Args(MemArg::Imm(_, _, imm), MemArg::Reg(r, Size64)) => {
-                let val = state.regs.get_reg(r, Size64).v;
-                if let Some(ref v) = val { 
+            }
+            MemArgs::Mem2Args(MemArg::Reg(r, sz), MemArg::Imm(_, _, imm))
+            | MemArgs::Mem2Args(MemArg::Imm(_, _, imm), MemArg::Reg(r, sz)) => {
+                let val = state.regs.get_reg(r, sz).v;
+                if let Some(ref v) = val {
+                    //TODO: whitelist which field offsets are acceptable
                     if v.is_vmctx() && self.analyzer.offsets.contains_key(&imm) {
                         return true;
                     }
-                }
-                //TODO: whitelist which field offsets are acceptable 
-                if let Some(ref v) = val { 
+                    //TODO: whitelist which field offsets are acceptable
                     if v.is_field() {
                         return true;
                     }
                 }
+            }
+            MemArgs::Mem2Args(MemArg::Reg(r1, sz1), MemArg::Reg(r2, sz2)) => {
+                let val1 = state.regs.get_reg(r1, sz1).v;
+                let val2 = state.regs.get_reg(r2, sz2).v;
+                // match (v1,v2) {
+                //     Some(),_
+                //     _,Some()
+                // }
 
-            },
+                // if let (Some(ref v1),Some(ref v2)) = (val1,val2) {
+                //     //TODO: refine this further
+                //     if v1.is_vmctx() || v2.is_vmctx(){
+                //         return true;
+                //     }
+                //     if v1.is_field() || v2.is_field(){
+                //         return true;
+                //     }
+                // }
+
+                if let Some(ref v1) = val1 {
+                    return v1.is_vmctx() || v1.is_field();
+                }
+                if let Some(ref v2) = val2 {
+                    return v2.is_vmctx() || v2.is_field();
+                }
+
+                //     //TODO: whitelist which field offsets are acceptable
+                //     if v.is_vmctx() && self.analyzer.offsets.contains_key(&imm) {
+                //         return true;
+                //     }
+                //     //TODO: whitelist which field offsets are acceptable
+                //     if v.is_field() {
+                //         return true;
+                //     }
+                // }
+            }
             _ => (),
         }
         false
@@ -228,7 +277,11 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
             return true;
         }
         // Case 8: its unknown
-        log::debug!("None of the memory accesses at 0x{:x}", loc_idx.addr);
+        log::debug!(
+            "None of the memory accesses at {} : 0x{:x}",
+            self.analyzer.name,
+            loc_idx.addr
+        );
         print_mem_access(state, access);
         return false;
     }
@@ -245,20 +298,23 @@ pub fn memarg_repr<Ar: RegT>(state: &WasmtimeLattice<Ar>, memarg: &MemArg<Ar>) -
 pub fn print_mem_access<Ar: RegT>(state: &WasmtimeLattice<Ar>, access: &Value<Ar>) {
     if let Value::Mem(_, memargs) = access {
         match memargs {
-            MemArgs::Mem1Arg(x) => log::debug!("mem[{:?}]", memarg_repr(state, x)),
+            MemArgs::Mem1Arg(x) => log::debug!("{:?} => mem[{:?}]", access, memarg_repr(state, x)),
             MemArgs::Mem2Args(x, y) => log::debug!(
-                "mem[{:?} + {:?}]",
+                "{:?} => mem[{:?} + {:?}]",
+                access,
                 memarg_repr(state, x),
                 memarg_repr(state, y)
             ),
             MemArgs::Mem3Args(x, y, z) => log::debug!(
-                "mem[{:?} + {:?} + {:?}]",
+                "{:?} => mem[{:?} + {:?} + {:?}]",
+                access,
                 memarg_repr(state, x),
                 memarg_repr(state, y),
                 memarg_repr(state, z)
             ),
             MemArgs::MemScale(x, y, z) => log::debug!(
-                "mem[{:?} + {:?} * {:?}]",
+                "{:?} => mem[{:?} + {:?} * {:?}]",
+                access,
                 memarg_repr(state, x),
                 memarg_repr(state, y),
                 memarg_repr(state, z)

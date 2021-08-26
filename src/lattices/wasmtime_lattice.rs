@@ -50,7 +50,7 @@ pub enum WasmtimeValue {
     HeapAddr,
     VmCtx,
     VmCtxField(FieldDesc),
-    VmAddr(i64),
+    VmAddr(Option<i64>),
 }
 
 use WasmtimeValue::*;

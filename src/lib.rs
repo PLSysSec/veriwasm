@@ -237,6 +237,8 @@ fn get_vm_offsets() -> VMOffsets {
     let mut offsets = HashMap::new();
     offsets.insert(36, FieldDesc::Rx); // ??
     offsets.insert(44, FieldDesc::R); // ??
+    offsets.insert(236, FieldDesc::R); // ??
+    offsets.insert(244, FieldDesc::R); // ??
     offsets.insert(556, FieldDesc::R); // ??
     offsets.insert(572, FieldDesc::R); // ??
     offsets.insert(592, FieldDesc::R); // ??
@@ -261,7 +263,7 @@ pub fn validate_wasmtime_func(
         func_name
     );
     let arch = VwArch::from_str(arch_str).map_err(|err| ValidationError::Other(err))?;
-    println!("Arch = {:?}", arch);
+    // println!("Arch = {:?}", arch);
     // println!("{:?} {:?} {:?}", code.len(), basic_blocks, cfg_edges);
     let cfg = get_cfg_from_compiler_info(code, basic_blocks, cfg_edges);
     let module = create_dummy_module(code, ExecutableType::Wasmtime, arch);
@@ -299,12 +301,16 @@ pub fn validate_wasmtime_func(
             // }
             println!("Checking heap for {}", func_name);
             let offsets = get_vm_offsets();
-            let wasmtime_analyzer = WasmtimeAnalyzer { offsets };
+            let wasmtime_analyzer = WasmtimeAnalyzer {
+                offsets,
+                name: func_name,
+            };
             let wasmtime_result = run_worklist(&cfg, &irmap, &wasmtime_analyzer);
             let wasmtime_safe = check_wasmtime(wasmtime_result, &irmap, &wasmtime_analyzer);
             // println!("Wow, a bug!");
             // return Ok(());
             if !wasmtime_safe {
+                println!("Veriwasm Check failed!");
                 return Err(ValidationError::HeapUnsafe);
             }
         }

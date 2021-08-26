@@ -7,7 +7,6 @@ use lattices::wasmtime_lattice::{
     FieldDesc, VMOffsets, WasmtimeLattice, WasmtimeValue, WasmtimeValueLattice,
 };
 use lattices::{ConstLattice, VarState};
-// use loaders::types::VwMetadata;
 use std::collections::HashMap;
 use std::default::Default;
 
@@ -17,6 +16,7 @@ use WasmtimeValue::*;
 
 pub struct WasmtimeAnalyzer {
     pub offsets: VMOffsets,
+    pub name: String,
 }
 
 impl<Ar: RegT> AbstractAnalyzer<Ar, WasmtimeLattice<Ar>> for WasmtimeAnalyzer {
@@ -33,7 +33,17 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, WasmtimeLattice<Ar>> for WasmtimeAnalyzer {
 
     fn aexec(&self, in_state: &mut WasmtimeLattice<Ar>, ir_instr: &Stmt<Ar>, loc_idx: &LocIdx) {
         match ir_instr {
-            Stmt::Clear(dst, _srcs) => in_state.set_to_bot(dst),
+            Stmt::Clear(dst, _srcs) => {
+                if let &Value::Reg(rd, Size32) | &Value::Reg(rd, Size16) | &Value::Reg(rd, Size8) =
+                    dst
+                {
+                    in_state
+                        .regs
+                        .set_reg(rd, Size64, WasmtimeValueLattice::new(Bounded4GB(None)));
+                } else {
+                    in_state.set_to_bot(dst)
+                }
+            }
             Stmt::Unop(opcode, dst, src) => self.aexec_unop(in_state, opcode, &dst, &src, loc_idx),
             Stmt::Binop(opcode, dst, src1, src2) => {
                 self.aexec_binop(in_state, opcode, dst, src1, src2, loc_idx);
@@ -85,55 +95,8 @@ impl WasmtimeAnalyzer {
         dst: &Value<Ar>,
         src1: &Value<Ar>,
         src2: &Value<Ar>,
-        _loc_idx: &LocIdx,
+        loc_idx: &LocIdx,
     ) {
-        match opcode {
-            Binopcode::Add => {
-                if let (
-                    &Value::Reg(rd, Size64),
-                    &Value::Reg(rs1, sz1),
-                    &Value::Reg(rs2, sz2),
-                ) = (dst, src1, src2)
-                {
-                    let rs1_val = in_state.regs.get_reg(rs1, sz1).v;
-                    let rs2_val = in_state.regs.get_reg(rs2, sz2).v;
-                    match (rs1_val, rs2_val) {
-                        (Some(HeapBase), Some(Bounded4GB(_))) | (Some(Bounded4GB(_)), Some(HeapBase)) => {
-                            in_state
-                                .regs
-                                .set_reg(rd, Size64, ConstLattice { v: Some(HeapAddr) });
-                            return;
-                        }
-                        _ => {}
-                    }
-                }
-            }
-            _ => {}
-        }
-        match opcode {
-            Binopcode::Add => {
-                if let (
-                    &Value::Reg(rd, Size64),
-                    &Value::Reg(rs1, sz1),
-                    &Value::Reg(rs2, sz2),
-                ) = (dst, src1, src2)
-                {
-                    let rs1_val = in_state.regs.get_reg(rs1, sz1).v;
-                    let rs2_val = in_state.regs.get_reg(rs2, sz2).v;
-                    match (rs1_val, rs2_val) {
-                        (Some(VmCtx), Some(Bounded4GB(Some(b)))) | (Some(Bounded4GB(Some(b))), Some(VmCtx)) => {
-                            in_state
-                                .regs
-                                .set_reg(rd, Size64, ConstLattice { v: Some(VmAddr(b)) });
-                            return;
-                        }
-                        _ => {}
-                    }
-                }
-            }
-            _ => {}
-        }
-
         // Any write to a 32-bit register will clear the upper 32 bits of the containing 64-bit
         // register.
         if let &Value::Reg(rd, Size32) = dst {
@@ -147,7 +110,7 @@ impl WasmtimeAnalyzer {
             return;
         }
 
-        in_state.set_to_bot(dst);
+        in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2, loc_idx));
     }
 
     fn aeval_unop<Ar: RegT>(
@@ -194,6 +157,47 @@ impl WasmtimeAnalyzer {
         Default::default()
     }
 
+    pub fn aeval_binop<Ar: RegT>(
+        &self,
+        in_state: &WasmtimeLattice<Ar>,
+        opcode: &Binopcode,
+        src1: &Value<Ar>,
+        src2: &Value<Ar>,
+        loc_idx: &LocIdx,
+    ) -> WasmtimeValueLattice {
+        match opcode {
+            Binopcode::Add => self.aeval_add(in_state, src1, src2, loc_idx),
+            _ => Default::default(),
+        }
+    }
+
+    pub fn aeval_add<Ar: RegT>(
+        &self,
+        in_state: &WasmtimeLattice<Ar>,
+        src1: &Value<Ar>,
+        src2: &Value<Ar>,
+        loc_idx: &LocIdx,
+    ) -> WasmtimeValueLattice {
+        match (src1, src2) {
+            (&Value::Reg(rs1, sz1), &Value::Reg(rs2, sz2)) => {
+                let rs1_val = in_state.regs.get_reg(rs1, sz1).v;
+                let rs2_val = in_state.regs.get_reg(rs2, sz2).v;
+                match (rs1_val, rs2_val) {
+                    (Some(HeapBase), Some(Bounded4GB(_)))
+                    | (Some(Bounded4GB(_)), Some(HeapBase)) => {
+                        return WasmtimeValueLattice::new(HeapAddr);
+                    }
+                    (Some(VmCtx), Some(Bounded4GB(Some(b))))
+                    | (Some(Bounded4GB(Some(b))), Some(VmCtx)) => {
+                        return WasmtimeValueLattice::new(VmAddr(Some(b)));
+                    }
+                    _ => Default::default(),
+                }
+            }
+            _ => Default::default(),
+        }
+    }
+
     /// Deref a VmCtx field (if this a deref)
     /// None denotes that this is not a field deref
     /// There are three patters of field access:
@@ -212,8 +216,8 @@ impl WasmtimeAnalyzer {
                 if v.is_vmctx() {
                     return Some(WasmtimeValueLattice::new(HeapBase));
                 }
-                if let VmAddr(offset) = v {
-                    if !self.offsets.contains_key(&offset){
+                if let VmAddr(Some(offset)) = v {
+                    if !self.offsets.contains_key(&offset) {
                         println!("This offset does not exist = {:?}", offset);
                     }
                     let field = self.offsets[&offset].clone();

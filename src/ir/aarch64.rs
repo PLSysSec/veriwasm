@@ -754,13 +754,13 @@ fn lift_block(
     // }
     let mut block_ir = parse_instrs(&cs, &instrs, &module.metadata, strict);
     if let Some(imm) = ends_in_b(&cs, &block, &instrs, buf) {
-        println!(
-            "[{:x}:{:x}] imm = {:x} buf.len() = {:x}",
-            block.start,
-            block.end,
-            imm,
-            buf.len()
-        );
+        // println!(
+        //     "[{:x}:{:x}] imm = {:x} buf.len() = {:x}",
+        //     block.start,
+        //     block.end,
+        //     imm,
+        //     buf.len()
+        // );
         let new_instrs = disas_aarch64(
             &cs,
             &buf[(imm as u64 - block.start) as usize..],
@@ -769,7 +769,7 @@ fn lift_block(
 
         let new_ir = parse_instrs(&cs, &new_instrs, &module.metadata, strict);
         block_ir.extend(new_ir);
-        println!("Wow: {:x}", imm);
+        // println!("Wow: {:x}", imm);
     }
 
     // Deal with undefined instructions stopping disassembly
