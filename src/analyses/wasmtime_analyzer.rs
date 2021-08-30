@@ -113,7 +113,7 @@ impl WasmtimeAnalyzer {
         in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2, loc_idx));
     }
 
-    fn aeval_unop<Ar: RegT>(
+    pub fn aeval_unop<Ar: RegT>(
         &self,
         in_state: &WasmtimeLattice<Ar>,
         value: &Value<Ar>,
@@ -178,21 +178,49 @@ impl WasmtimeAnalyzer {
         src2: &Value<Ar>,
         loc_idx: &LocIdx,
     ) -> WasmtimeValueLattice {
-        match (src1, src2) {
-            (&Value::Reg(rs1, sz1), &Value::Reg(rs2, sz2)) => {
-                let rs1_val = in_state.regs.get_reg(rs1, sz1).v;
-                let rs2_val = in_state.regs.get_reg(rs2, sz2).v;
-                match (rs1_val, rs2_val) {
-                    (Some(HeapBase), Some(Bounded4GB(_)))
-                    | (Some(Bounded4GB(_)), Some(HeapBase)) => {
-                        return WasmtimeValueLattice::new(HeapAddr);
-                    }
-                    (Some(VmCtx), Some(Bounded4GB(Some(b))))
-                    | (Some(Bounded4GB(Some(b))), Some(VmCtx)) => {
-                        return WasmtimeValueLattice::new(VmAddr(Some(b)));
-                    }
-                    _ => Default::default(),
-                }
+        // match (src1, src2) {
+        //     (&Value::Reg(rs1, sz1), &Value::Reg(rs2, sz2)) => {
+        //         let rs1_val = in_state.regs.get_reg(rs1, sz1).v;
+        //         let rs2_val = in_state.regs.get_reg(rs2, sz2).v;
+        //         match (rs1_val, rs2_val) {
+        //             (Some(HeapBase), Some(Bounded4GB(_)))
+        //             | (Some(Bounded4GB(_)), Some(HeapBase)) => {
+        //                 return WasmtimeValueLattice::new(HeapAddr);
+        //             }
+        //             (Some(VmCtx), Some(Bounded4GB(Some(b))))
+        //             | (Some(Bounded4GB(Some(b))), Some(VmCtx)) => {
+        //                 return WasmtimeValueLattice::new(VmAddr(Some(b)));
+        //             }
+        //             _ => Default::default(),
+        //         }
+
+        //         // (&Value::Reg(rs1, sz1), &Value::Reg(rs2, sz2)) => {
+        //         //     let rs1_val = in_state.regs.get_reg(rs1, sz1).v;
+        //         //     let rs2_val = in_state.regs.get_reg(rs2, sz2).v;
+        //         //     match (rs1_val, rs2_val) {
+        //         //         (Some(HeapBase), Some(Bounded4GB(_)))
+        //         //         | (Some(Bounded4GB(_)), Some(HeapBase)) => {
+        //         //             return WasmtimeValueLattice::new(HeapAddr);
+        //         //         }
+        //         //         (Some(VmCtx), Some(Bounded4GB(Some(b))))
+        //         //         | (Some(Bounded4GB(Some(b))), Some(VmCtx)) => {
+        //         //             return WasmtimeValueLattice::new(VmAddr(Some(b)));
+        //         //         }
+        //         //         _ => Default::default(),
+        //         //     }
+        //         // }
+        //     }
+        //     _ => Default::default(),
+        // }
+        match (
+            self.aeval_unop(in_state, src1).v,
+            self.aeval_unop(in_state, src2).v,
+        ) {
+            (Some(HeapBase), Some(Bounded4GB(_))) | (Some(Bounded4GB(_)), Some(HeapBase)) => {
+                return WasmtimeValueLattice::new(HeapAddr);
+            }
+            (Some(VmCtx), Some(Bounded4GB(Some(b)))) | (Some(Bounded4GB(Some(b))), Some(VmCtx)) => {
+                return WasmtimeValueLattice::new(VmAddr(Some(b)));
             }
             _ => Default::default(),
         }
@@ -220,13 +248,19 @@ impl WasmtimeAnalyzer {
                     if !self.offsets.contains_key(&offset) {
                         println!("This offset does not exist = {:?}", offset);
                     }
-                    let field = self.offsets[&offset].clone();
-                    return Some(WasmtimeValueLattice::new(VmCtxField(field)));
+                    let field_v = self.offsets[&offset].clone();
+                    return Some(WasmtimeValueLattice::new(field_v));
+                    // return Some(WasmtimeValueLattice::new(VmCtxField(field)));
                 }
-                // 2. mem[VmCtxField] => VmCtxField.deref()
+                // 2. mem[VmCtxField] => Read only field
                 if v.is_field() {
                     let field = v.as_field().ok()?;
-                    return Some(WasmtimeValueLattice::new(VmCtxField(field)));
+                    let v = if field.is_ptr() {
+                        field.deref().ok()?
+                    } else {
+                        VmCtxField(FieldDesc::R)
+                    };
+                    return Some(WasmtimeValueLattice::new(v));
                 }
             }
             MemArgs::Mem2Args(arg1, arg2) if arg1.is_reg() => {
@@ -238,7 +272,8 @@ impl WasmtimeAnalyzer {
                         println!("VMCtx field not present: {:?}", k);
                     }
                     let field = self.offsets[k].clone();
-                    return Some(WasmtimeValueLattice::new(VmCtxField(field)));
+                    return Some(WasmtimeValueLattice::new(field));
+                    // return Some(WasmtimeValueLattice::new(VmCtxField(field)));
                 }
             }
             _ => (),

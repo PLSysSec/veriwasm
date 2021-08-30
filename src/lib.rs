@@ -16,14 +16,17 @@ use checkers::{check_heap, check_stack, check_wasmtime};
 use crate::ir::types::X86Regs;
 use ir::types::IRMap;
 use ir::{aarch64_lift_cfg, x64_lift_cfg};
-use lattices::wasmtime_lattice::{FieldDesc, VMOffsets};
+use lattices::wasmtime_lattice::{FieldDesc, VMOffsets, WasmtimeValue};
 use loaders::types::{ExecutableType, VwArch, VwMetadata, VwModule};
 use petgraph::graphmap::GraphMap;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::str::FromStr;
+use wasmtime_environ;
 use yaxpeax_core::analyses::control_flow::{VW_Block, VW_CFG};
 use yaxpeax_core::memory::repr::process::{ModuleData, ModuleInfo, Segment};
+
+use crate::WasmtimeValue::*;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ValidationError {
@@ -233,15 +236,143 @@ pub fn wasmtime_test_hook() {
     println!("Wasmtime has called into VeriWasm!");
 }
 
-fn get_vm_offsets() -> VMOffsets {
+/*
+VMOffsets {
+    pointer_size: 8,
+    num_signature_ids: 51,
+    num_imported_functions: 20,
+    num_imported_tables: 0,
+    num_imported_memories: 0,
+    num_imported_globals: 0,
+    num_defined_functions: 731,
+    num_defined_tables: 1,
+    num_defined_memories: 1,
+    num_defined_globals: 243,
+    interrupts: 0,
+    externref_activations_table: 8,
+    module_info_lookup: 16,
+    signature_ids: 32,
+    imported_functions: 236,
+    imported_tables: 556,
+    imported_memories: 556,
+    imported_globals: 556,
+    defined_tables: 556,
+    defined_memories: 572,
+    defined_globals: 592,
+    defined_anyfuncs: 4480,
+    builtin_functions: 22504,
+    size: 22720 }
+
+*/
+
+//
+// vmcaller_checked_anyfunc_func_ptr 0    ?
+// vmcaller_checked_anyfunc_type_index 8  ?
+// vmcaller_checked_anyfunc_vmctx 16      ?
+// size_of_vmcaller_checked_anyfunc() 24  ?
+// vmctx_interrupts 0                     ?
+// vmctx_externref_activations_table 8    ?
+// vmctx_module_info_lookup 16            ?
+// vmctx_signature_ids_begin 32           Rx
+// vmctx_imported_functions_begin 236     Rx
+// vmctx_imported_tables_begin 556        R
+// vmctx_imported_memories_begin 556      R
+// vmctx_imported_globals_begin  556      R
+// vmctx_tables_begin 556                 R
+// vmctx_memories_begin 572               address of HeapBase
+// vmctx_globals_begin 592                R
+// vmctx_anyfuncs_begin 4480              ?
+// vmctx_builtin_functions_begin 22504    ?
+// size_of_vmctx 22720                    ?
+//
+
+fn get_vm_offsets(vm_offsets: &wasmtime_environ::VMOffsets) -> VMOffsets {
+    // println!("VMOffsets:
+    //     {:?}
+    //     vmcaller_checked_anyfunc_func_ptr {:?}
+    //     vmcaller_checked_anyfunc_type_index {:?}
+    //     vmcaller_checked_anyfunc_vmctx {:?}
+    //     size_of_vmcaller_checked_anyfunc() {:?}
+    //     vmctx_interrupts {:?}
+    //     vmctx_externref_activations_table {:?}
+    //     vmctx_module_info_lookup {:?}
+    //     vmctx_signature_ids_begin {:?}
+    //     vmctx_imported_functions_begin {:?}
+    //     vmctx_imported_tables_begin {:?}
+    //     vmctx_imported_memories_begin {:?}
+    //     vmctx_imported_globals_begin  {:?}
+    //     vmctx_tables_begin {:?}
+    //     vmctx_memories_begin {:?}
+    //     vmctx_globals_begin {:?}
+    //     vmctx_anyfuncs_begin {:?}
+    //     vmctx_builtin_functions_begin {:?}
+    //     size_of_vmctx {:?}",
+    //     vm_offsets,
+    //     vm_offsets.vmcaller_checked_anyfunc_func_ptr(),
+    //     vm_offsets.vmcaller_checked_anyfunc_type_index(),
+    //     vm_offsets.vmcaller_checked_anyfunc_vmctx(),
+    //     vm_offsets.size_of_vmcaller_checked_anyfunc(),
+    //     vm_offsets.vmctx_interrupts(),
+    //     vm_offsets.vmctx_externref_activations_table(),
+    //     vm_offsets.vmctx_module_info_lookup(),
+    //     vm_offsets.vmctx_signature_ids_begin(),
+    //     vm_offsets.vmctx_imported_functions_begin(),
+    //     vm_offsets.vmctx_imported_tables_begin(),
+    //     vm_offsets.vmctx_imported_memories_begin(),
+    //     vm_offsets.vmctx_imported_globals_begin(),
+    //     vm_offsets.vmctx_tables_begin(),
+    //     vm_offsets.vmctx_memories_begin(),
+    //     vm_offsets.vmctx_globals_begin(),
+    //     vm_offsets.vmctx_anyfuncs_begin(),
+    //     vm_offsets.vmctx_builtin_functions_begin(),
+    //     vm_offsets.size_of_vmctx(),
+    //     );
     let mut offsets = HashMap::new();
-    offsets.insert(36, FieldDesc::Rx); // ??
-    offsets.insert(44, FieldDesc::R); // ??
-    offsets.insert(236, FieldDesc::R); // ??
-    offsets.insert(244, FieldDesc::R); // ??
-    offsets.insert(556, FieldDesc::R); // ??
-    offsets.insert(572, FieldDesc::R); // ??
-    offsets.insert(592, FieldDesc::R); // ??
+    // 1. load signatures
+    let sig_start = vm_offsets.vmctx_signature_ids_begin();
+    let num_sigs = vm_offsets.num_signature_ids;
+    for offset in (sig_start..sig_start + num_sigs * 8).step_by(8) {
+        offsets.insert(offset as i64, VmCtxField(FieldDesc::Rx));
+    }
+    // 2. load imported funcs
+    let funcs_start = vm_offsets.vmctx_imported_functions_begin();
+    let num_funcs = vm_offsets.num_imported_functions;
+    for offset in (funcs_start..funcs_start + (num_funcs + 1) * 8).step_by(8) {
+        offsets.insert(offset as i64, VmCtxField(FieldDesc::Rx));
+    }
+
+    // 3. load tables
+    let tables_start = vm_offsets.vmctx_tables_begin();
+    let num_tables = vm_offsets.num_defined_tables;
+    for offset in (tables_start..tables_start + num_tables * 8).step_by(8) {
+        offsets.insert(offset as i64, VmCtxField(FieldDesc::R));
+    }
+
+    // 4. load globals
+    let globals_start = vm_offsets.vmctx_globals_begin();
+    let num_globals = vm_offsets.num_defined_globals;
+    // println!("Inserting globals {:?} {:?}", globals_start, num_globals);
+    for offset in (globals_start..globals_start + num_globals * 8).step_by(8) {
+        // println!("Inserting global = {:?}", offset);
+        offsets.insert(offset as i64, VmCtxField(FieldDesc::Rw));
+    }
+
+    // 5. load HeapBase
+    let mem_start = vm_offsets.vmctx_memories_begin();
+    //let num_mem = vm_offsets.num_imported_gl();
+    //offsets.insert(mem_start as i64, FieldDesc::Ptr(Box::new(WasmtimeValue::HeapBase)));
+    offsets.insert(mem_start as i64, HeapBase);
+    // for offset in (globals_start..globals_start + num_globals*8).step_by(8){
+    //     offsets.insert(offset, FieldDesc::Rw);
+    // }
+    // offsets.insert(36, FieldDesc::Rx); // ??
+    // offsets.insert(44, FieldDesc::R); // ??
+    // offsets.insert(236, FieldDesc::R); // ??
+    // offsets.insert(244, FieldDesc::R); // ??
+    // offsets.insert(556, FieldDesc::R); // ??
+    // offsets.insert(572, FieldDesc::R); // ??
+    // offsets.insert(592, FieldDesc::R); // ??
+    // println!("{:?}", offsets);
     offsets
 }
 
@@ -251,12 +382,13 @@ pub fn validate_wasmtime_func(
     cfg_edges: &[(usize, usize)],
     arch_str: &str,
     func_name: String,
+    vm_offsets: &wasmtime_environ::VMOffsets,
 ) -> Result<(), ValidationError> {
     // env_logger::init();
     // if func_name != "_wasm_function_569"{
-    // if func_name != "u0:430"{
-    //     return Ok(());
-    // }
+    if func_name != "u0:319" {
+        return Ok(());
+    }
 
     println!(
         "VeriWasm is verifying the Wasmtime aot compilation: {}",
@@ -300,7 +432,7 @@ pub fn validate_wasmtime_func(
             //     return Err(ValidationError::StackUnsafe);
             // }
             println!("Checking heap for {}", func_name);
-            let offsets = get_vm_offsets();
+            let offsets = get_vm_offsets(vm_offsets);
             let wasmtime_analyzer = WasmtimeAnalyzer {
                 offsets,
                 name: func_name,

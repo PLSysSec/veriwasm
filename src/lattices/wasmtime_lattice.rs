@@ -12,7 +12,7 @@ pub enum FieldDesc {
     R,
     Rw,
     Rx,
-    Ptr(Box<FieldDesc>),
+    Ptr(Box<WasmtimeValue>),
 }
 
 use FieldDesc::*;
@@ -30,7 +30,7 @@ impl FieldDesc {
         matches!(self, Ptr(_))
     }
 
-    pub fn deref(&self) -> WasmtimeResult<FieldDesc> {
+    pub fn deref(&self) -> WasmtimeResult<WasmtimeValue> {
         if let Ptr(field) = self {
             Ok(*field.clone())
         } else {
@@ -76,10 +76,6 @@ impl WasmtimeValue {
         matches!(self, VmAddr(_))
     }
 
-    // pub fn as_vmaddr_offset(&self) -> bool {
-    //     matches!(self, VmAddr(v))
-    // }
-
     pub fn is_field(&self) -> bool {
         matches!(self, VmCtxField(_))
     }
@@ -97,4 +93,4 @@ pub type WasmtimeValueLattice = ConstLattice<WasmtimeValue>;
 
 pub type WasmtimeLattice<Ar> = VariableState<Ar, WasmtimeValueLattice>;
 
-pub type VMOffsets = HashMap<i64, FieldDesc>;
+pub type VMOffsets = HashMap<i64, WasmtimeValue>;

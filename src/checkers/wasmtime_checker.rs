@@ -129,9 +129,16 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
     fn is_heap_access(&self, state: &WasmtimeLattice<Ar>, access: &Value<Ar>) -> bool {
         match access.to_mem() {
             // 1. mem[heapbase]
-            MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64)) => {
-                let v = state.regs.get_reg(regnum, Size64).v;
-                return v.map(|x| x.is_heapbase()).unwrap_or(false);
+            // MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64)) => {
+            //     let v = state.regs.get_reg(regnum, Size64).v;
+            //     return v.map(|x| x.is_heapbase()).unwrap_or(false);
+            // }
+            MemArgs::Mem1Arg(memarg) => {
+                // let maybe_v: Value<Ar> = memarg.into();
+                let v = self.analyzer.aeval_unop(state, &memarg.into()).v;
+                return matches!(v, Some(HeapBase));
+                // let v = state.regs.get_reg(regnum, Size64).v;
+                // return v.map(|x| x.is_heapbase()).unwrap_or(false);
             }
             // 2. mem[heapbase + bounded4GB]
             MemArgs::Mem2Args(MemArg::Reg(regnum, Size64), memarg2) => {
@@ -140,7 +147,8 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
                     match memarg2 {
                         MemArg::Reg(regnum2, size2) => {
                             let v2 = state.regs.get_reg(regnum2, size2).v;
-                            return v2.map(|x| x.is_heapbase()).unwrap_or(false);
+                            return size2.into_bits() <= 32 || matches!(v2, Some(Bounded4GB(_)));
+                            // return v2.map(|x| x.is_heapbase()).unwrap_or(false);
                         }
                         MemArg::Imm(_, _, v) => return v >= -0x1000 && v <= 0xffffffff,
                     }
@@ -156,6 +164,9 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
                     match (memarg2, memarg3) {
                         (MemArg::Reg(regnum2, size2), MemArg::Imm(_, _, v))
                         | (MemArg::Imm(_, _, v), MemArg::Reg(regnum2, size2)) => {
+                            if size2.into_bits() <= 32 {
+                                return v <= 0xffffffff;
+                            }
                             if let Some(Bounded4GB(_)) = state.regs.get_reg(regnum2, size2).v {
                                 return v <= 0xffffffff;
                             }
@@ -187,8 +198,11 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
                         // if !self.analyzer.offsets.contains_key(offset){
                         //     println!("This offset does not exist = {:?}", offset);
                         // }
-                        let field = self.analyzer.offsets[&offset].clone();
-                        if (field.is_write() && write) || (!write) {
+                        if write {
+                            let field_v = self.analyzer.offsets[&offset].clone();
+                            let field = field_v.as_field();
+                            return field.is_ok() && field.unwrap().is_write();
+                        } else {
                             return true;
                         }
                     }
@@ -238,14 +252,23 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
                     return v2.is_vmctx() || v2.is_field();
                 }
 
-                //     //TODO: whitelist which field offsets are acceptable
-                //     if v.is_vmctx() && self.analyzer.offsets.contains_key(&imm) {
-                //         return true;
-                //     }
-                //     //TODO: whitelist which field offsets are acceptable
-                //     if v.is_field() {
-                //         return true;
-                //     }
+                // VmCtx + bounded
+                if let Some(WasmtimeValue::VmCtx) = val1 {
+                    if let Some(WasmtimeValue::Bounded4GB(Some(b))) = val2 {
+                        return self.analyzer.offsets.contains_key(&b);
+                    }
+                }
+
+                if let Some(WasmtimeValue::VmCtx) = val2 {
+                    if let Some(WasmtimeValue::Bounded4GB(Some(b))) = val1 {
+                        return self.analyzer.offsets.contains_key(&b);
+                    }
+                }
+
+                //TODO: whitelist which field offsets are acceptable
+                // if val2.is_vmctx() {
+                //     return true;
+                // }
                 // }
             }
             _ => (),
@@ -288,6 +311,9 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
 }
 pub fn memarg_repr<Ar: RegT>(state: &WasmtimeLattice<Ar>, memarg: &MemArg<Ar>) -> String {
     match memarg {
+        MemArg::Reg(regnum, Size32) => {
+            format!("{:?}: {:?}", regnum, Bounded4GB(None))
+        }
         MemArg::Reg(regnum, size) => {
             format!("{:?}: {:?}", regnum, state.regs.get_reg(*regnum, *size).v)
         }

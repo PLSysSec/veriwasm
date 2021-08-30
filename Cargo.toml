@@ -45,3 +45,5 @@ capstone = { path = "../capstone-rs/capstone-rs" }
 # # lucet-module = { git = "https://github.com/bytecodealliance/lucet.git" }
 elfkit = "0.0.4"
 itertools = "*"
+wasmtime-environ = { path = "../environ", version = "0.27.0" }
+

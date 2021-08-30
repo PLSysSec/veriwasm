@@ -246,6 +246,15 @@ impl<Ar> From<i64> for Value<Ar> {
     }
 }
 
+impl<Ar> From<MemArg<Ar>> for Value<Ar> {
+    fn from(arg: MemArg<Ar>) -> Self {
+        match arg {
+            MemArg::Reg(r, sz) => Self::Reg(r, sz),
+            MemArg::Imm(ty, imm, sz) => Self::Imm(ty, imm, sz),
+        }
+    }
+}
+
 // Parameterized by architecture register set
 #[derive(Debug, Clone)]
 pub enum Stmt<Ar> {
