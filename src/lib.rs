@@ -331,21 +331,27 @@ fn get_vm_offsets(vm_offsets: &wasmtime_environ::VMOffsets) -> VMOffsets {
     // 1. load signatures
     let sig_start = vm_offsets.vmctx_signature_ids_begin();
     let num_sigs = vm_offsets.num_signature_ids;
-    for offset in (sig_start..sig_start + num_sigs * 8).step_by(8) {
+    // size = 4
+    for offset in (sig_start..sig_start + num_sigs * 8).step_by(4) {
         offsets.insert(offset as i64, VmCtxField(FieldDesc::Rx));
     }
     // 2. load imported funcs
     let funcs_start = vm_offsets.vmctx_imported_functions_begin();
     let num_funcs = vm_offsets.num_imported_functions;
-    for offset in (funcs_start..funcs_start + (num_funcs + 1) * 8).step_by(8) {
+    for offset in (funcs_start..funcs_start + num_funcs * 16).step_by(8) {
         offsets.insert(offset as i64, VmCtxField(FieldDesc::Rx));
     }
 
     // 3. load tables
     let tables_start = vm_offsets.vmctx_tables_begin();
     let num_tables = vm_offsets.num_defined_tables;
-    for offset in (tables_start..tables_start + num_tables * 8).step_by(8) {
-        offsets.insert(offset as i64, VmCtxField(FieldDesc::R));
+    // table entries are 16 bytes: 8 bytes for base, 8 bytes for size
+    for offset in (tables_start..tables_start + num_tables * 8 * 2).step_by(8 * 2) {
+        offsets.insert(
+            offset as i64,
+            VmCtxField(FieldDesc::Ptr(Box::new(VmCtxField(FieldDesc::R)))),
+        ); //base
+        offsets.insert((offset + 8) as i64, VmCtxField(FieldDesc::R)); //size
     }
 
     // 4. load globals
@@ -357,22 +363,20 @@ fn get_vm_offsets(vm_offsets: &wasmtime_environ::VMOffsets) -> VMOffsets {
         offsets.insert(offset as i64, VmCtxField(FieldDesc::Rw));
     }
 
-    // 5. load HeapBase
+    // 6. load HeapBase
     let mem_start = vm_offsets.vmctx_memories_begin();
-    //let num_mem = vm_offsets.num_imported_gl();
-    //offsets.insert(mem_start as i64, FieldDesc::Ptr(Box::new(WasmtimeValue::HeapBase)));
     offsets.insert(mem_start as i64, HeapBase);
-    // for offset in (globals_start..globals_start + num_globals*8).step_by(8){
-    //     offsets.insert(offset, FieldDesc::Rw);
+
+    // 7. load builtin functions
+    let builtin_funcs_start = vm_offsets.vmctx_builtin_functions_begin();
+    let builtin_funcs_end = vm_offsets.size_of_vmctx();
+    for offset in (builtin_funcs_start..builtin_funcs_end).step_by(8) {
+        offsets.insert(offset as i64, VmCtxField(FieldDesc::Rx));
+    }
+    //println!("Offsets = {:?}", offsets);
+    // for (k,v) in offsets.iter(){
+    //     println!("Offsets slot: {:?} {:?}", k, v);
     // }
-    // offsets.insert(36, FieldDesc::Rx); // ??
-    // offsets.insert(44, FieldDesc::R); // ??
-    // offsets.insert(236, FieldDesc::R); // ??
-    // offsets.insert(244, FieldDesc::R); // ??
-    // offsets.insert(556, FieldDesc::R); // ??
-    // offsets.insert(572, FieldDesc::R); // ??
-    // offsets.insert(592, FieldDesc::R); // ??
-    // println!("{:?}", offsets);
     offsets
 }
 
@@ -386,9 +390,9 @@ pub fn validate_wasmtime_func(
 ) -> Result<(), ValidationError> {
     // env_logger::init();
     // if func_name != "_wasm_function_569"{
-    if func_name != "u0:319" {
-        return Ok(());
-    }
+    // if func_name != "u0:1435" {
+    //     return Ok(());
+    // }
 
     println!(
         "VeriWasm is verifying the Wasmtime aot compilation: {}",
@@ -409,7 +413,7 @@ pub fn validate_wasmtime_func(
             // for (_, block) in cfg.blocks.iter() {
             //     println!("CFG block: [0x{:x} : 0x{:x}]", block.start, block.end);
             // }
-            // println!("CFG graph: {:?}", cfg.graph);
+            // // println!("CFG graph: {:?}", cfg.graph);
 
             // for (baddr, block) in irmap.iter() {
             //     println!(
@@ -435,14 +439,14 @@ pub fn validate_wasmtime_func(
             let offsets = get_vm_offsets(vm_offsets);
             let wasmtime_analyzer = WasmtimeAnalyzer {
                 offsets,
-                name: func_name,
+                name: func_name.clone(),
             };
             let wasmtime_result = run_worklist(&cfg, &irmap, &wasmtime_analyzer);
             let wasmtime_safe = check_wasmtime(wasmtime_result, &irmap, &wasmtime_analyzer);
             // println!("Wow, a bug!");
             // return Ok(());
             if !wasmtime_safe {
-                println!("Veriwasm Check failed!");
+                println!("Veriwasm Check failed: {}", func_name);
                 return Err(ValidationError::HeapUnsafe);
             }
         }

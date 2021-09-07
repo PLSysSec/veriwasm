@@ -135,10 +135,10 @@ pub fn run_worklist<T: AbstractAnalyzer<Ar, State>, State: VarState + Lattice + 
         let addr = worklist.pop_front().unwrap();
         let irblock = irmap.get(&addr).unwrap();
         let state = statemap.get(&addr).unwrap();
-        let new_state = analyzer.analyze_block(state, irblock);
         let succ_addrs_unaligned: Vec<u64> = cfg.graph.neighbors(addr).collect();
         let succ_addrs: Vec<u64> = align_succ_addrs(addr, succ_addrs_unaligned);
         log::debug!("Processing Block: 0x{:x} -> {:?}", addr, succ_addrs);
+        let new_state = analyzer.analyze_block(state, irblock);
         for (succ_addr, branch_state) in
             analyzer.process_branch(irmap, &new_state, &succ_addrs, &addr)
         {

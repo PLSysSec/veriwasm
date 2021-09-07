@@ -693,6 +693,7 @@ fn ends_in_check(block: &VW_Block, instrs: &capstone::Instructions, buf: &[u8]) 
     if last_instr.mnemonic() == Some("b.hs") {
         if bytes_read <= block.end {
             let rest = &buf[(block.start + bytes_read) as usize..(block.end as usize)];
+            // println!("ends_in_check!");
             return &rest[0..4] == [0, 0, 160, 212];
         }
     }
@@ -707,6 +708,7 @@ fn ends_in_b(
 ) -> Option<i64> {
     let last_instr = instrs.last().unwrap();
     let bytes_read = last_instr.address() + last_instr.bytes().len() as u64;
+    // println!("Ends in b: {:x} {:?} {:?}", last_instr.address(), bytes_read, block.end);
     if last_instr.mnemonic() == Some("b") {
         if bytes_read <= block.end {
             let operands = get_aarch64_operands(cs, last_instr);
@@ -735,54 +737,39 @@ fn lift_block(
     // block addrs should not be used to index into buf since buf is just the function's code
     // and block addrs are the global address
     // block range is inclusive, range here is excl
-    let instrs = disas_aarch64(&cs, buf, block.start);
+    let mut instrs = disas_aarch64(&cs, buf, block.start);
     if instrs.len() == 0 {
         return Vec::new();
-        // println!("No instructions parsed! [0x{:x}:0x{:x}] = (length = {:?}) {:?}", block.start, block.end,  buf.len(), &buf);
     }
-    // println!("{:?} length = {:?}", block, instrs.len());
-    // let last_instr = instrs.last().unwrap();
-    // let bytes_read = last_instr.address() + last_instr.bytes().len() as u64;
-    // println!("Disas_aarch64({:x}, {:?}) = ", block.start, buf.len());
-    // for instr in instrs.iter() {
-    //     println!(
-    //         "0x{:x}: {:?} {:?}",
-    //         instr.address(),
-    //         instr.mnemonic(),
-    //         instr.op_str()
-    //     );
-    // }
+
     let mut block_ir = parse_instrs(&cs, &instrs, &module.metadata, strict);
-    if let Some(imm) = ends_in_b(&cs, &block, &instrs, buf) {
-        // println!(
-        //     "[{:x}:{:x}] imm = {:x} buf.len() = {:x}",
-        //     block.start,
-        //     block.end,
-        //     imm,
-        //     buf.len()
-        // );
-        let new_instrs = disas_aarch64(
-            &cs,
-            &buf[(imm as u64 - block.start) as usize..],
-            imm as u64, // add block.start?
-        );
 
-        let new_ir = parse_instrs(&cs, &new_instrs, &module.metadata, strict);
-        block_ir.extend(new_ir);
-        // println!("Wow: {:x}", imm);
-    }
+    // Check until fixed point
+    while ends_in_b(&cs, &block, &instrs, buf).is_some() || ends_in_check(&block, &instrs, buf) {
+        if let Some(imm) = ends_in_b(&cs, &block, &instrs, buf) {
+            instrs = disas_aarch64(
+                &cs,
+                &buf[(imm as u64 - block.start) as usize..],
+                imm as u64, // add block.start?
+            );
 
-    // Deal with undefined instructions stopping disassembly
-    if ends_in_check(&block, &instrs, buf) {
-        let last_instr = instrs.last().unwrap();
-        let bytes_read = last_instr.address() + last_instr.bytes().len() as u64;
-        let new_instrs = disas_aarch64(
-            &cs,
-            &buf[(bytes_read + 4) as usize..],
-            block.start + bytes_read + 4,
-        );
-        let new_ir = parse_instrs(&cs, &new_instrs, &module.metadata, strict);
-        block_ir.extend(new_ir);
+            let new_ir = parse_instrs(&cs, &instrs, &module.metadata, strict);
+            block_ir.extend(new_ir);
+        }
+
+        // Deal with undefined instructions stopping disassembly
+        if ends_in_check(&block, &instrs, buf) {
+            let last_instr = instrs.last().unwrap();
+            // println!("ends_in_check! {:x}", last_instr.address());
+            let bytes_read = last_instr.address() + last_instr.bytes().len() as u64;
+            instrs = disas_aarch64(
+                &cs,
+                &buf[(bytes_read + 4) as usize..],
+                block.start + bytes_read + 4,
+            );
+            let new_ir = parse_instrs(&cs, &instrs, &module.metadata, strict);
+            block_ir.extend(new_ir);
+        }
     }
     block_ir
 }
@@ -849,5 +836,13 @@ impl RegT for Aarch64Regs {
 
     fn pinned_vmctx_reg() -> Self {
         X0
+    }
+
+    fn is_caller_saved(&self) -> bool {
+        match self {
+            X0 | X1 | X2 | X3 | X4 | X5 | X6 | X7 | X8 | X9 | X10 | X11 | X12 | X13 | X14 | X15
+            | X16 | X17 | X18 | X30 => true,
+            _ => false,
+        }
     }
 }

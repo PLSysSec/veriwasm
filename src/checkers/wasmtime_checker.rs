@@ -66,25 +66,25 @@ impl<Ar: RegT> Checker<Ar, WasmtimeLattice<Ar>> for WasmtimeChecker<'_, Ar> {
         match ir_stmt {
             //1. Check that at each call vmctx reg = VmCtx
             // TODO: reenable
-            Stmt::Call(target) => {
-                match target {
-                    Value::Reg(r, Size64) => {
-                        let v = state.regs.get_reg(Ar::pinned_vmctx_reg(), Size64).v;
-                        let target_v = state.regs.get_reg(*r, Size64).v;
-                        log::debug!("Call check: target = {:?} vmctx reg = {:?}", target_v, v);
-                        return target_v
-                            .map(|t| t.is_field() && t.as_field().unwrap().is_exec())
-                            .unwrap_or(false);
-                    }
-                    Value::Mem(_, _) => {
-                        return false;
-                    }
-                    _ => return true,
-                }
+            // Stmt::Call(target) => {
+            //     match target {
+            //         Value::Reg(r, Size64) => {
+            //             let v = state.regs.get_reg(Ar::pinned_vmctx_reg(), Size64).v;
+            //             let target_v = state.regs.get_reg(*r, Size64).v;
+            //             log::debug!("0x{:x}: Call check: target = {:?} vmctx reg = {:?}", loc_idx.addr, target_v, v);
+            //             return target_v
+            //                 .map(|t| t.is_field() && t.as_field().unwrap().is_exec())
+            //                 .unwrap_or(false);
+            //         }
+            //         Value::Mem(_, _) => {
+            //             return false;
+            //         }
+            //         _ => return true,
+            //     }
 
-                // return true;
-                // return v.map(|x| x.is_vmctx()).unwrap_or(false);
-            }
+            //     // return true;
+            //     // return v.map(|x| x.is_vmctx()).unwrap_or(false);
+            // }
 
             //2. Check that all load and store are safe
             Stmt::Unop(_, dst, src) => {
@@ -129,52 +129,36 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
     fn is_heap_access(&self, state: &WasmtimeLattice<Ar>, access: &Value<Ar>) -> bool {
         match access.to_mem() {
             // 1. mem[heapbase]
-            // MemArgs::Mem1Arg(MemArg::Reg(regnum, Size64)) => {
-            //     let v = state.regs.get_reg(regnum, Size64).v;
-            //     return v.map(|x| x.is_heapbase()).unwrap_or(false);
-            // }
             MemArgs::Mem1Arg(memarg) => {
-                // let maybe_v: Value<Ar> = memarg.into();
                 let v = self.analyzer.aeval_unop(state, &memarg.into()).v;
-                return matches!(v, Some(HeapBase));
-                // let v = state.regs.get_reg(regnum, Size64).v;
-                // return v.map(|x| x.is_heapbase()).unwrap_or(false);
+                return matches!(v, Some(HeapBase) | Some(HeapAddr));
             }
             // 2. mem[heapbase + bounded4GB]
-            MemArgs::Mem2Args(MemArg::Reg(regnum, Size64), memarg2) => {
-                let v1 = state.regs.get_reg(regnum, Size64).v;
-                if let Some(HeapBase) = v1 {
-                    match memarg2 {
-                        MemArg::Reg(regnum2, size2) => {
-                            let v2 = state.regs.get_reg(regnum2, size2).v;
-                            return size2.into_bits() <= 32 || matches!(v2, Some(Bounded4GB(_)));
-                            // return v2.map(|x| x.is_heapbase()).unwrap_or(false);
-                        }
-                        MemArg::Imm(_, _, v) => return v >= -0x1000 && v <= 0xffffffff,
-                    }
-                };
-                false
+            //    mem[bounded4GB + heapbase]
+            //    mem[heapaddr + bounded4gb]
+            //    mem[bounded4gb + heapaddr]
+            MemArgs::Mem2Args(memarg1, memarg2) => {
+                let v1 = self.analyzer.aeval_unop(state, &memarg1.into()).v;
+                let v2 = self.analyzer.aeval_unop(state, &memarg2.into()).v;
+                return matches!(
+                    (v1, v2),
+                    (Some(HeapBase), Some(Bounded4GB(_)))
+                        | (Some(Bounded4GB(_)), Some(HeapBase))
+                        | (Some(HeapAddr), Some(Bounded4GB(_)))
+                        | (Some(Bounded4GB(_)), Some(HeapAddr))
+                );
             }
             // mem[HeapBase + Bounded4GB + Bounded4GB] ||
             // mem[Bounded4GB + HeapBase + Bounded4GB]
-            MemArgs::Mem3Args(MemArg::Reg(regnum, Size64), memarg2, memarg3)
-            | MemArgs::Mem3Args(memarg2, MemArg::Reg(regnum, Size64), memarg3) => {
-                let v1 = state.regs.get_reg(regnum, Size64).v;
-                if let Some(HeapBase) = v1 {
-                    match (memarg2, memarg3) {
-                        (MemArg::Reg(regnum2, size2), MemArg::Imm(_, _, v))
-                        | (MemArg::Imm(_, _, v), MemArg::Reg(regnum2, size2)) => {
-                            if size2.into_bits() <= 32 {
-                                return v <= 0xffffffff;
-                            }
-                            if let Some(Bounded4GB(_)) = state.regs.get_reg(regnum2, size2).v {
-                                return v <= 0xffffffff;
-                            }
-                        }
-                        _ => (),
-                    }
-                };
-                false
+            MemArgs::Mem3Args(memarg1, memarg2, memarg3) => {
+                let v1 = self.analyzer.aeval_unop(state, &memarg1.into()).v;
+                let v2 = self.analyzer.aeval_unop(state, &memarg2.into()).v;
+                let v3 = self.analyzer.aeval_unop(state, &memarg3.into()).v;
+                return matches!(
+                    (v1, v2, v3),
+                    (Some(HeapBase), Some(Bounded4GB(_)), Some(Bounded4GB(_)))
+                        | (Some(Bounded4GB(_)), Some(HeapBase), Some(Bounded4GB(_)))
+                );
             }
             _ => return false,
         }
@@ -230,20 +214,6 @@ impl<Ar: RegT> WasmtimeChecker<'_, Ar> {
             MemArgs::Mem2Args(MemArg::Reg(r1, sz1), MemArg::Reg(r2, sz2)) => {
                 let val1 = state.regs.get_reg(r1, sz1).v;
                 let val2 = state.regs.get_reg(r2, sz2).v;
-                // match (v1,v2) {
-                //     Some(),_
-                //     _,Some()
-                // }
-
-                // if let (Some(ref v1),Some(ref v2)) = (val1,val2) {
-                //     //TODO: refine this further
-                //     if v1.is_vmctx() || v2.is_vmctx(){
-                //         return true;
-                //     }
-                //     if v1.is_field() || v2.is_field(){
-                //         return true;
-                //     }
-                // }
 
                 if let Some(ref v1) = val1 {
                     return v1.is_vmctx() || v1.is_field();

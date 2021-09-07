@@ -49,7 +49,14 @@ impl<Ar: RegT> AbstractAnalyzer<Ar, WasmtimeLattice<Ar>> for WasmtimeAnalyzer {
                 self.aexec_binop(in_state, opcode, dst, src1, src2, loc_idx);
                 in_state.adjust_stack_offset(opcode, dst, src1, src2)
             }
-            Stmt::Call(_) => in_state.on_call(),
+            Stmt::Call(_) => {
+                //TODO: Should probably verify that this holds
+                for reg in Ar::iter() {
+                    if reg.is_caller_saved() {
+                        in_state.set_to_bot(&Value::Reg(reg, Size64));
+                    }
+                }
+            } //in_state.on_call(),
             _ => (),
         }
     }
@@ -222,6 +229,10 @@ impl WasmtimeAnalyzer {
             (Some(VmCtx), Some(Bounded4GB(Some(b)))) | (Some(Bounded4GB(Some(b))), Some(VmCtx)) => {
                 return WasmtimeValueLattice::new(VmAddr(Some(b)));
             }
+            (Some(VmCtxField(FieldDesc::Ptr(f))), _) | (_, Some(VmCtxField(FieldDesc::Ptr(f)))) => {
+                return WasmtimeValueLattice::new(VmCtxField(FieldDesc::Ptr(f)));
+                // return WasmtimeValueLattice::new(VmAddr(Some(b)));
+            }
             _ => Default::default(),
         }
     }
@@ -252,8 +263,9 @@ impl WasmtimeAnalyzer {
                     return Some(WasmtimeValueLattice::new(field_v));
                     // return Some(WasmtimeValueLattice::new(VmCtxField(field)));
                 }
-                // 2. mem[VmCtxField] => Read only field
+                // 2. mem[VmCtxField] => Read only field (or ptr if ptr)
                 if v.is_field() {
+                    // println!("Derefing a field: {:?}", v);
                     let field = v.as_field().ok()?;
                     let v = if field.is_ptr() {
                         field.deref().ok()?
@@ -274,6 +286,12 @@ impl WasmtimeAnalyzer {
                     let field = self.offsets[k].clone();
                     return Some(WasmtimeValueLattice::new(field));
                     // return Some(WasmtimeValueLattice::new(VmCtxField(field)));
+                }
+                // allow mem[VmCtxField + x] => VmCtxField
+                // TODO: retrict this further
+                if v1.is_field() {
+                    let v = VmCtxField(FieldDesc::R);
+                    return Some(WasmtimeValueLattice::new(v));
                 }
             }
             _ => (),

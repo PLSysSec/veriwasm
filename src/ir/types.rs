@@ -397,6 +397,13 @@ impl RegT for X86Regs {
     fn pinned_vmctx_reg() -> Self {
         Rdi
     }
+
+    fn is_caller_saved(&self) -> bool {
+        match self {
+            Rax | Rcx | Rdx | Rsi | Rdi | R8 | R9 | R10 | R11 | Zf | Cf | Pf | Sf | Of => true,
+            _ => false,
+        }
+    }
 }
 
 impl TryFrom<u8> for X86Regs {
@@ -467,6 +474,7 @@ pub trait RegT:
     fn is_zf(&self) -> bool;
     fn pinned_heap_reg() -> Self;
     fn pinned_vmctx_reg() -> Self;
+    fn is_caller_saved(&self) -> bool;
     fn iter() -> RegsIterator<Self> {
         RegsIterator {
             current_reg: 0,
