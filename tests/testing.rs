@@ -34,6 +34,7 @@ fn full_test_helper(path: &str, format: ExecutableType, arch: VwArch) {
         executable_type: format,
         active_passes,
         arch,
+        strict: true,
     };
     runner::run(config);
 }
@@ -55,6 +56,7 @@ fn negative_test_helper(path: &str, func_name: &str, format: ExecutableType, arc
         executable_type: format,
         active_passes,
         arch,
+        strict: true,
     };
     runner::run(config);
 }

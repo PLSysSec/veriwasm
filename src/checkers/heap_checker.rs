@@ -75,7 +75,8 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
             //1. Check that at each call rdi = HeapBase
             Stmt::Call(v) => match state.regs.get_reg(Rdi, Size64).v {
                 Some(HeapBase) => (),
-                _ => { ()
+                _ => {
+                    ()
                     // removed for lucet integration
 
                     // if let Value::Imm(_, _, dst) = v {

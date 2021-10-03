@@ -1,4 +1,4 @@
-use crate::{analyses, ir, lattices, loaders, checkers};
+use crate::{analyses, checkers, ir, lattices, loaders};
 use std::collections::HashSet;
 use std::convert::TryFrom;
 

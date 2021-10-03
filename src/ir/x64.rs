@@ -71,7 +71,10 @@ fn convert_operand(op: yaxpeax_x86::long_mode::Operand, memsize: ValSize) -> Val
         Operand::ImmediateI32(imm) => Value::Imm(ImmType::Signed, Size32, imm as i64),
         Operand::ImmediateU64(imm) => Value::Imm(ImmType::Unsigned, Size64, imm as i64),
         Operand::ImmediateI64(imm) => Value::Imm(ImmType::Signed, Size64, imm as i64),
-        Operand::Register(reg) => {log::debug!("convert_operand widths {:?} {:?}", op, op.width()); convert_reg(reg)},
+        Operand::Register(reg) => {
+            log::debug!("convert_operand widths {:?} {:?}", op, op.width());
+            convert_reg(reg)
+        }
         //u32 and u64 are address sizes
         Operand::DisplacementU32(imm) => Value::Mem(
             memsize,
@@ -826,8 +829,8 @@ fn parse_probestack_suffix<'a>(
     instrs: BlockInstrs<'a>,
     metadata: &VwMetadata,
     strict: bool,
-    probestack_arg: u64, 
-) -> IResult<'a, (i64,StmtResult)> {
+    probestack_arg: u64,
+) -> IResult<'a, (i64, StmtResult)> {
     let (rest, (addr, sub_instr)) = parse_single_instr(instrs, metadata, strict)?;
     log::info!(
         "Found potential probestack suffix: {:x} {:?}",
@@ -865,13 +868,19 @@ fn parse_probestack<'a>(
     log::info!("Found potential probestack: 0x{:x}", addr);
     let (rest, (_, call_instr)) = parse_probestack_call(rest, metadata, strict)?;
     log::info!("Found probestack call: 0x{:x}", addr);
-    let (rest, ( stack_adjustment,(_, suffix_instr))) = parse_probestack_suffix(rest, metadata, strict, probestack_arg)?;
+    let (rest, (stack_adjustment, (_, suffix_instr))) =
+        parse_probestack_suffix(rest, metadata, strict, probestack_arg)?;
     log::info!("Completed probestack: 0x{:x}", addr);
     let mut stmts = Vec::new();
     stmts.extend(mov_instr);
     stmts.push(Stmt::ProbeStack(probestack_arg));
-    if stack_adjustment != 0{
-        stmts.push(Stmt::Binop(Binopcode::Sub, Value::Reg(Rsp, Size64), Value::Reg(Rsp, Size64), mk_value_i64(stack_adjustment)));
+    if stack_adjustment != 0 {
+        stmts.push(Stmt::Binop(
+            Binopcode::Sub,
+            Value::Reg(Rsp, Size64),
+            Value::Reg(Rsp, Size64),
+            mk_value_i64(stack_adjustment),
+        ));
     }
     Ok((rest, (addr, stmts)))
 }

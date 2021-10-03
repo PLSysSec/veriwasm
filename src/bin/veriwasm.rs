@@ -54,6 +54,7 @@ fn main() {
         .arg(Arg::with_name("disable_linear_mem_checks").long("disable_linear_mem_checks"))
         .arg(Arg::with_name("disable_call_checks").long("disable_call_checks"))
         .arg(Arg::with_name("enable_zero_cost_checks").long("enable_zero_cost_checks"))
+        .arg(Arg::with_name("strict").long("strict"))
         .get_matches();
 
     let module_path = matches.value_of("module path").unwrap();
@@ -66,6 +67,7 @@ fn main() {
     let disable_linear_mem_checks = matches.is_present("disable_linear_mem_checks");
     let disable_call_checks = matches.is_present("disable_call_checks");
     let enable_zero_cost_checks = matches.is_present("enable_zero_cost_checks");
+    let strict = matches.is_present("strict");
     let only_func = matches.value_of("one function").map(|s| s.to_owned());
     let executable_type =
         ExecutableType::from_str(matches.value_of("executable type").unwrap_or("lucet")).unwrap();
@@ -89,6 +91,7 @@ fn main() {
         executable_type,
         active_passes,
         arch,
+        strict,
     };
 
     run(config);
