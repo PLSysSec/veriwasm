@@ -23,8 +23,19 @@ WORKDIR /veriwasm/
 
 RUN cargo build --release
 
+#TODO: move this up
+ARG DEBIAN_FRONTEND=noninteractive
+
+#TODO: add these to original installs
+RUN apt-get install -y cmake 
+RUN apt-get install -y m4
+RUN apt-get install -y python3
+RUN apt-get install -y wget
 # This will setup fuzzers, and by doing so, build clang and lucet
-#RUN make build_fuzzers
+RUN make build_fuzzers
+
+# Load binaries to test
+RUN make build_public_data
 
 # add instructions for compiling your own c or rust code to wasm
 
