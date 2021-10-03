@@ -47,6 +47,7 @@ pub struct Config {
     pub executable_type: ExecutableType,
     pub active_passes: PassConfig,
     pub arch: VwArch,
+    pub strict: bool,
 }
 
 pub fn run_locals(
@@ -154,7 +155,7 @@ fn run_calls(
 }
 
 pub fn run(config: Config) {
-    let strict = false; // should probably be a commandline option
+    let strict = config.strict;
     let module = load_program(&config);
     let (x86_64_data, func_addrs, plt, mut all_addrs) =
         get_data(&module.program, &config.executable_type);

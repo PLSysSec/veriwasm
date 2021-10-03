@@ -1,10 +1,9 @@
 use crate::{analyses, ir, lattices};
 use analyses::AnalysisResult;
 use ir::types::{IRMap, Stmt};
+use itertools::Itertools;
 use lattices::reachingdefslattice::LocIdx;
 use lattices::Lattice;
-use itertools::Itertools;
-
 
 mod call_checker;
 mod heap_checker;

@@ -29,29 +29,28 @@ impl AbstractAnalyzer<HeapLattice> for HeapAnalyzer {
     fn aexec(&self, in_state: &mut HeapLattice, ir_instr: &Stmt, loc_idx: &LocIdx) -> () {
         match ir_instr {
             Stmt::Clear(dst, _srcs) => {
-                if let &Value::Reg(rd, Size32) | &Value::Reg(rd, Size16) | &Value::Reg(rd, Size8) = dst {
-                    in_state.regs.set_reg(
-                        rd,
-                        Size64,
-                        HeapValueLattice::new(Bounded4GB),
-                    );
-                }
-                else {
+                if let &Value::Reg(rd, Size32) | &Value::Reg(rd, Size16) | &Value::Reg(rd, Size8) =
+                    dst
+                {
+                    in_state
+                        .regs
+                        .set_reg(rd, Size64, HeapValueLattice::new(Bounded4GB));
+                } else {
                     in_state.set_to_bot(dst)
                 }
-            },
+            }
             Stmt::Unop(opcode, dst, src) => self.aexec_unop(in_state, opcode, &dst, &src, loc_idx),
             Stmt::Binop(opcode, dst, src1, src2) => {
                 self.aexec_binop(in_state, opcode, dst, src1, src2, loc_idx);
                 in_state.adjust_stack_offset(opcode, dst, src1, src2)
             }
-            Stmt::Call(_) => { 
+            Stmt::Call(_) => {
                 // TODO: this should only be for probestack
                 // RDI is conserved on calls
                 // let v = in_state.regs.get_reg(Rdi, Size64);
                 in_state.on_call();
                 // in_state.regs.set_reg(Rdi, Size64, v);
-            },
+            }
             _ => (),
         }
     }
