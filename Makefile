@@ -34,5 +34,7 @@ compute_stats_zerocost:
 	target/release/veriwasm -i veriwasm_public_data/zerocost_spec_libraries/namd.so -o zerocost_stats/namd
 	target/release/veriwasm -i veriwasm_public_data/zerocost_spec_libraries/sjeng.so -o zerocost_stats/sjeng
 
-
+build_public_data:
+	git clone https://github.com/PLSysSec/veriwasm_public_data.git
+	cd veriwasm_public_data && bash setup.sh && bash build_negative_tests.sh
 
