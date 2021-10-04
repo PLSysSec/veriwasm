@@ -39,3 +39,6 @@ RUN make build_public_data
 
 # add instructions for compiling your own c or rust code to wasm
 
+# Add shortcuts for compilers to compile your own sandboxed applications
+RUN cat enable_compilers >> /root/.bashrc
+
