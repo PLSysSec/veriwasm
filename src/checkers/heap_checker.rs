@@ -79,17 +79,17 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
                     //()
                     // removed for lucet integration
 
-                     if let Value::Imm(_, _, dst) = v {
-                         let target = (*dst + (loc_idx.addr as i64) + 5) as u64;
-                         let name = self.name_addr_map.get(&target).unwrap();
-                         if !is_libcall(name) {
-                             log::debug!("0x{:x}: Call failure", loc_idx.addr);
-                             return false;
-                         }
-                     } else {
-                         log::debug!("0x{:x}: Call failure", loc_idx.addr);
-                         return false;
-                     }
+                    if let Value::Imm(_, _, dst) = v {
+                        let target = (*dst + (loc_idx.addr as i64) + 5) as u64;
+                        let name = self.name_addr_map.get(&target).unwrap();
+                        if !is_libcall(name) {
+                            log::debug!("0x{:x}: Call failure", loc_idx.addr);
+                            return false;
+                        }
+                    } else {
+                        log::debug!("0x{:x}: Call failure", loc_idx.addr);
+                        return false;
+                    }
                 }
             },
             //2. Check that all load and store are safe

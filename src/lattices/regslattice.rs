@@ -43,16 +43,6 @@ impl<T: PartialOrd> PartialOrd for X86RegsLattice<T> {
 
 impl<T: Lattice + Clone> X86RegsLattice<T> {
     pub fn get_reg(&self, index: X86Regs, size: ValSize) -> T {
-        // if let ValSize::Size128 = size {
-        //     return Default::default(); // TODO: what is happening here
-        // }
-        // if let ValSize::Size256 = size {
-        //     return Default::default(); // TODO: what is happening here
-        // }
-        // if let ValSize::Size256 = size {
-        //     return Default::default(); // TODO: what is happening here
-        // }
-
         if let Some(slot) = self.map.get(&index) {
             slot.value.clone()
         } else {
@@ -69,15 +59,6 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
     }
 
     pub fn set_reg(&mut self, index: X86Regs, size: ValSize, value: T) {
-        // if let ValSize::Size128 = size {
-        //     return Default::default(); // TODO: what is happening here
-        // }
-        // if let ValSize::Size256 = size {
-        //     return Default::default(); // TODO: what is happening here
-        // }
-        // if let ValSize::Size256 = size {
-        //     return Default::default(); // TODO: what is happening here
-        // }
         self.map.insert(
             index,
             VarSlot {

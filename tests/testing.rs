@@ -14,8 +14,48 @@ use loaders::Loadable;
 use lucet_module::{Signature, ValueType};
 use std::collections::HashMap;
 use std::panic;
+use veriwasm::loaders::load_program;
 use veriwasm::runner::run_locals;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
+
+fn get_proxy_func_signatures() -> VwFuncInfo {
+    let mut signatures: Vec<Signature> = Vec::new();
+    // sig0 :: i32 -> ()
+    let sig0 = Signature {
+        params: vec![ValueType::I32],
+        ret_ty: None,
+    };
+    // sig1 :: i32 -> i32 -> ()
+    let sig1 = Signature {
+        params: vec![ValueType::I32, ValueType::I32],
+        ret_ty: None,
+    };
+    // sig2 :: i32 -> i32
+    let sig2 = Signature {
+        params: vec![ValueType::I32],
+        ret_ty: Some(ValueType::I32),
+    };
+    signatures.push(sig0);
+    signatures.push(sig1);
+    signatures.push(sig2);
+
+    let mut indexes: HashMap<String, u32> = HashMap::new();
+    indexes.insert("func1".to_string(), 0);
+    indexes.insert("func2".to_string(), 0);
+    indexes.insert("func3".to_string(), 1);
+    indexes.insert("func4".to_string(), 0);
+    indexes.insert("func5".to_string(), 0);
+    indexes.insert("subfunc5".to_string(), 1);
+    indexes.insert("func6".to_string(), 0);
+    indexes.insert("func7".to_string(), 2);
+    indexes.insert("func8".to_string(), 0);
+    indexes.insert("func9".to_string(), 0);
+
+    VwFuncInfo {
+        signatures,
+        indexes,
+    }
+}
 
 fn full_test_helper(path: &str, format: ExecutableType, arch: VwArch) {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -24,6 +64,28 @@ fn full_test_helper(path: &str, format: ExecutableType, arch: VwArch) {
         linear_mem: true,
         call: true,
         zero_cost: false,
+    };
+    let config = runner::Config {
+        module_path: path.to_string(),
+        _num_jobs: 1,
+        output_path: "".to_string(),
+        has_output: false,
+        only_func: None,
+        executable_type: format,
+        active_passes,
+        arch,
+        strict: true,
+    };
+    runner::run(config);
+}
+
+fn full_test_with_locals(path: &str, format: ExecutableType, arch: VwArch) {
+    let _ = env_logger::builder().is_test(true).try_init();
+    let active_passes = runner::PassConfig {
+        stack: true,
+        linear_mem: true,
+        call: true,
+        zero_cost: true,
     };
     let config = runner::Config {
         module_path: path.to_string(),
@@ -58,7 +120,131 @@ fn negative_test_helper(path: &str, func_name: &str, format: ExecutableType, arc
         arch,
         strict: true,
     };
-    runner::run(config);
+
+    let module = load_program(&config);
+    runner::run_helper(config, module, Vec::new(), get_proxy_func_signatures());
+}
+
+fn negative_test_with_locals(path: &str, func_name: &str, format: ExecutableType, arch: VwArch) {
+    let _ = env_logger::builder().is_test(true).try_init();
+    let active_passes = runner::PassConfig {
+        stack: true,
+        linear_mem: true,
+        call: true,
+        zero_cost: true,
+    };
+    let config = runner::Config {
+        module_path: path.to_string(),
+        _num_jobs: 1,
+        output_path: "".to_string(),
+        has_output: false,
+        only_func: Some(func_name.to_string()),
+        executable_type: format,
+        active_passes,
+        arch,
+        strict: true,
+    };
+    let module = load_program(&config);
+    runner::run_helper(config, module, Vec::new(), get_proxy_func_signatures());
+}
+
+#[test]
+#[should_panic(expected = "Not Stack Safe")]
+fn negative_test_zerocost_1() {
+    negative_test_with_locals(
+        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+        "func1",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Not Stack Safe")]
+fn negative_test_zerocost_2() {
+    negative_test_with_locals(
+        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+        "func2",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Not Stack Safe")]
+fn negative_test_zerocost_3() {
+    negative_test_with_locals(
+        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+        "func3",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Not Locals Safe")]
+fn negative_test_zerocost_4() {
+    negative_test_with_locals(
+        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+        "func4",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Not Locals Safe")]
+fn negative_test_zerocost_5() {
+    negative_test_with_locals(
+        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+        "func5",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Not Locals Safe")]
+fn negative_test_zerocost_6() {
+    negative_test_with_locals(
+        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+        "func6",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Not Locals Safe")]
+fn negative_test_zerocost_7() {
+    negative_test_with_locals(
+        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+        "func7",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Not Locals Safe")]
+fn negative_test_zerocost_8() {
+    negative_test_with_locals(
+        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+        "func8",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Not Call Safe")]
+fn negative_test_zerocost_9() {
+    negative_test_with_locals(
+        "veriwasm_public_data/negative_tests/negative_tests_locals.so",
+        "func9",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    );
 }
 
 #[test]
@@ -106,8 +292,50 @@ fn full_test_soundtouch() {
     )
 }
 
+#[test]
+fn full_test_libgraphite_zero_cost() {
+    full_test_with_locals(
+        "./veriwasm_public_data/firefox_libs/libgraphitewasm.so",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    )
+}
 
+#[test]
+fn full_test_libogg_zero_cost() {
+    full_test_with_locals(
+        "./veriwasm_public_data/firefox_libs/liboggwasm.so",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    )
+}
 
+#[test]
+fn full_test_graphiteogghunspell_zero_cost() {
+    full_test_with_locals(
+        "./veriwasm_public_data/firefox_libs/graphiteogghunspell.so",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    )
+}
+
+#[test]
+fn full_test_libexpat_zero_cost() {
+    full_test_with_locals(
+        "./veriwasm_public_data/firefox_libs/libexpatwasm.so",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    )
+}
+
+#[test]
+fn full_test_soundtouch_zero_cost() {
+    full_test_with_locals(
+        "./veriwasm_public_data/firefox_libs/soundtouch.so",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    )
+}
 
 #[test]
 #[should_panic(expected = "Not Stack Safe")]

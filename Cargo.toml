@@ -32,8 +32,8 @@ wasmtime = "0.28.0"
 #wasmtime = {path = "../wasmtime/crates/wasmtime"}
 #wasmtime-jit = { path = "../wasmtime/crates/jit"}
 #wasmtime-jit = "0.28.0"
-#lucet-module = { path = "../lucet_sandbox_compiler/lucet-module", version = "0.1.1", package="lucet-module-wasmsbx" }
-lucet-module = "0.5.1"
+lucet-module = { path = "../lucet_sandbox_compiler/lucet-module", version = "0.1.1", package="lucet-module-wasmsbx" }
+#lucet-module = "0.5.1"
 #capstone = { version = "0.8.0" }
 
 
