@@ -38,3 +38,8 @@ build_public_data:
 	git clone https://github.com/PLSysSec/veriwasm_public_data.git
 	cd veriwasm_public_data && bash setup.sh && bash build_negative_tests.sh
 
+bootstrap:
+	git clone https://github.com/PLSysSec/lucet_sandbox_compiler.git
+	cd lucet_sandbox_compiler && git submodule update --init --recursive 
+
+

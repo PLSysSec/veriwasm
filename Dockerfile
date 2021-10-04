@@ -1,10 +1,11 @@
 FROM ubuntu:latest
 
+ARG DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update
-RUN apt-get install -y curl unzip git make
+RUN apt-get install -y curl unzip git make cmake m4 python3 wget
 RUN apt update
 RUN apt install build-essential -y
-
 
 
 # Rust dependencies to compile program to wasm
@@ -16,28 +17,19 @@ RUN cargo install cargo-wasi
 # Install wasm32-wasi
 RUN rustup target add wasm32-wasi
 
-
-#COPY . /veriwasm/
+# Clone and build veriwasm docker branch
 RUN git clone https://github.com/PLSysSec/veriwasm.git
 WORKDIR /veriwasm/
-
+RUN git checkout docker
+RUN make bootstrap
 RUN cargo build --release
 
-#TODO: move this up
-ARG DEBIAN_FRONTEND=noninteractive
 
-#TODO: add these to original installs
-RUN apt-get install -y cmake 
-RUN apt-get install -y m4
-RUN apt-get install -y python3
-RUN apt-get install -y wget
 # This will setup fuzzers, and by doing so, build clang and lucet
 RUN make build_fuzzers
 
 # Load binaries to test
 RUN make build_public_data
-
-# add instructions for compiling your own c or rust code to wasm
 
 # Add shortcuts for compilers to compile your own sandboxed applications
 RUN cat enable_compilers >> /root/.bashrc
