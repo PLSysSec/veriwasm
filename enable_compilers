@@ -1,0 +1,5 @@
+alias lucetc4G="./lucet_sandboxing_compiler/target/release/lucetc --bindings ./lucet_sandboxing_compiler/lucet-wasi/bindings.json --guard-size \"4GiB\" --min-reserved-size \"4GiB\" --max-reserved-size \"4GiB\" "
+
+alias wasiclang="./veriwasm_fuzzing/wasi-sdk-10.0/bin/clang --sysroot ./veriwasm_fuzzing/wasi-sdk-10.0/share/wasi-sysroot -Wl,--export-all --std=c99 -Ofast -Wall -W"
+
+
