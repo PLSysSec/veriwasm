@@ -80,6 +80,36 @@ fn full_test_libogg() {
 }
 
 #[test]
+fn full_test_graphiteogghunspell() {
+    full_test_helper(
+        "./veriwasm_public_data/firefox_libs/graphiteogghunspell.so",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    )
+}
+
+#[test]
+fn full_test_libexpat() {
+    full_test_helper(
+        "./veriwasm_public_data/firefox_libs/libexpatwasm.so",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    )
+}
+
+#[test]
+fn full_test_soundtouch() {
+    full_test_helper(
+        "./veriwasm_public_data/firefox_libs/soundtouch.so",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    )
+}
+
+
+
+
+#[test]
 #[should_panic(expected = "Not Stack Safe")]
 fn negative_test_1() {
     negative_test_helper(
