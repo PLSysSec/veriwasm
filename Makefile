@@ -40,6 +40,6 @@ build_public_data:
 
 bootstrap:
 	git clone https://github.com/PLSysSec/lucet_sandbox_compiler.git
-	cd lucet_sandbox_compiler && git submodule update --init --recursive 
+	cd lucet_sandbox_compiler && git submodule update --init --recursive && cargo build --release
 
 
