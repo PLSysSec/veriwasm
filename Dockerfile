@@ -3,7 +3,7 @@ FROM ubuntu:latest
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
-RUN apt-get install -y curl unzip git make cmake m4 python3 wget
+RUN apt-get install -y curl unzip git make cmake m4 python3 wget nasm
 RUN apt update
 RUN apt install build-essential -y
 
@@ -18,7 +18,7 @@ RUN cargo install cargo-wasi
 RUN rustup target add wasm32-wasi
 
 # Clone and build veriwasm docker branch
-RUN git clone https://github.com/PLSysSec/veriwasm.git
+RUN git clone https://github.com/PLSysSec/veriwasm.git 
 WORKDIR /veriwasm/
 RUN git checkout docker
 RUN make bootstrap
