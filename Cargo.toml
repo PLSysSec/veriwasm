@@ -12,7 +12,8 @@ keywords = ["verification", "WebAssembly", "security", "static-analysis", "binar
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-yaxpeax-core = { git = "https://github.com/iximeow/yaxpeax-core", branch = "vw-tweaks-ii" }
+# Commit `3c7a77993badea3f6c4573ecea58c263af74e213` is the current tip of `vw-tweaks-ii`
+yaxpeax-core = { git = "https://github.com/iximeow/yaxpeax-core", branch = "3c7a77993badea3f6c4573ecea58c263af74e213" }
 yaxpeax-x86 = { version = "1.0.4", features = ["use-serde"] }
 yaxpeax-arch = { version = "0.2.4", features = ["use-serde"] }
 "petgraph" = "0.4.13"
