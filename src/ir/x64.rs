@@ -159,7 +159,7 @@ fn get_sources(instr: &X64Instruction) -> Vec<Value> {
                 sources.push(Value::Reg(Cf, Size8));
             }
             (Some(Location::UnevalMem(op)), Direction::Read) => {
-                sources.push(convert_operand(op, Size32)); // is Size32 right?
+                sources.push(convert_operand(instr.operand(op), Size32)); // is Size32 right?
             }
             _ => {}
         }
@@ -185,7 +185,7 @@ fn get_destinations(instr: &X64Instruction) -> Vec<Value> {
                 destinations.push(Value::Reg(Cf, Size8));
             }
             (Some(Location::UnevalMem(op)), Direction::Read) => {
-                destinations.push(convert_operand(op, Size32)); // is Size32 right?
+                destinations.push(convert_operand(instr.operand(op), Size32)); // is Size32 right?
             }
             _ => {}
         }

@@ -7,12 +7,14 @@ use std::collections::HashMap;
 use yaxpeax_core::memory::repr::process::ModuleData;
 use yaxpeax_core::memory::MemoryRepr;
 
-fn load_target(program: &ModuleData, addr: u64) -> i64 {
-    let b0 = program.read(addr).unwrap() as u32;
-    let b1 = (program.read(addr + 1).unwrap() as u32) << 8;
-    let b2 = (program.read(addr + 2).unwrap() as u32) << 16;
-    let b3 = (program.read(addr + 3).unwrap() as u32) << 24;
-    (b0 + b1 + b2 + b3) as i64
+fn load_target<A: yaxpeax_arch::Arch, M: MemoryRepr<A>>(program: &M, addr: A::Address) -> i64 {
+    let mut data = [0u8; 4];
+    let mut addr = addr;
+    for i in 0..4 {
+        data[i] = program.read(addr).unwrap();
+        addr = addr + yaxpeax_arch::AddressDiff::one();
+    }
+    u32::from_le_bytes(data) as i32 as i64
 }
 
 fn extract_jmp_targets(program: &ModuleData, aval: &SwitchValueLattice) -> Vec<i64> {
@@ -21,7 +23,7 @@ fn extract_jmp_targets(program: &ModuleData, aval: &SwitchValueLattice) -> Vec<i
         Some(SwitchValue::JmpTarget(base, upper_bound)) => {
             for idx in 0..upper_bound {
                 let addr = base + idx * 4;
-                let target = load_target(program, addr.into());
+                let target = load_target::<yaxpeax_x86::x86_64, _>(program, addr.into());
                 let resolved_target = ((base as i32) + (target as i32)) as i64;
                 targets.push(resolved_target);
             }
