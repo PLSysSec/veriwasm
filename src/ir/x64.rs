@@ -330,15 +330,12 @@ pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VwMetadata, strict: 
     match instr.opcode() {
         Opcode::MOV => instrs.push(unop(Unopcode::Mov, instr)),
         Opcode::MOVQ => instrs.push(unop_w_memsize(Unopcode::Mov, instr, Size64)),
-        Opcode::MOVZX_b |
-        Opcode::MOVZX_w => instrs.push(unop(Unopcode::Mov, instr)),
+        Opcode::MOVZX => instrs.push(unop(Unopcode::Mov, instr)),
 
         Opcode::MOVD  => instrs.push(unop_w_memsize(Unopcode::Mov, instr, Size32)),
         Opcode::MOVSD => instrs.push(unop_w_memsize(Unopcode::Mov, instr, Size64)),
 
         Opcode::MOVSX |
-        Opcode::MOVSX_w |
-        Opcode::MOVSX_b |
         Opcode::MOVSXD => instrs.push(unop(Unopcode::Movsx, instr)),
 
         Opcode::LEA => instrs.extend(lea(instr, addr)),
@@ -471,7 +468,7 @@ pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VwMetadata, strict: 
         Opcode::CALL => instrs.push(call(instr, metadata)),
 
         Opcode::PUSH => {
-            let width = instr.operand(0).width();
+            let width = instr.operand(0).width().expect("push operand has a width");
             assert_eq!(width, 8); //8 bytes
             instrs.push(Stmt::Binop(
                 Binopcode::Sub,
@@ -489,7 +486,7 @@ pub fn lift(instr: &X64Instruction, addr: &Addr, metadata: &VwMetadata, strict: 
             ))
         }
         Opcode::POP => {
-            let width = instr.operand(0).width();
+            let width = instr.operand(0).width().expect("pop operand has a width");
             assert_eq!(width, 8); //8 bytes
             instrs.push(Stmt::Unop(
                 Unopcode::Mov,
@@ -1027,9 +1024,8 @@ pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap {
     for block_addr in g.nodes() {
         let block = cfg.get_block(block_addr);
 
-        let instrs_vec: Vec<(u64, X64Instruction)> = module
-            .program
-            .instructions_spanning(<AMD64 as Arch>::Decoder::default(), block.start, block.end)
+        let instrs_vec: Vec<(u64, X64Instruction)> =
+            yaxpeax_x86::x86_64::instructions_spanning(&module.program, block.start, block.end)
             .collect();
         let instrs = instrs_vec.as_slice();
         let block_ir = parse_instrs(instrs, &module.metadata, strict);

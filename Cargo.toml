@@ -12,10 +12,9 @@ keywords = ["verification", "WebAssembly", "security", "static-analysis", "binar
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# This commit (`f9dc5c2...`) is the `vw-tweaks` branch.
-yaxpeax-core = { git = "https://github.com/mkolosick/yaxpeax-core/", branch = "veriwasm" }
-yaxpeax-arch = { version = "0.0.4", features = ["use-serde"] }
-yaxpeax-x86 = { git = "https://github.com/mkolosick/yaxpeax-x86/", branch = "veriwasm" }
+yaxpeax-core = { git = "https://github.com/iximeow/yaxpeax-core", branch = "vw-tweaks-ii" }
+yaxpeax-x86 = { version = "1.0.4", features = ["use-serde"] }
+yaxpeax-arch = { version = "0.2.4", features = ["use-serde"] }
 "petgraph" = "0.4.13"
 clap = "2.33.3"
 object = "0.21.0"

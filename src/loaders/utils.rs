@@ -42,7 +42,7 @@ pub fn deconstruct_elf(
     &Vec<ELFExport>,
     &Vec<ELFSymbol>,
 ) {
-    match (program as &dyn MemoryRepr<<AMD64 as Arch>::Address>).module_info() {
+    match (program as &dyn MemoryRepr<AMD64>).module_info() {
         Some(ModuleInfo::ELF(
             isa,
             _header,
