@@ -17,6 +17,7 @@ pub enum CallCheckValue {
     CheckedVal,
     CheckFlag(u32, X86Regs),
     TypeCheckFlag(X86Regs, u32), //addr, regnum, typeidx
+    Constant(u64),
 }
 
 use CallCheckValue::*;

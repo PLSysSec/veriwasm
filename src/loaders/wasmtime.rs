@@ -101,6 +101,6 @@ pub fn get_wasmtime_func_signatures(program: &ModuleData) -> VwFuncInfo {
     unimplemented!();
 }
 
-pub fn wasmtime_get_plt_funcs(binpath: &str) -> Vec<(u64, String)> {
+pub fn wasmtime_get_plt_funcs(binpath: &str) -> Option<Vec<(u64, String)>> {
     unimplemented!();
 }

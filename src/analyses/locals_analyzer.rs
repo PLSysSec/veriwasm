@@ -42,7 +42,7 @@ impl<'a> LocalsAnalyzer<'a> {
             }
             Value::Reg(_, _) => state.get(value).unwrap_or(Uninit),
             Value::Imm(_, _, _) => Init,
-            Value::RIPConst => todo!(),
+            Value::RIPConst => Init,
         }
     }
 
@@ -76,6 +76,7 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
                 (VarIndex::Reg(reg_num), size) => lattice.regs.set_reg(*reg_num, *size, Init),
             }
         }
+        lattice.regs.set_reg(Rsp, Size64, Init);
         // rbp, rbx, and r12-r15 are the callee-saved registers
         lattice.regs.set_reg(Rbp, Size64, UninitCalleeReg(Rbp));
         lattice.regs.set_reg(Rbx, Size64, UninitCalleeReg(Rbx));
@@ -134,11 +135,12 @@ impl<'a> AbstractAnalyzer<LocalsLattice> for LocalsAnalyzer<'a> {
                         self.symbol_table.signatures.get(fn_ptr_index as usize)
                     });
                 in_state.on_call();
-                if let Some((ret_reg, reg_size)) =
-                    fn_ptr_type.and_then(|sig| to_system_v_ret_ty(sig))
-                {
-                    in_state.regs.set_reg(ret_reg, reg_size, Init);
-                }
+                //println!("fn_ptr_type = {:#?}", fn_ptr_type);
+                //if let Some((ret_reg, reg_size)) =
+                //    fn_ptr_type.and_then(|sig| to_system_v_ret_ty(sig))
+                //{
+                in_state.regs.set_reg(Rax, Size64, Init);
+                //}
             }
             Stmt::Branch(br_type, val) => {
                 // println!("unhandled branch 0x{:x?}: {:?} {:?}", loc_idx.addr, br_type, val);

@@ -161,7 +161,9 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
             // 3.1 also check that all caller saved regs have been restored
             Stmt::Ret => self.ret_is_uninitialized(state) || self.regs_not_restored(state),
             // 4. check that all function arguments are initialized (if the called function has any)
-            Stmt::Call(val) => {
+            Stmt::Call(val) =>
+            //false,
+            {
                 let signature = match val {
                     // 4.1 Check direct calls
                     Value::Imm(_, _, dst) => {
@@ -183,16 +185,20 @@ impl Checker<LocalsLattice> for LocalsChecker<'_> {
                         v
                     }
                     // 4.2 Check indirect calls
-                    Value::Reg(_, _) => self
-                        .analyzer
-                        .call_analyzer
-                        .get_fn_ptr_type(&self.analyzer.call_analysis, loc_idx, val)
-                        .and_then(|fn_ptr_index| {
-                            self.analyzer
-                                .symbol_table
-                                .signatures
-                                .get(fn_ptr_index as usize)
-                        }),
+                    Value::Reg(reg, sz) => {
+                        return state.regs.get_reg(*reg, *sz) == Init;
+                        // println!("Indirect call: {:?} {:?}", reg, state.regs.get_reg(*reg, *sz));
+                        // self
+                        // .analyzer
+                        // .call_analyzer
+                        // .get_fn_ptr_type(&self.analyzer.call_analysis, loc_idx, val)
+                        // .and_then(|fn_ptr_index| {
+                        //     self.analyzer
+                        //         .symbol_table
+                        //         .signatures
+                        //         .get(fn_ptr_index as usize)
+                        // })
+                    }
                     _ => panic!("bad call value: {:?}", val),
                 };
                 let type_check_result = if let Some(ty_sig) = signature.map(|sig| to_system_v(sig))

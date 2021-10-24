@@ -22,7 +22,7 @@ pub fn load_program(config: &Config) -> VwModule {
 pub trait Loadable {
     fn is_valid_func_name(&self, name: &String) -> bool;
     fn get_func_signatures(&self, program: &ModuleData) -> VwFuncInfo;
-    fn get_plt_funcs(&self, binpath: &str) -> Vec<(u64, String)>;
+    fn get_plt_funcs(&self, binpath: &str) -> Option<Vec<(u64, String)>>;
 }
 
 impl Loadable for ExecutableType {
@@ -40,7 +40,7 @@ impl Loadable for ExecutableType {
         }
     }
 
-    fn get_plt_funcs(&self, binpath: &str) -> Vec<(u64, String)> {
+    fn get_plt_funcs(&self, binpath: &str) -> Option<Vec<(u64, String)>> {
         match self {
             ExecutableType::Lucet => lucet_get_plt_funcs(binpath),
             ExecutableType::Wasmtime => wasmtime_get_plt_funcs(binpath),

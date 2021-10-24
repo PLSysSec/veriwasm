@@ -1035,7 +1035,7 @@ pub fn lift_cfg(module: &VwModule, cfg: &VW_CFG, strict: bool) -> IRMap {
 
         let instrs_vec: Vec<(u64, X64Instruction)> =
             yaxpeax_x86::x86_64::instructions_spanning(&module.program, block.start, block.end)
-            .collect();
+                .collect();
         let instrs = instrs_vec.as_slice();
         let block_ir = parse_instrs(instrs, &module.metadata, strict);
 

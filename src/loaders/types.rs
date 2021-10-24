@@ -62,3 +62,12 @@ pub struct VwFuncInfo {
     // Name -> Index
     pub indexes: HashMap<String, u32>,
 }
+
+impl VwFuncInfo {
+    pub fn new() -> Self {
+        VwFuncInfo {
+            signatures: Vec::new(),
+            indexes: HashMap::new(),
+        }
+    }
+}

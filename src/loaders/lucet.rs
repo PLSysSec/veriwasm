@@ -18,7 +18,7 @@ use std::string::String;
 use yaxpeax_core::memory::repr::process::{ModuleData, Segment};
 use yaxpeax_core::memory::repr::FileRepr;
 
-pub fn lucet_get_plt_funcs(binpath: &str) -> Vec<(u64, String)> {
+pub fn lucet_get_plt_funcs(binpath: &str) -> Option<Vec<(u64, String)>> {
     //Extract relocation symbols
     let mut in_file = OpenOptions::new().read(true).open(binpath).unwrap();
     let mut elf = Elf::from_reader(&mut in_file).unwrap();
@@ -56,7 +56,7 @@ pub fn lucet_get_plt_funcs(binpath: &str) -> Vec<(u64, String)> {
     // if plt_section.is_none(){
     //     return Vec::new();
     // };
-    let plt_section = plt_section.unwrap();
+    let plt_section = plt_section?;
     let plt_start = plt_section.header.addr;
     if let SectionContent::Raw(buf) = &plt_section.content {
         let mut rdr = Cursor::new(buf);
@@ -93,7 +93,7 @@ pub fn lucet_get_plt_funcs(binpath: &str) -> Vec<(u64, String)> {
     // println!("plt_funcs: {:?}", plt_funcs);
 
     // unimplemented!();
-    plt_funcs
+    Some(plt_funcs)
 }
 
 // pub fn load_lucet_program(binpath: &str) -> ModuleData {
@@ -167,6 +167,9 @@ pub fn load_lucet_module_data(program: &ModuleData) -> lucet_module::ModuleData 
 
     let buffer = read_module_buffer(program, module_start, module_size).unwrap();
     let mut rdr = Cursor::new(buffer);
+    // In the newest lucet, ptr and len start after 16 bytes for some reason
+    // for the old lucet (the one used in rlbox), do not seek forward 16 bytes
+    rdr.seek(SeekFrom::Current(16)).unwrap();
     let module_data_ptr = rdr.read_u64::<LittleEndian>().unwrap();
     let module_data_len = rdr.read_u64::<LittleEndian>().unwrap();
 

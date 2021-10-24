@@ -138,6 +138,16 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                         CallCheckValueLattice::new(CheckFlag(0, *regnum2)),
                     )
                 }
+
+                if let Some(TypeOf(r)) = in_state.regs.get_reg(*regnum1, *size1).v {
+                    if let Some(Constant(c)) = in_state.regs.get_reg(*regnum2, *size2).v {
+                        in_state.regs.set_reg(
+                            Zf,
+                            Size64,
+                            CallCheckValueLattice::new(TypeCheckFlag(r, c as u32)),
+                        )
+                    }
+                }
             }
             (Binopcode::Cmp, Value::Reg(regnum, size), Value::Imm(_, _, c)) => {
                 if let Some(TypeOf(r)) = in_state.regs.get_reg(*regnum, *size).v {
@@ -185,6 +195,7 @@ impl AbstractAnalyzer<CallCheckLattice> for CallAnalyzer {
                 Some(Opcode::JB) => (true, false, false),
                 Some(Opcode::JNB) => (true, false, true),
                 Some(Opcode::JZ) => (false, true, false),
+                Some(Opcode::JNZ) => (false, true, true),
                 _ => (false, false, false),
             };
 
@@ -396,6 +407,10 @@ impl CallAnalyzer {
                 } else if self.is_func_start(*immval as u64) {
                     return CallCheckValueLattice {
                         v: Some(FnPtr(1337)), //dummy value, TODO remove
+                    };
+                } else {
+                    return CallCheckValueLattice {
+                        v: Some(Constant(*immval as u64)),
                     };
                 }
             }

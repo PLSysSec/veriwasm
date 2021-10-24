@@ -157,9 +157,20 @@ fn run_calls(
 
 pub fn run(config: Config) {
     let module = load_program(&config);
-    let plt_funcs = config.executable_type.get_plt_funcs(&config.module_path);
+    // We only need to load the data if we are doing zero cost checks
+    if config.active_passes.zero_cost {
+        let plt_funcs = config
+            .executable_type
+            .get_plt_funcs(&config.module_path)
+            .unwrap_or(Vec::new());
+        let func_signatures = config.executable_type.get_func_signatures(&module.program);
+        return run_helper(config, module, plt_funcs, func_signatures);
+    }
+    //let plt_funcs = config.executable_type.get_plt_funcs(&config.module_path);
+    let plt_funcs = Vec::new();
     // all_addrs.extend(plt_funcs);
-    let func_signatures = config.executable_type.get_func_signatures(&module.program);
+    //let func_signatures = config.executable_type.get_func_signatures(&module.program);
+    let func_signatures = VwFuncInfo::new();
     run_helper(config, module, plt_funcs, func_signatures);
 }
 
