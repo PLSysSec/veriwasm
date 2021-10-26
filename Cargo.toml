@@ -1,6 +1,6 @@
 [package]
 name = "veriwasm"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["enjhnsn2 <e5johnso@eng.ucsd.edu>"]
 edition = "2018"
 license-file = "LICENSE"
