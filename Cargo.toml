@@ -29,12 +29,14 @@ goblin = "0.4.1"
 itertools = "0.10.1"
 
 # This should be an optional compile target
-wasmtime = "0.28.0"
+wasmtime = {version = "0.28.0", optional = true }
 #wasmtime = {path = "../wasmtime/crates/wasmtime"}
 #wasmtime-jit = { path = "../wasmtime/crates/jit"}
 #wasmtime-jit = "0.28.0"
 #lucet-module = { path = "./lucet_sandbox_compiler/lucet-module", version = "0.1.1", package="lucet-module-wasmsbx" }
 lucet-module = "0.5.1"
+
+
 #capstone = { version = "0.8.0" }
 
 
@@ -46,3 +48,7 @@ lucet-module = "0.5.1"
 # lucet-module = { path = "../lucet_sandbox_compiler/lucet-module", version = "0.1.1", package="lucet-module-wasmsbx" }
 # # lucet-module = { git = "https://github.com/bytecodealliance/lucet.git" }
 elfkit = "0.0.4"
+
+[features]
+verify = ["wasmtime"] # feature for when we're integrating with wasmtime
+
