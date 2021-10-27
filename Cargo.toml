@@ -1,6 +1,6 @@
 [package]
 name = "veriwasm"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["enjhnsn2 <e5johnso@eng.ucsd.edu>"]
 edition = "2018"
 license-file = "LICENSE"
@@ -14,7 +14,7 @@ keywords = ["verification", "WebAssembly", "security", "static-analysis", "binar
 [dependencies]
 # Commit `3c7a77993badea3f6c4573ecea58c263af74e213` is the current tip of `vw-tweaks-ii`
 #yaxpeax-core = { git = "https://github.com/iximeow/yaxpeax-core", rev = "3c7a77993badea3f6c4573ecea58c263af74e213" }
-yaxpeax-core = {version = "0.0.3-vw-tweaks"}
+yaxpeax-core = {version = "0.0.4-vw-tweaks"}
 yaxpeax-x86 = { version = "1.0.4", features = ["use-serde"] }
 yaxpeax-arch = { version = "0.2.4", features = ["use-serde"] }
 "petgraph" = "0.4.13"
