@@ -9,8 +9,6 @@ repository = "https://github.com/PLSysSec/veriwasm"
 description = "A safety verifier for native-compiled WebAssembly code"
 keywords = ["verification", "WebAssembly", "security", "static-analysis", "binary-analysis"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 # Commit `3c7a77993badea3f6c4573ecea58c263af74e213` is the current tip of `vw-tweaks-ii`
 #yaxpeax-core = { git = "https://github.com/iximeow/yaxpeax-core", rev = "3c7a77993badea3f6c4573ecea58c263af74e213" }
@@ -30,23 +28,8 @@ itertools = "0.10.1"
 
 # This should be an optional compile target
 wasmtime = {version = "0.28.0", optional = true }
-#wasmtime = {path = "../wasmtime/crates/wasmtime"}
-#wasmtime-jit = { path = "../wasmtime/crates/jit"}
-#wasmtime-jit = "0.28.0"
-#lucet-module = { path = "./lucet_sandbox_compiler/lucet-module", version = "0.1.1", package="lucet-module-wasmsbx" }
 lucet-module = "0.5.1"
 
-
-#capstone = { version = "0.8.0" }
-
-
-# log = "*"
-# env_logger = "*"
-# goblin = "*"
-# wasmtime = { path = "../wasmtime/crates/wasmtime" }
-# wasmtime-jit = { path = "../wasmtime/crates/jit" }
-# lucet-module = { path = "../lucet_sandbox_compiler/lucet-module", version = "0.1.1", package="lucet-module-wasmsbx" }
-# # lucet-module = { git = "https://github.com/bytecodealliance/lucet.git" }
 elfkit = "0.0.4"
 
 [features]
