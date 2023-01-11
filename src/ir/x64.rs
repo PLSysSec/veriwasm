@@ -2,7 +2,6 @@ use std::convert::TryFrom;
 use std::mem::discriminant;
 
 use crate::ir::types::*;
-use crate::ir::utils::{mk_value_i64, valsize};
 use crate::loaders::types::{VwMetadata, VwModule};
 use yaxpeax_arch::{AddressBase, Arch, LengthedInstruction};
 use yaxpeax_core::analyses::control_flow::VW_CFG;

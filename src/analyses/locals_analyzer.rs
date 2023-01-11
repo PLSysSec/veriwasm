@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use analyses::{AbstractAnalyzer, AnalysisResult, CallAnalyzer};
-use ir::types::{Binopcode, FunType, IRMap, Stmt, ValSize, Value, VarIndex, X86Regs};
-use ir::utils::mk_value_i64;
+use ir::types::*;
 use lattices::calllattice::CallCheckLattice;
 use lattices::localslattice::*;
 use lattices::mem_to_stack_offset;

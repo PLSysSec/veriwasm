@@ -2,8 +2,7 @@ use crate::{analyses, checkers, ir, lattices};
 use analyses::StackAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
 use checkers::Checker;
-use ir::types::{IRMap, MemArgs, Stmt, Value};
-use ir::utils::{get_imm_mem_offset, is_bp_access, is_stack_access};
+use ir::types::*;
 use lattices::reachingdefslattice::LocIdx;
 use lattices::stackgrowthlattice::StackGrowthLattice;
 
@@ -61,7 +60,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
             Stmt::Unop(_, dst, src) =>
             // stack write: probestack <= stackgrowth + c < 0
             {
-                if is_stack_access(dst) {
+                if dst.is_stack_access() {
                     if !self.check_stack_write(state, dst) {
                         log::debug!(
                             "check_stack_write failed: access = {:?} state = {:?}",
@@ -71,7 +70,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
                         return false;
                     }
                 }
-                if is_bp_access(dst) {
+                if dst.is_frame_access() {
                     if !self.check_bp_write(state, dst) {
                         log::debug!(
                             "check_bp_write failed: access = {:?} state = {:?}",
@@ -82,7 +81,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
                     }
                 }
                 //stack read: probestack <= stackgrowth + c < 8K
-                if is_stack_access(src) {
+                if src.is_stack_access() {
                     if !self.check_stack_read(state, src) {
                         log::debug!(
                             "check_stack_read failed: access = {:?} state = {:?}",
@@ -91,7 +90,7 @@ impl Checker<StackGrowthLattice> for StackChecker<'_> {
                         );
                         return false;
                     }
-                } else if is_bp_access(src) {
+                } else if src.is_frame_access() {
                     if !self.check_bp_read(state, src) {
                         log::debug!(
                             "check_bp_read failed: access = {:?} state = {:?}",
@@ -128,7 +127,7 @@ impl StackChecker<'_> {
                         && (state.get_stackgrowth().unwrap() < 8096)
                 }
                 MemArgs::Mem2Args(_memarg1, memarg2) => {
-                    let offset = get_imm_mem_offset(memarg2);
+                    let offset = memarg2.to_imm();
                     return (-state.get_probestack().unwrap()
                         <= state.get_stackgrowth().unwrap() + offset)
                         && (state.get_stackgrowth().unwrap() + offset < 8096);
@@ -147,7 +146,7 @@ impl StackChecker<'_> {
                         && (state.get_rbp().unwrap() < 8096)
                 }
                 MemArgs::Mem2Args(_memarg1, memarg2) => {
-                    let offset = get_imm_mem_offset(memarg2);
+                    let offset = memarg2.to_imm();
                     return (-state.get_probestack().unwrap() <= state.get_rbp().unwrap() + offset)
                         && (state.get_rbp().unwrap() + offset < 8096);
                 }
@@ -165,7 +164,7 @@ impl StackChecker<'_> {
                         && (state.get_stackgrowth().unwrap() < 0);
                 }
                 MemArgs::Mem2Args(_memarg1, memarg2) => {
-                    let offset = get_imm_mem_offset(memarg2);
+                    let offset = memarg2.to_imm();
                     return (-state.get_probestack().unwrap()
                         <= state.get_stackgrowth().unwrap() + offset)
                         && (state.get_stackgrowth().unwrap() + offset < 0);
@@ -184,7 +183,7 @@ impl StackChecker<'_> {
                         && (state.get_rbp().unwrap() < 0);
                 }
                 MemArgs::Mem2Args(_memarg1, memarg2) => {
-                    let offset = get_imm_mem_offset(memarg2);
+                    let offset = memarg2.to_imm();
                     return (-state.get_probestack().unwrap() <= state.get_rbp().unwrap() + offset)
                         && (state.get_rbp().unwrap() + offset < 0);
                 }

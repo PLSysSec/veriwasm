@@ -4,11 +4,26 @@ use analyses::reaching_defs::ReachingDefnAnalyzer;
 use analyses::{run_worklist, SwitchAnalyzer};
 use checkers::resolve_jumps;
 use ir::lift_cfg;
-use ir::types::IRMap;
-use ir::utils::has_indirect_jumps;
+use ir::types::*;
 use loaders::types::VwModule;
 use yaxpeax_core::analyses::control_flow::{get_cfg, VW_CFG};
 use yaxpeax_core::arch::x86_64::MergedContextTable;
+
+pub fn has_indirect_jumps(irmap: &IRMap) -> bool {
+    for (_block_addr, ir_block) in irmap {
+        for (_addr, ir_stmts) in ir_block {
+            for (_idx, ir_stmt) in ir_stmts.iter().enumerate() {
+                match ir_stmt {
+                    Stmt::Branch(_, Value::Reg(_, _)) | Stmt::Branch(_, Value::Mem(_, _)) => {
+                        return true
+                    }
+                    _ => (),
+                }
+            }
+        }
+    }
+    false
+}
 
 fn try_resolve_jumps(
     module: &VwModule,

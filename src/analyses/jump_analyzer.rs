@@ -1,8 +1,8 @@
+use crate::ir::types::RegT;
 use crate::{analyses, ir, lattices, loaders};
 use analyses::reaching_defs::ReachingDefnAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
-use ir::types::{Binopcode, IRMap, MemArg, MemArgs, Unopcode, ValSize, Value, X86Regs};
-use ir::utils::get_rsp_offset;
+use ir::types::*;
 use lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
 use lattices::{VarSlot, VarState};

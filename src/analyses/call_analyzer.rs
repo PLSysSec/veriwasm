@@ -1,10 +1,9 @@
 use crate::{analyses, ir, lattices, loaders};
 use analyses::reaching_defs::ReachingDefnAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
-use ir::types::{
-    Binopcode, IRBlock, IRMap, MemArg, MemArgs, Stmt, Unopcode, ValSize, Value, X86Regs,
-};
-use ir::utils::{extract_stack_offset, is_stack_access};
+use ir::types::*;
+// use ir::utils::{extract_stack_offset, is_stack_access};
+use crate::ir::types::RegT;
 use lattices::calllattice::{CallCheckLattice, CallCheckValue, CallCheckValueLattice};
 use lattices::davlattice::DAV;
 use lattices::reachingdefslattice::{LocIdx, ReachLattice};
@@ -387,8 +386,8 @@ impl CallAnalyzer {
                     return CallCheckValueLattice {
                         v: Some(TypeOf(reg)),
                     };
-                } else if is_stack_access(value) {
-                    let offset = extract_stack_offset(memargs);
+                } else if value.is_stack_access() {
+                    let offset = memargs.extract_stack_offset();
                     return in_state.stack.get(offset, memsize.into_bytes());
                 }
             }

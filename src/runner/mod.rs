@@ -14,7 +14,7 @@ use checkers::locals_checker::check_locals;
 use checkers::{check_calls, check_heap, check_stack};
 use ir::fully_resolved_cfg;
 use ir::types::FunType;
-use ir::utils::has_indirect_calls;
+// use ir::utils::has_indirect_calls;
 use loaders::load_program;
 use loaders::types::{ExecutableType, VwArch, VwFuncInfo};
 use loaders::utils::get_data;

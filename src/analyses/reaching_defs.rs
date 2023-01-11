@@ -1,6 +1,6 @@
 use crate::{analyses, ir, lattices, loaders};
 use analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
-use ir::types::{Binopcode, IRMap, Stmt, Unopcode, ValSize, X86Regs};
+use ir::types::*;
 use lattices::reachingdefslattice::{loc, singleton, LocIdx, ReachLattice};
 use lattices::VarState;
 use loaders::types::VwMetadata;

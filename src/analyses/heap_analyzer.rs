@@ -1,8 +1,8 @@
 use crate::ir::types::Stmt;
 use crate::{analyses, ir, lattices, loaders};
 use analyses::{AbstractAnalyzer, AnalysisResult};
-use ir::types::{Binopcode, MemArg, MemArgs, Unopcode, ValSize, Value, X86Regs};
-use ir::utils::{extract_stack_offset, is_stack_access};
+use ir::types::*;
+// use ir::utils::{extract_stack_offset, is_stack_access};
 use lattices::heaplattice::{HeapLattice, HeapValue, HeapValueLattice};
 use lattices::reachingdefslattice::LocIdx;
 use lattices::{ConstLattice, VarState};
@@ -157,8 +157,8 @@ impl HeapAnalyzer {
                 if is_globalbase_access(in_state, memargs) {
                     return HeapValueLattice::new(GlobalsBase);
                 }
-                if is_stack_access(value) {
-                    let offset = extract_stack_offset(memargs);
+                if value.is_stack_access() {
+                    let offset = memargs.extract_stack_offset();
                     let v = in_state.stack.get(offset, memsize.into_bytes());
                     return v;
                 }

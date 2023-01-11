@@ -1,7 +1,7 @@
 use crate::{analyses, checkers, ir, lattices};
 use analyses::{AbstractAnalyzer, AnalysisResult, CallAnalyzer};
 use checkers::Checker;
-use ir::types::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
+use ir::types::*;
 use lattices::calllattice::{CallCheckLattice, CallCheckValue};
 use lattices::davlattice::DAV;
 use lattices::reachingdefslattice::LocIdx;

@@ -5,8 +5,7 @@ use std::convert::TryFrom;
 use analyses::locals_analyzer::LocalsAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
 use checkers::Checker;
-use ir::types::{FunType, IRMap, MemArgs, Stmt, ValSize, Value, VarIndex, X86Regs};
-use ir::utils::is_stack_access;
+use ir::types::*;
 use lattices::localslattice::{LocalsLattice, SlotVal};
 use lattices::reachingdefslattice::LocIdx;
 use loaders::utils::is_libcall;
@@ -31,16 +30,7 @@ pub fn check_locals(
 }
 
 fn is_noninit_illegal(v: &Value) -> bool {
-    match v {
-        Value::Mem(memsize, memargs) => !is_stack_access(v),
-        Value::Reg(reg_num, _) => false,
-        // {
-        //     *reg_num != Rsp && *reg_num != Rbp && !(X86Regs::is_flag(*reg_num))
-        // },
-        // false,
-        Value::Imm(_, _, _) => false, //imm are always "init"
-        Value::RIPConst => false,
-    }
+    v.is_mem() && !v.is_stack_access()
 }
 
 impl LocalsChecker<'_> {

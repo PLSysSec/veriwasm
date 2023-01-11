@@ -9,7 +9,6 @@ pub mod stacklattice;
 pub mod switchlattice;
 use crate::{ir, lattices};
 use ir::types::{Binopcode, MemArg, MemArgs, ValSize, Value, X86Regs};
-use ir::utils::{get_imm_offset, is_rsp};
 use lattices::reachingdefslattice::LocIdx;
 use lattices::regslattice::X86RegsLattice;
 use lattices::stacklattice::StackLattice;
@@ -210,9 +209,9 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
     }
 
     fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value, src1: &Value, src2: &Value) {
-        if is_rsp(dst) {
-            if is_rsp(src1) {
-                let adjustment = get_imm_offset(src2);
+        if dst.is_rsp() {
+            if src1.is_rsp() {
+                let adjustment = src2.as_imm_val();
                 match opcode {
                     Binopcode::Add => self.stack.update_stack_offset(adjustment),
                     Binopcode::Sub => self.stack.update_stack_offset(-adjustment),

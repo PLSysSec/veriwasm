@@ -73,7 +73,7 @@ fn main() {
         ExecutableType::from_str(matches.value_of("executable type").unwrap_or("lucet")).unwrap();
     let arch = VwArch::from_str(matches.value_of("architecture").unwrap_or("x64")).unwrap();
 
-    let has_output = if output_path == "" { false } else { true };
+    let has_output = output_path != "";
 
     let active_passes = PassConfig {
         stack: !disable_stack_checks,

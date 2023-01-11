@@ -1,7 +1,6 @@
 use crate::{analyses, ir, lattices};
 use analyses::AbstractAnalyzer;
-use ir::types::{Binopcode, Stmt, Unopcode};
-use ir::utils::{get_imm_offset, is_rbp, is_rsp};
+use ir::types::*;
 use lattices::reachingdefslattice::LocIdx;
 use lattices::stackgrowthlattice::StackGrowthLattice;
 
@@ -15,18 +14,18 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
     fn aexec(&self, in_state: &mut StackGrowthLattice, ir_instr: &Stmt, loc_idx: &LocIdx) -> () {
         match ir_instr {
             Stmt::Clear(dst, _) => {
-                if is_rsp(dst) {
+                if dst.is_rsp() {
                     *in_state = Default::default()
                 }
             }
-            Stmt::Unop(Unopcode::Mov, dst, src) if is_rsp(dst) && is_rbp(src) => {
+            Stmt::Unop(Unopcode::Mov, dst, src) if dst.is_rsp() && src.is_rbp() => {
                 if let Some((_, probestack, rbp_stackgrowth)) = in_state.v {
                     *in_state = StackGrowthLattice {
                         v: Some((rbp_stackgrowth, probestack, rbp_stackgrowth)),
                     };
                 }
             }
-            Stmt::Unop(Unopcode::Mov, dst, src) if is_rbp(dst) && is_rsp(src) => {
+            Stmt::Unop(Unopcode::Mov, dst, src) if dst.is_rbp() && src.is_rsp() => {
                 if let Some((stackgrowth, probestack, _)) = in_state.v {
                     *in_state = StackGrowthLattice {
                         v: Some((stackgrowth, probestack, stackgrowth)),
@@ -34,21 +33,21 @@ impl AbstractAnalyzer<StackGrowthLattice> for StackAnalyzer {
                 }
             }
             Stmt::Unop(_, dst, _) => {
-                if is_rsp(dst) {
+                if dst.is_rsp() {
                     *in_state = Default::default()
                 }
             }
             Stmt::Binop(Binopcode::Cmp, _, _, _) => (),
             Stmt::Binop(Binopcode::Test, _, _, _) => (),
             Stmt::Binop(opcode, dst, src1, src2) => {
-                if is_rsp(dst) {
-                    if is_rsp(src1) {
+                if dst.is_rsp() {
+                    if src1.is_rsp() {
                         log::debug!(
                             "Processing stack instruction: 0x{:x} {:?}",
                             loc_idx.addr,
                             ir_instr
                         );
-                        let offset = get_imm_offset(src2);
+                        let offset = src2.as_imm_val();
                         if let Some((x, probestack, rbp)) = in_state.v {
                             match opcode {
                                 Binopcode::Add => {

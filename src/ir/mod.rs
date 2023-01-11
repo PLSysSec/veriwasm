@@ -1,7 +1,7 @@
 mod aarch64;
 mod cfg;
 pub mod types;
-pub mod utils;
+//pub mod utils;
 mod x64;
 
 pub use self::cfg::fully_resolved_cfg;
