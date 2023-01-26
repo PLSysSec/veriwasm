@@ -249,14 +249,14 @@ fn negative_test_zerocost_9() {
 // These tests are commented out for the branch that I am merging into Lucet
 // TODO: recompile these examples with most recent lucet so I can reintegrate them
 
-//#[test]
-//fn full_test_libgraphite() {
-//    full_test_helper(
-//        "./veriwasm_public_data/firefox_libs/libgraphitewasm.so",
-//        ExecutableType::Lucet,
-//        VwArch::X64,
-//    )
-//}
+#[test]
+fn full_test_libgraphite() {
+   full_test_helper(
+       "./veriwasm_public_data/firefox_libs/libgraphitewasm.so",
+       ExecutableType::Lucet,
+       VwArch::X64,
+   )
+}
 
 #[test]
 fn full_test_libogg() {
