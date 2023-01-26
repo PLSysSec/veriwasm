@@ -6,7 +6,6 @@ use analyses::run_worklist;
 use analyses::{CallAnalyzer, HeapAnalyzer, StackAnalyzer};
 use checkers::{check_calls, check_heap, check_stack};
 use ir::fully_resolved_cfg;
-use ir::utils::has_indirect_calls;
 use loaders::types::VwFuncInfo;
 use loaders::types::{ExecutableType, VwArch};
 use loaders::utils::get_data;
