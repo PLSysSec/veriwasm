@@ -27,11 +27,12 @@ goblin = "0.4.1"
 itertools = "0.10.1"
 
 # This should be an optional compile target
-wasmtime = {version = "0.28.0", optional = true }
+wasmtime = {version = "0.28.0"}
+#wasmtime = {path = "../wasmtime"}
 lucet-module = "0.5.1"
 
 elfkit = "0.0.4"
 
-[features]
-verify = ["wasmtime"] # feature for when we're integrating with wasmtime
+#[features]
+#verify = ["wasmtime"] # feature for when we're integrating with wasmtime
 

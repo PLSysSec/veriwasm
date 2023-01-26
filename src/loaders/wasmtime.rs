@@ -4,7 +4,7 @@ use loaders::types::{VwFuncInfo, VwMetadata, VwModule};
 use loaders::utils::deconstruct_elf;
 use loaders::utils::*;
 use std::fs;
-#[cfg(feature = "wasmtime")]
+//#[cfg(feature = "wasmtime")]
 use wasmtime::*;
 use yaxpeax_core::goblin::Object;
 use yaxpeax_core::memory::repr::process::ModuleData;
@@ -13,7 +13,7 @@ use yaxpeax_core::memory::repr::process::Segment;
 //yaxpeax doesnt load .o files correctly, so this code
 // manually adds memory regions corresponding to ELF sections
 // (yaxpeax does this by segments, but .o files may not have segments)
-#[cfg(feature = "wasmtime")]
+//#[cfg(feature = "wasmtime")]
 fn fixup_object_file(program: &mut ModuleData, obj: &[u8]) {
     // let elf = program.module_info().unwrap();
     let elf = match Object::parse(obj) {
@@ -48,12 +48,12 @@ fn fixup_object_file(program: &mut ModuleData, obj: &[u8]) {
     }
 }
 
-#[cfg(not(feature = "wasmtime"))]
-fn load_wasmtime_metadata(program: &ModuleData) -> VwMetadata {
-    unimplemented!("Enable the veriwasm feature to load wasmtime modules")
-}
+// #[cfg(not(feature = "wasmtime"))]
+// fn load_wasmtime_metadata(program: &ModuleData) -> VwMetadata {
+//     unimplemented!("Enable the veriwasm feature to load wasmtime modules")
+// }
 
-#[cfg(feature = "wasmtime")]
+//#[cfg(feature = "wasmtime")]
 fn load_wasmtime_metadata(program: &ModuleData) -> VwMetadata {
     let (_, sections, entrypoint, imports, exports, symbols) = deconstruct_elf(program);
 
@@ -73,12 +73,12 @@ fn load_wasmtime_metadata(program: &ModuleData) -> VwMetadata {
     }
 }
 
-#[cfg(not(feature = "wasmtime"))]
-pub fn load_wasmtime_program(config: &runner::Config) -> VwModule {
-    unimplemented!("Enable wasmtime feature to use this function");
-}
+// #[cfg(not(feature = "wasmtime"))]
+// pub fn load_wasmtime_program(config: &runner::Config) -> VwModule {
+//     unimplemented!("Enable wasmtime feature to use this function");
+// }
 
-#[cfg(feature = "wasmtime")]
+// #[cfg(feature = "wasmtime")]
 pub fn load_wasmtime_program(config: &runner::Config) -> VwModule {
     let path = &config.module_path;
     let buffer = fs::read(path).expect("Something went wrong reading the file");
