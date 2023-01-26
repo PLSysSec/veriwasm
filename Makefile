@@ -36,7 +36,7 @@ compute_stats_zerocost:
 
 build_public_data:
 	git clone git@github.com:PLSysSec/veriwasm_public_data.git
-	cd veriwasm_public_data && bash setup.sh && bash build_negative_tests.sh
+	cd veriwasm_public_data && bash setup.sh && bash build_negative_tests.sh && bash build_wasmtime_tests.sh 
 
 bootstrap:
 	git clone https://github.com/PLSysSec/lucet_sandbox_compiler.git
