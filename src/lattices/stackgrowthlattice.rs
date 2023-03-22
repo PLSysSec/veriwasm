@@ -60,7 +60,7 @@ impl StackGrowthLattice {
 
 #[test]
 fn stack_growth_lattice_test() {
-    use crate::lattices::reachingdefslattice::LocIdx;
+    use crate::ir::types::LocIdx;
     use crate::lattices::Lattice;
 
     let x1 = StackGrowthLattice { v: None };

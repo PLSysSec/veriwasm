@@ -1,10 +1,9 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 use veriwasm::{analyses, checkers, ir, loaders, runner};
 
-use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
 use analyses::run_worklist;
-use analyses::{CallAnalyzer, HeapAnalyzer, StackAnalyzer};
-use checkers::{check_calls, check_heap, check_stack};
+use analyses::{HeapAnalyzer, StackAnalyzer};
+use checkers::{check_heap, check_stack};
 use ir::fully_resolved_cfg;
 use loaders::types::VwFuncInfo;
 use loaders::types::{ExecutableType, VwArch};
@@ -16,45 +15,6 @@ use std::panic;
 use veriwasm::loaders::load_program;
 use veriwasm::runner::run_locals;
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
-
-fn get_proxy_func_signatures() -> VwFuncInfo {
-    let mut signatures: Vec<Signature> = Vec::new();
-    // sig0 :: i32 -> ()
-    let sig0 = Signature {
-        params: vec![ValueType::I32],
-        ret_ty: None,
-    };
-    // sig1 :: i32 -> i32 -> ()
-    let sig1 = Signature {
-        params: vec![ValueType::I32, ValueType::I32],
-        ret_ty: None,
-    };
-    // sig2 :: i32 -> i32
-    let sig2 = Signature {
-        params: vec![ValueType::I32],
-        ret_ty: Some(ValueType::I32),
-    };
-    signatures.push(sig0);
-    signatures.push(sig1);
-    signatures.push(sig2);
-
-    let mut indexes: HashMap<String, u32> = HashMap::new();
-    indexes.insert("func1".to_string(), 0);
-    indexes.insert("func2".to_string(), 0);
-    indexes.insert("func3".to_string(), 1);
-    indexes.insert("func4".to_string(), 0);
-    indexes.insert("func5".to_string(), 0);
-    indexes.insert("subfunc5".to_string(), 1);
-    indexes.insert("func6".to_string(), 0);
-    indexes.insert("func7".to_string(), 2);
-    indexes.insert("func8".to_string(), 0);
-    indexes.insert("func9".to_string(), 0);
-
-    VwFuncInfo {
-        signatures,
-        indexes,
-    }
-}
 
 fn full_test_helper(path: &str, format: ExecutableType, arch: VwArch) {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -121,7 +81,7 @@ fn negative_test_helper(path: &str, func_name: &str, format: ExecutableType, arc
     };
 
     let module = load_program(&config);
-    runner::run_helper(config, module, Vec::new(), get_proxy_func_signatures());
+    runner::run_helper(config, module, Vec::new());
 }
 
 fn negative_test_with_locals(path: &str, func_name: &str, format: ExecutableType, arch: VwArch) {
@@ -144,7 +104,7 @@ fn negative_test_with_locals(path: &str, func_name: &str, format: ExecutableType
         strict: true,
     };
     let module = load_program(&config);
-    runner::run_helper(config, module, Vec::new(), get_proxy_func_signatures());
+    runner::run_helper(config, module, Vec::new());
 }
 
 #[test]
@@ -251,11 +211,11 @@ fn negative_test_zerocost_9() {
 
 #[test]
 fn full_test_libgraphite() {
-   full_test_helper(
-       "./veriwasm_public_data/firefox_libs/libgraphitewasm.so",
-       ExecutableType::Lucet,
-       VwArch::X64,
-   )
+    full_test_helper(
+        "./veriwasm_public_data/firefox_libs/libgraphitewasm.so",
+        ExecutableType::Lucet,
+        VwArch::X64,
+    )
 }
 
 #[test]

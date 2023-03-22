@@ -1,11 +1,10 @@
 use crate::ir::types::X86Regs;
-use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use crate::lattices::{ConstLattice, VariableState};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum SwitchValue {
     SwitchBase(u32),
-    ZF(u32, X86Regs, ReachingDefnLattice),
+    ZF(u32, X86Regs),
     UpperBound(u32),
     JmpOffset(u32, u32), // base + bound
     JmpTarget(u32, u32), //base + bound
@@ -17,7 +16,7 @@ pub type SwitchLattice = VariableState<SwitchValueLattice>;
 
 #[test]
 fn switch_lattice_test() {
-    use crate::lattices::reachingdefslattice::LocIdx;
+    use crate::ir::types::LocIdx;
     use crate::lattices::Lattice;
 
     let x1 = SwitchValueLattice { v: None };

@@ -1,7 +1,6 @@
 use crate::{analyses, ir, lattices};
 use analyses::AbstractAnalyzer;
 use ir::types::*;
-use lattices::reachingdefslattice::LocIdx;
 use lattices::stackgrowthlattice::StackGrowthLattice;
 
 pub struct StackAnalyzer {}

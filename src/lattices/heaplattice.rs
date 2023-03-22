@@ -17,7 +17,7 @@ pub type HeapLattice = VariableState<HeapValueLattice>;
 
 #[test]
 fn heap_lattice_test() {
-    use crate::lattices::reachingdefslattice::LocIdx;
+    use crate::ir::types::LocIdx;
     use crate::lattices::Lattice;
 
     let x1 = HeapValueLattice { v: None };

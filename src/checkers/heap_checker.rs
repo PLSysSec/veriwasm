@@ -3,7 +3,6 @@ use crate::checkers::Checker;
 use crate::ir::types::*;
 // use crate::ir::utils::{is_mem_access, is_stack_access};
 use crate::lattices::heaplattice::{HeapLattice, HeapValue};
-use crate::lattices::reachingdefslattice::LocIdx;
 use crate::loaders::utils::is_libcall;
 use std::collections::HashMap;
 

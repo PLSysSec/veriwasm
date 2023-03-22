@@ -1,7 +1,6 @@
 use crate::{analyses, ir, lattices};
 use analyses::{AbstractAnalyzer, AnalysisResult, SwitchAnalyzer};
 use ir::types::*;
-use lattices::reachingdefslattice::LocIdx;
 use lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
 use std::collections::HashMap;
 use yaxpeax_core::memory::repr::process::ModuleData;

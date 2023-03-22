@@ -2,17 +2,13 @@ use crate::{analyses, ir, lattices};
 use analyses::AnalysisResult;
 use ir::types::*;
 use itertools::Itertools;
-use lattices::reachingdefslattice::LocIdx;
 use lattices::Lattice;
 
-mod call_checker;
 mod heap_checker;
 mod jump_resolver;
-pub mod locals_checker;
 mod stack_checker;
 
 /*      Public API for checker submodule      */
-pub use self::call_checker::check_calls;
 pub use self::heap_checker::check_heap;
 pub use self::jump_resolver::resolve_jumps;
 pub use self::stack_checker::check_stack;

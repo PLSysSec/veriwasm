@@ -1,20 +1,14 @@
 use crate::{analyses, checkers, ir, lattices, loaders};
 
-use crate::lattices::calllattice::CallCheckLattice;
-use crate::lattices::reachingdefslattice::ReachingDefnLattice;
 use crate::lattices::VariableState;
 use crate::VwModule;
 use crate::{IRMap, VwMetadata, VW_CFG};
-use analyses::locals_analyzer::LocalsAnalyzer;
-use analyses::reaching_defs::{analyze_reaching_defs, ReachingDefnAnalyzer};
 use analyses::{run_worklist, AnalysisResult};
 
-use analyses::{CallAnalyzer, HeapAnalyzer, StackAnalyzer};
-use checkers::locals_checker::check_locals;
-use checkers::{check_calls, check_heap, check_stack};
+use analyses::{HeapAnalyzer, StackAnalyzer};
+use checkers::{check_heap, check_stack};
 use ir::fully_resolved_cfg;
 use ir::types::FunType;
-// use ir::utils::has_indirect_calls;
 use loaders::load_program;
 use loaders::types::{ExecutableType, VwArch, VwFuncInfo};
 use loaders::utils::get_data;
@@ -51,55 +45,6 @@ pub struct Config {
     pub strict: bool,
 }
 
-pub fn run_locals(
-    reaching_defs: AnalysisResult<VariableState<ReachingDefnLattice>>,
-    call_analysis: AnalysisResult<CallCheckLattice>,
-    plt_bounds: (u64, u64),
-    all_addrs_map: &HashMap<u64, String>, // index into func_signatures.signatures
-    func_signatures: &VwFuncInfo,
-    func_name: &String,
-    cfg: &VW_CFG,
-    irmap: &IRMap,
-    metadata: &VwMetadata,
-    valid_funcs: &Vec<u64>,
-) -> bool {
-    let fun_type = func_signatures
-        .indexes
-        .get(func_name)
-        .and_then(|index| {
-            func_signatures
-                .signatures
-                .get(usize::try_from(*index).unwrap())
-        })
-        .map(to_system_v)
-        .unwrap_or(FunType {
-            args: Vec::new(),
-            ret: None,
-        });
-    let call_analyzer = CallAnalyzer {
-        metadata: metadata.clone(),
-        reaching_defs: reaching_defs.clone(),
-        reaching_analyzer: ReachingDefnAnalyzer {
-            cfg: cfg.clone(),
-            irmap: irmap.clone(),
-        },
-        funcs: valid_funcs.clone(),
-        irmap: irmap.clone(),
-        cfg: cfg.clone(),
-    };
-    let locals_analyzer = LocalsAnalyzer {
-        fun_type,
-        plt_bounds,
-        symbol_table: func_signatures,
-        name_addr_map: all_addrs_map,
-        call_analysis,
-        call_analyzer,
-    };
-    let locals_result = run_worklist(&cfg, &irmap, &locals_analyzer);
-    let locals_safe = check_locals(locals_result, &irmap, &locals_analyzer);
-    locals_safe
-}
-
 fn run_stack(cfg: &VW_CFG, irmap: &IRMap) -> bool {
     let stack_analyzer = StackAnalyzer {};
     let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
@@ -119,40 +64,6 @@ fn run_heap(
     let heap_result = run_worklist(&cfg, &irmap, &heap_analyzer);
     let heap_safe = check_heap(heap_result, &irmap, &heap_analyzer, &all_addrs_map);
     heap_safe
-}
-
-fn run_calls(
-    cfg: &VW_CFG,
-    irmap: &IRMap,
-    metadata: &VwMetadata,
-    valid_funcs: &Vec<u64>,
-    plt: (u64, u64),
-) -> (
-    bool,
-    AnalysisResult<CallCheckLattice>,
-    AnalysisResult<VariableState<ReachingDefnLattice>>,
-) {
-    let reaching_defs = analyze_reaching_defs(&cfg, &irmap, metadata.clone());
-    let call_analyzer = CallAnalyzer {
-        metadata: metadata.clone(),
-        reaching_defs: reaching_defs.clone(),
-        reaching_analyzer: ReachingDefnAnalyzer {
-            cfg: cfg.clone(),
-            irmap: irmap.clone(),
-        },
-        funcs: valid_funcs.clone(),
-        irmap: irmap.clone(),
-        cfg: cfg.clone(),
-    };
-    let call_result = run_worklist(&cfg, &irmap, &call_analyzer);
-    let call_safe = check_calls(
-        call_result.clone(),
-        &irmap,
-        &call_analyzer,
-        &valid_funcs,
-        &plt,
-    );
-    (call_safe, call_result, reaching_defs)
 }
 
 pub fn run(config: Config) {
@@ -193,7 +104,7 @@ pub fn run_helper(
     let strict = config.strict;
 
     let mut func_counter = 0;
-    let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64, f64)> = vec![];
+    let mut info: Vec<(std::string::String, usize, f64, f64, f64)> = vec![];
     let valid_funcs: Vec<u64> = func_addrs.clone().iter().map(|x| x.0).collect();
     let all_addrs_map = HashMap::from_iter(all_addrs.clone());
     for (addr, func_name) in func_addrs {
@@ -225,56 +136,21 @@ pub fn run_helper(
             }
         }
 
-        let call_start = Instant::now();
-        if config.active_passes.call {
-            // if config.active_passes.linear_mem {
-            println!("Checking Call Safety");
-            let (call_safe, indirect_calls_result, reaching_defs) =
-                run_calls(&cfg, &irmap, &module.metadata, &valid_funcs, plt);
-            if !call_safe {
-                panic!("Not Call Safe");
-            }
-
-            println!("Checking Locals Safety");
-            if config.active_passes.zero_cost {
-                let locals_safe = run_locals(
-                    reaching_defs,
-                    indirect_calls_result,
-                    plt,
-                    &all_addrs_map,
-                    &func_signatures,
-                    &func_name,
-                    &cfg,
-                    &irmap,
-                    &module.metadata,
-                    &valid_funcs,
-                );
-                if !locals_safe {
-                    panic!("Not Locals Safe");
-                }
-            }
-        }
-        let locals_start = Instant::now(); //alwyas 0 right now, locals time grouped with calls
-
         let end = Instant::now();
         info.push((
             func_name.to_string(),
             cfg.blocks.len(),
             (stack_start - start).as_secs_f64(),
             (heap_start - stack_start).as_secs_f64(),
-            (call_start - heap_start).as_secs_f64(),
-            (locals_start - call_start).as_secs_f64(), // TODO: proper timing
-            (end - locals_start).as_secs_f64(),
+            (end - heap_start).as_secs_f64(),
         ));
         println!(
-            "Verified {:?} at {:?} blocks. CFG: {:?}s Stack: {:?}s Heap: {:?}s Calls: {:?}s locals {:?}s",
+            "Verified {:?} at {:?} blocks. CFG: {:?}s Stack: {:?}s Heap: {:?}s",
             func_name,
             cfg.blocks.len(),
             (stack_start - start).as_secs_f64(),
             (heap_start - stack_start).as_secs_f64(),
-            (call_start - heap_start).as_secs_f64(),
-            (locals_start - call_start).as_secs_f64(),
-            (end - locals_start).as_secs_f64(), // TODO: proper timing
+            (end - heap_start).as_secs_f64(),
         );
     }
     if config.has_output {
@@ -286,24 +162,18 @@ pub fn run_helper(
     let mut total_cfg_time = 0.0;
     let mut total_stack_time = 0.0;
     let mut total_heap_time = 0.0;
-    let mut total_call_time = 0.0;
-    let mut total_locals_time = 0.0;
-    for (_, _, cfg_time, stack_time, heap_time, call_time, locals_time) in &info {
+    for (_, _, cfg_time, stack_time, heap_time) in &info {
         total_cfg_time += cfg_time;
         total_stack_time += stack_time;
         total_heap_time += heap_time;
-        total_call_time += call_time;
-        total_locals_time += locals_time;
     }
     println!("Verified {:?} functions", func_counter);
     println!(
-        "Total time = {:?}s CFG: {:?} Stack: {:?}s Heap: {:?}s Call: {:?}s Locals {:?}s",
-        total_cfg_time + total_stack_time + total_heap_time + total_call_time + total_locals_time,
+        "Total time = {:?}s CFG: {:?} Stack: {:?}s Heap: {:?}s",
+        total_cfg_time + total_stack_time + total_heap_time,
         total_cfg_time,
         total_stack_time,
         total_heap_time,
-        total_call_time,
-        total_locals_time,
     );
     println!("Done!");
 }

@@ -1,15 +1,10 @@
-pub mod calllattice;
-pub mod davlattice;
 pub mod heaplattice;
-pub mod localslattice;
-pub mod reachingdefslattice;
 pub mod regslattice;
 pub mod stackgrowthlattice;
 pub mod stacklattice;
 pub mod switchlattice;
 use crate::{ir, lattices};
-use ir::types::{Binopcode, MemArg, MemArgs, ValSize, Value, X86Regs};
-use lattices::reachingdefslattice::LocIdx;
+use ir::types::{Binopcode, LocIdx, MemArg, MemArgs, ValSize, Value, X86Regs};
 use lattices::regslattice::X86RegsLattice;
 use lattices::stacklattice::StackLattice;
 use std::cmp::Ordering;

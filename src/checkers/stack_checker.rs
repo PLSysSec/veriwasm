@@ -3,7 +3,6 @@ use analyses::StackAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
 use checkers::Checker;
 use ir::types::*;
-use lattices::reachingdefslattice::LocIdx;
 use lattices::stackgrowthlattice::StackGrowthLattice;
 
 pub struct StackChecker<'a> {

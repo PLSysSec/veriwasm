@@ -1,9 +1,7 @@
 use crate::ir::types::RegT;
 use crate::{analyses, ir, lattices, loaders};
-use analyses::reaching_defs::ReachingDefnAnalyzer;
 use analyses::{AbstractAnalyzer, AnalysisResult};
 use ir::types::*;
-use lattices::reachingdefslattice::{LocIdx, ReachLattice};
 use lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
 use lattices::{VarSlot, VarState};
 use loaders::types::VwMetadata;
@@ -15,8 +13,8 @@ use X86Regs::*;
 
 pub struct SwitchAnalyzer {
     pub metadata: VwMetadata,
-    pub reaching_defs: AnalysisResult<ReachLattice>,
-    pub reaching_analyzer: ReachingDefnAnalyzer,
+    //pub reaching_defs: AnalysisResult<ReachLattice>,
+    //pub reaching_analyzer: ReachingDefnAnalyzer,
 }
 
 impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
@@ -40,31 +38,32 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         src2: &Value,
         loc_idx: &LocIdx,
     ) -> () {
-        if let Binopcode::Cmp = opcode {
-            match (src1, src2) {
-                (Value::Reg(regnum, _), Value::Imm(_, _, imm))
-                | (Value::Imm(_, _, imm), Value::Reg(regnum, _)) => {
-                    let reg_def = self
-                        .reaching_analyzer
-                        .fetch_def(&self.reaching_defs, loc_idx);
-                    let src_loc = reg_def.regs.get_reg(*regnum, Size64);
-                    in_state.regs.set_reg(
-                        Zf,
-                        Size64,
-                        SwitchValueLattice::new(SwitchValue::ZF(*imm as u32, *regnum, src_loc)),
-                    );
-                }
-                _ => (),
-            }
-        }
+        unimplemented!()
+        // if let Binopcode::Cmp = opcode {
+        //     match (src1, src2) {
+        //         (Value::Reg(regnum, _), Value::Imm(_, _, imm))
+        //         | (Value::Imm(_, _, imm), Value::Reg(regnum, _)) => {
+        //             let reg_def = self
+        //                 .reaching_analyzer
+        //                 .fetch_def(&self.reaching_defs, loc_idx);
+        //             let src_loc = reg_def.regs.get_reg(*regnum, Size64);
+        //             in_state.regs.set_reg(
+        //                 Zf,
+        //                 Size64,
+        //                 SwitchValueLattice::new(SwitchValue::ZF(*imm as u32, *regnum, src_loc)),
+        //             );
+        //         }
+        //         _ => (),
+        //     }
+        // }
 
-        match opcode {
-            Binopcode::Cmp => (),
-            Binopcode::Test => {
-                in_state.regs.set_reg(Zf, Size64, Default::default());
-            }
-            _ => in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2)),
-        }
+        // match opcode {
+        //     Binopcode::Cmp => (),
+        //     Binopcode::Test => {
+        //         in_state.regs.set_reg(Zf, Size64, Default::default());
+        //     }
+        //     _ => in_state.set(dst, self.aeval_binop(in_state, opcode, src1, src2)),
+        // }
     }
 
     fn process_branch(
@@ -74,65 +73,67 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
         succ_addrs: &Vec<u64>,
         addr: &u64,
     ) -> Vec<(u64, SwitchLattice)> {
-        if succ_addrs.len() == 2 {
-            let mut not_branch_state = in_state.clone();
-            let mut branch_state = in_state.clone();
-            if let Some(SwitchValue::ZF(bound, regnum, checked_defs)) =
-                &in_state.regs.get_reg(Zf, Size64).v
-            {
-                not_branch_state.regs.set_reg(
-                    *regnum,
-                    Size64,
-                    SwitchValueLattice {
-                        v: Some(UpperBound(*bound)),
-                    },
-                );
-                let defs_state = self.reaching_defs.get(addr).unwrap();
-                let ir_block = irmap.get(addr).unwrap();
-                let defs_state = self.reaching_analyzer.analyze_block(defs_state, ir_block);
-                //propagate bound across registers with the same reaching def
-                for idx in X86Regs::iter() {
-                    if idx != *regnum {
-                        let reg_def = defs_state.regs.get_reg(idx, Size64);
-                        if (!reg_def.is_empty()) && (&reg_def == checked_defs) {
-                            not_branch_state.regs.set_reg(
-                                idx,
-                                Size64,
-                                SwitchValueLattice {
-                                    v: Some(UpperBound(*bound)),
-                                },
-                            );
-                        }
-                    }
-                }
-                //propagate bound across stack slots with the same upper bound
-                for (stack_offset, stack_slot) in defs_state.stack.map.iter() {
-                    if !checked_defs.is_empty() && (&stack_slot.value == checked_defs) {
-                        let v = SwitchValueLattice {
-                            v: Some(UpperBound(*bound)),
-                        };
-                        let vv = VarSlot {
-                            size: stack_slot.size,
-                            value: v,
-                        };
-                        not_branch_state.stack.map.insert(*stack_offset, vv);
-                    }
-                }
-            }
-            branch_state.regs.set_reg(Zf, Size64, Default::default());
-            not_branch_state
-                .regs
-                .set_reg(Zf, Size64, Default::default());
-            vec![
-                (succ_addrs[0].clone(), not_branch_state),
-                (succ_addrs[1].clone(), branch_state),
-            ]
-        } else {
-            succ_addrs
-                .into_iter()
-                .map(|addr| (addr.clone(), in_state.clone()))
-                .collect()
-        }
+        unimplemented!()
+        // return Vec::new();
+        // if succ_addrs.len() == 2 {
+        //     let mut not_branch_state = in_state.clone();
+        //     let mut branch_state = in_state.clone();
+        //     if let Some(SwitchValue::ZF(bound, regnum, checked_defs)) =
+        //         &in_state.regs.get_reg(Zf, Size64).v
+        //     {
+        //         not_branch_state.regs.set_reg(
+        //             *regnum,
+        //             Size64,
+        //             SwitchValueLattice {
+        //                 v: Some(UpperBound(*bound)),
+        //             },
+        //         );
+        //         let defs_state = self.reaching_defs.get(addr).unwrap();
+        //         let ir_block = irmap.get(addr).unwrap();
+        //         let defs_state = self.reaching_analyzer.analyze_block(defs_state, ir_block);
+        //         //propagate bound across registers with the same reaching def
+        //         for idx in X86Regs::iter() {
+        //             if idx != *regnum {
+        //                 let reg_def = defs_state.regs.get_reg(idx, Size64);
+        //                 if (!reg_def.is_empty()) && (&reg_def == checked_defs) {
+        //                     not_branch_state.regs.set_reg(
+        //                         idx,
+        //                         Size64,
+        //                         SwitchValueLattice {
+        //                             v: Some(UpperBound(*bound)),
+        //                         },
+        //                     );
+        //                 }
+        //             }
+        //         }
+        //         //propagate bound across stack slots with the same upper bound
+        //         for (stack_offset, stack_slot) in defs_state.stack.map.iter() {
+        //             if !checked_defs.is_empty() && (&stack_slot.value == checked_defs) {
+        //                 let v = SwitchValueLattice {
+        //                     v: Some(UpperBound(*bound)),
+        //                 };
+        //                 let vv = VarSlot {
+        //                     size: stack_slot.size,
+        //                     value: v,
+        //                 };
+        //                 not_branch_state.stack.map.insert(*stack_offset, vv);
+        //             }
+        //         }
+        //     }
+        //     branch_state.regs.set_reg(Zf, Size64, Default::default());
+        //     not_branch_state
+        //         .regs
+        //         .set_reg(Zf, Size64, Default::default());
+        //     vec![
+        //         (succ_addrs[0].clone(), not_branch_state),
+        //         (succ_addrs[1].clone(), branch_state),
+        //     ]
+        // } else {
+        //     succ_addrs
+        //         .into_iter()
+        //         .map(|addr| (addr.clone(), in_state.clone()))
+        //         .collect()
+        // }
     }
 }
 

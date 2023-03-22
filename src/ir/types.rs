@@ -553,3 +553,9 @@ pub fn get_rsp_offset(memargs: &MemArgs) -> Option<i64> {
         _ => None,
     }
 }
+
+#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Debug)]
+pub struct LocIdx {
+    pub addr: u64,
+    pub idx: u32,
+}
